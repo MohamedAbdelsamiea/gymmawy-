@@ -1,0 +1,25 @@
+{
+    "nav": {
+      "home": "Home",
+      "packages": "Packages",
+      "trainingPrograms": "Training Programs",
+      "videos": "Videos",
+      "transformations": "Transformations",
+      "store": "Store",
+      "subscribeNow": "Subscribe Now",
+      "partners": "Partners",
+      "joinTheTeam": "Join the Team",
+      "contactUs": "Contact Us"
+    },
+    "languageToggle": "العربية",
+    "auth": {
+      "login": "Login",
+      "signUp": "Sign Up",
+      "home": "Home",
+      "dashboard": "Dashboard",
+      "profileSettings": "Profile Settings",
+      "signOut": "Sign Out",
+      "loyaltyPoints": "loyalty points"
+    }
+  }
+  

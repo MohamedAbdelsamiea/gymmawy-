@@ -1,0 +1,52 @@
+{
+  "title": "Advantages of",
+  "description": "If you're serious about the gym and ready to stay consistent, all you really need is a solid plan to follow. That's where ready-made programs come in-they give you step-by-step workouts, clear video demos, and the exact sets and reps so you can just show up, put in the work, and see results.",
+
+  "Cards": [
+    {
+      "title": "Very fast",
+      "description": "Right after payment, the ready-made program is sent instantly to the email you provided during checkout-so you get it on the spot and can start right away."
+    },
+    {
+      "title": "Economy",
+      "description": "The program comes at an affordable price, giving you great quality and real value for what you pay."
+    },
+    {
+      "title": "Professional",
+      "description": "The ready-made program includes the exercises, the number of sets and reps, along with professional video tutorials showing you exactly how to perform each movement."
+    }
+  ],
+
+  "programmesLabel": "ready-made programs",
+  "ProgrammesList": [
+    {
+      "name": "Psycho GYMMAWY COURSE",
+      "price": "3400 L.E"
+    },
+    {
+      "name": "Upper & Lower Programme",
+      "price": "340 L.E"
+    },
+    {
+      "name": "Push Pull Leg Programme",
+      "price": "340 L.E"
+    },
+    {
+      "name": "The Arnold Programme",
+      "price": "340 L.E"
+    },
+    {
+      "name": "3 Days Full Body Programme",
+      "price": "340 L.E"
+    },
+    {
+      "name": "Female Upper & Lower Programme",
+      "price": "340 L.E"
+    },
+    {
+      "name": "Kon GYMMAWY FULL GUIDE",
+      "price": "FREE"
+    }
+  ],
+  "button": "BUY IT NOW"
+}

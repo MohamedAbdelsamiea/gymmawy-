@@ -1,0 +1,25 @@
+{
+    "nav": {
+      "home": "الرئيسية",
+      "packages": "الباقات",
+      "trainingPrograms": "برامج التدريب",
+      "videos": "الفيديوهات",
+      "transformations": "التحولات",
+      "store": "المتجر",
+      "subscribeNow": "اشترك الآن",
+      "partners": "الشركاء",
+      "joinTheTeam": "انضم للفريق",
+      "contactUs": "اتصل بنا"
+    },
+    "languageToggle": "English",
+    "auth": {
+      "login": "تسجيل الدخول",
+      "signUp": "إنشاء حساب",
+      "home": "الرئيسية",
+      "dashboard": "لوحة التحكم",
+      "profileSettings": "إعدادات الملف الشخصي",
+      "signOut": "تسجيل الخروج",
+      "loyaltyPoints": "نقاط الولاء"
+    }
+  }
+  

@@ -1,0 +1,140 @@
+{
+  "hero": {
+    "title": "YOU KNOW THE WAY",
+    "joinUs": "Join Us Now"
+  },
+  "why-join": {
+    "title": "The Gymmawys Community",
+    "description": "WITH GYMMAWY, YOU’LL BE PART OF A COMMUNITY <br> THAT NOT ONLY MOTIVATES YOU BUT ALSO <br> SUPPORTS YOU IN BECOMING THE BEST VERSION OF <br> YOURSELF!",
+    "cards": [
+      {
+        "title": "Complete lifestyle development",
+        "description": "It helps you improve your lifestyle by building beneficial habits and making the best use of your youth!"
+      },
+      {
+        "title": "Programs For Actual Results",
+        "description": "The programs are carefully designed by the expert Gymmawy team to suit your lifestyle and help us reach the goal in the shortest time possible!"
+      },
+      {
+        "title": "Join the Gymmawy community",
+        "description": "Joining the Gymmawy community. A community where we all share one goal! To become the best version of ourselves and support each other in achieving our goals. This is the Gymmawy community."
+      }
+    ]
+  },
+  "membership": {
+    "title": "Programs",
+    "features": [
+      {
+        "title": "Diet Plan",
+        "description": "A calorie-counted diet plan, precisely designed based on your goals, available food options, and the foods you love, created by the expert Gymmawy team."
+      },
+      {
+        "title": "Workout Program",
+        "description": "A workout program designed by the expert Gymmawy team to achieve the best results and help you reach your dream body in the shortest time possible."
+      },
+      {
+        "title": "Unlock gymmawy app Features!",
+        "description": "Your diet plan, training program, weight tracking, and the Gymmawy community—all of this and more will be available on the Gymmawy app once you subscribe to online coaching!"
+      }
+    ]
+  },
+  "results": "Success Stories",
+  "packages": {
+    "title": "Choose package",
+    "choosePlan": "Choose Plan",
+    "items": [
+      {
+        "crown": "GYMMAWY'S CHALLENGE",
+        "name": "6 Weeks Challenge",
+        "price": "1999 L.E",
+        "tagline": "A 6-week challenge to transform your body and life !",
+        "duration": "6 Weeks + 6 Weeks",
+        "features": [
+          "We’re committing to the *Gymmawy Routine* for the next 6 weeks — waking up early, reading Quran, training, and building tons of healthy habits. The goal? To become the *best version of ourselves* in these coming 6 weeks!",
+          "A comprehensive workout program , that you can do at the gym or even at home! Designed to match your current fitness level and ensure you break all limits to become the best version of yourself .",
+          "Follow-up by our team of nutritionists, and certified trainers will guide you step by step to achieve the best results .",
+          "A 100% personalized meal plan, designed based on your goal, weight, and body type, to help you achieve the best results easily and quickly!",
+          "Full access to all the features of GYMMAWY app, with the ability to log your workout weights, track your meal plan, and follow your training program directly from the app."
+        ]
+      },
+      {
+        "name": "Gymmawyia package",
+        "price": "5280 L.E",
+        "tagline": "For every Gymmawy who decided to improve",
+        "duration": "6 Months + 6 Months",
+        "features": [
+          "A comprehensive workout program , that you can do at the gym or even at home! Designed to match your current fitness level and ensure you break all limits to become the best version of yourself .",
+          "Follow-up by our team of nutritionists, and certified trainers will guide you step by step to achieve the best results .",
+          "A 100% personalized meal plan, designed based on your goal, weight, and body type, to help you achieve the best results easily and quickly!",
+          "Full access to all the features of GYMMAWY app, with the ability to log your workout weights, track your meal plan, and follow your training program directly from the app."
+        ]
+      },
+      {
+        "name": "Gymmawy package",
+        "price": "3300 L.E",
+        "tagline": "For every Gymmawy beginning his gym journey",
+        "duration": "3 Months + 3 Months",
+        "features": [
+          "A comprehensive workout program , that you can do at the gym or even at home! Designed to match your current fitness level and ensure you break all limits to become the best version of yourself .",
+          "Follow-up by our team of nutritionists, and certified trainers will guide you step by step to achieve the best results .",
+          "A 100% personalized meal plan, designed based on your goal, weight, and body type, to help you achieve the best results easily and quickly!",
+          "Full access to all the features of GYMMAWY app, with the ability to log your workout weights, track your meal plan, and follow your training program directly from the app."
+        ]
+      },
+      {
+        "name": "Loyal Gymmawy",
+        "price": "9920 L.E",
+        "tagline": "For the loyals who decided to FULLY achieve their goals",
+        "duration": "12 Months + 12 Months",
+        "features": [
+          "A comprehensive workout program , that you can do at the gym or even at home! Designed to match your current fitness level and ensure you break all limits to become the best version of yourself .",
+          "Follow-up by our team of nutritionists, and certified trainers will guide you step by step to achieve the best results .",
+          "A 100% personalized meal plan, designed based on your goal, weight, and body type, to help you achieve the best results easily and quickly!",
+          "Full access to all the features of GYMMAWY app, with the ability to log your workout weights, track your meal plan, and follow your training program directly from the app."
+        ]
+      }
+    ]
+  },
+  "plan": {
+    "title": "The Plan",
+    "phases": [
+      {
+        "title": "Phase one:",
+        "description": "Make the decision to improve your body and health."
+      },
+      {
+        "title": "Phase two:",
+        "description": "Join the Gymmawy community and choose the package that suits you (I recommend the 6-week challenge package) and subscribe to transform your body and health!"
+      },
+      {
+        "title": "Phase three:",
+        "description": "Trust in Allah, stay committed, and leave the rest to the Gymmawy's Team !"
+      },
+      {
+        "title": "Phase four:",
+        "description": "After subscribing, you’ll be contacted by the Gymmawy team, who will start designing your programs, and you’ll join the Gymmawy community!"
+      }
+    ]
+  },
+  "partners": {
+    "title": "Our Partners",
+    "subtitle": "PROUD OF EACH OF OUR PARTNERS"
+  },
+  "faq": {
+    "title": "FAQ",
+    "subtitle": "ANY QUESTION WE GOT YOU",
+    "questions": [
+      "If I subscribe and don't see results, is there a guarantee?",
+      "I'm currently facing financial difficulties, is there a solution?",
+      "After payment, what should I do?",
+      "How is the follow-up process?"
+    ],
+    "answers": [
+      "Yes! With the Gymmawy Package guarantee, if you subscribe to the 3-month package, follow the programs throughout the subscription period, and adhere to the instructions but still don't see results or notice any difference, you will receive a full refund.",
+      "Your Gymmawy brother has got you covered! Installments are available through Tabby in 4 payments.",
+      "Within 24 hours, Gymmawy's team will contact you to confirm your subscription. They will then collect the required information and details to accurately design your programs!(Friday is Off)",
+      "The follow-up is done through the Gymmawy team on WhatsApp under the supervision of Coach Youssef Gymmawy."
+    ]
+  },
+  "isRTL": false
+}

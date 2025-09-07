@@ -1,0 +1,716 @@
+import apiClient from './apiClient';
+
+class AdminApiService {
+  // Generic API call method using the new API client
+  async apiCall(endpoint, options = {}) {
+    try {
+      const method = options.method || 'GET';
+      let data;
+      
+      if (method === 'GET') {
+        data = await apiClient.get(endpoint, options);
+      } else if (method === 'POST') {
+        // Handle FormData specially - don't parse it as JSON
+        if (options.body instanceof FormData) {
+          data = await apiClient.request(endpoint, { ...options, method: 'POST' });
+        } else {
+          const body = options.body ? (typeof options.body === 'string' ? JSON.parse(options.body) : options.body) : {};
+          data = await apiClient.post(endpoint, body, options);
+        }
+      } else if (method === 'PUT') {
+        const body = options.body ? (typeof options.body === 'string' ? JSON.parse(options.body) : options.body) : {};
+        data = await apiClient.put(endpoint, body, options);
+      } else if (method === 'PATCH') {
+        const body = options.body ? (typeof options.body === 'string' ? JSON.parse(options.body) : options.body) : {};
+        data = await apiClient.patch(endpoint, body, options);
+      } else if (method === 'DELETE') {
+        data = await apiClient.delete(endpoint, options);
+      }
+      
+      return data;
+    } catch (error) {
+      console.error(`API call failed for ${endpoint}:`, error);
+      throw error;
+    }
+  }
+
+  // ==================== USERS ====================
+  async getUsers(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/users${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getUserById(id) {
+    return this.apiCall(`/admin/users/${id}`);
+  }
+
+  async createUser(userData) {
+    return this.apiCall('/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(userData)
+    });
+  }
+
+  async updateUser(id, userData) {
+    return this.apiCall(`/admin/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(userData)
+    });
+  }
+
+  async deleteUser(id) {
+    return this.apiCall(`/admin/users/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // ==================== PRODUCTS ====================
+  async getProducts(params = {}) {
+    // Mock data since GET /products endpoint doesn't exist yet
+    return { products: [] };
+  }
+
+  async getProductById(id) {
+    return this.apiCall(`/products/${id}`);
+  }
+
+  async createProduct(productData) {
+    return this.apiCall('/products', {
+      method: 'POST',
+      body: JSON.stringify(productData)
+    });
+  }
+
+  async updateProduct(id, productData) {
+    return this.apiCall(`/products/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(productData)
+    });
+  }
+
+  async deleteProduct(id) {
+    return this.apiCall(`/products/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // ==================== CATEGORIES ====================
+  async getCategories() {
+    // Mock data since GET /categories endpoint doesn't exist yet
+    return { categories: [] };
+  }
+
+  async getCategoryById(id) {
+    return this.apiCall(`/categories/${id}`);
+  }
+
+  async createCategory(categoryData) {
+    return this.apiCall('/categories', {
+      method: 'POST',
+      body: JSON.stringify(categoryData)
+    });
+  }
+
+  async updateCategory(id, categoryData) {
+    return this.apiCall(`/categories/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(categoryData)
+    });
+  }
+
+  async deleteCategory(id) {
+    return this.apiCall(`/categories/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // ==================== ORDERS ====================
+  async getOrders(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/orders${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getOrderById(id) {
+    return this.apiCall(`/orders/${id}`);
+  }
+
+  async updateOrderStatus(id, status) {
+    return this.apiCall(`/orders/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+  }
+
+  async exportOrders(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/orders/export${queryString ? `?${queryString}` : ''}`);
+  }
+
+  // ==================== SUBSCRIPTIONS ====================
+  async getSubscriptions(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/subscriptions${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getSubscriptionById(id) {
+    return this.apiCall(`/subscriptions/${id}`);
+  }
+
+  async updateSubscription(id, subscriptionData) {
+    return this.apiCall(`/admin/subscriptions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(subscriptionData)
+    });
+  }
+
+  // ==================== SUBSCRIPTION PLANS ====================
+  async getSubscriptionPlans(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/subscription-plans${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getSubscriptionPlanById(id) {
+    return this.apiCall(`/admin/subscription-plans/${id}`);
+  }
+
+  async createSubscriptionPlan(planData) {
+    return this.apiCall('/admin/subscription-plans', {
+      method: 'POST',
+      body: JSON.stringify(planData)
+    });
+  }
+
+  async updateSubscriptionPlan(id, planData) {
+    return this.apiCall(`/admin/subscription-plans/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(planData)
+    });
+  }
+
+  async deleteSubscriptionPlan(id) {
+    return this.apiCall(`/admin/subscription-plans/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // ==================== BENEFITS ====================
+  async getBenefits() {
+    return this.apiCall('/admin/benefits');
+  }
+
+  async createBenefit(benefitData) {
+    return this.apiCall('/admin/benefits', {
+      method: 'POST',
+      body: JSON.stringify(benefitData)
+    });
+  }
+
+  async updateBenefit(id, benefitData) {
+    return this.apiCall(`/admin/benefits/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(benefitData)
+    });
+  }
+
+  async deleteBenefit(id) {
+    return this.apiCall(`/admin/benefits/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async cancelSubscription(id) {
+    return this.apiCall(`/subscriptions/${id}/cancel`, {
+      method: 'PATCH'
+    });
+  }
+
+  async exportSubscriptions(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/subscriptions/export${queryString ? `?${queryString}` : ''}`);
+  }
+
+  // ==================== PAYMENTS ====================
+  async getPayments(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/payments${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getPaymentById(id) {
+    return this.apiCall(`/payments/${id}`);
+  }
+
+  async verifyPayment(id) {
+    return this.apiCall(`/payments/${id}/verify`);
+  }
+
+  async exportPayments(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/payments/export${queryString ? `?${queryString}` : ''}`);
+  }
+
+  // ==================== LEADS ====================
+  async getLeads(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/leads${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getLeadById(id) {
+    return this.apiCall(`/admin/leads/${id}`);
+  }
+
+  async updateLeadStatus(id, status) {
+    return this.apiCall(`/admin/leads/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+  }
+
+  async deleteLead(id) {
+    return this.apiCall(`/admin/leads/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async exportLeads(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/leads/export${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getLeadsStats() {
+    return this.apiCall('/admin/leads/stats');
+  }
+
+  // ==================== COUPONS ====================
+  async getCoupons() {
+    return this.apiCall('/coupons');
+  }
+
+  async getCouponsStats() {
+    return this.apiCall('/coupons/stats');
+  }
+
+  async getCouponById(id) {
+    return this.apiCall(`/coupons/${id}`);
+  }
+
+  async createCoupon(couponData) {
+    return this.apiCall('/admin/coupons', {
+      method: 'POST',
+      body: JSON.stringify(couponData)
+    });
+  }
+
+  async updateCoupon(id, couponData) {
+    return this.apiCall(`/admin/coupons/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(couponData)
+    });
+  }
+
+  async deleteCoupon(id) {
+    return this.apiCall(`/admin/coupons/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // ==================== CMS ====================
+  async getTransformations() {
+    // Mock data since GET /cms/transformations endpoint doesn't exist yet
+    return { transformations: [] };
+  }
+
+  async getTransformationById(id) {
+    return this.apiCall(`/cms/transformations/${id}`);
+  }
+
+  async createTransformation(transformationData) {
+    return this.apiCall('/cms/transformations', {
+      method: 'POST',
+      body: JSON.stringify(transformationData)
+    });
+  }
+
+  async updateTransformation(id, transformationData) {
+    return this.apiCall(`/cms/transformations/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(transformationData)
+    });
+  }
+
+  async deleteTransformation(id) {
+    return this.apiCall(`/cms/transformations/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async getVideos() {
+    // Mock data since GET /cms/videos endpoint doesn't exist yet
+    return { videos: [] };
+  }
+
+  async getVideoById(id) {
+    return this.apiCall(`/cms/videos/${id}`);
+  }
+
+  async createVideo(videoData) {
+    return this.apiCall('/cms/videos', {
+      method: 'POST',
+      body: JSON.stringify(videoData)
+    });
+  }
+
+
+  async deleteVideo(id) {
+    return this.apiCall(`/cms/videos/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // ==================== SHIPPING ====================
+  async trackShipment(trackingNumber) {
+    return this.apiCall(`/shipping/track/${trackingNumber}`);
+  }
+
+  async generateShippingLabel(orderId, labelData) {
+    return this.apiCall('/shipping/label', {
+      method: 'POST',
+      body: JSON.stringify({ orderId, ...labelData })
+    });
+  }
+
+  async getShippingInfo(orderId) {
+    return this.apiCall(`/shipping/order/${orderId}`);
+  }
+
+  // ==================== REFERRALS ====================
+  async getReferralCodes() {
+    return this.apiCall('/referral/my-codes');
+  }
+
+  async validateReferralCode(code) {
+    return this.apiCall(`/referral/validate/${code}`);
+  }
+
+  async deactivateReferralCode(code) {
+    return this.apiCall(`/referral/${code}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async getReferralAnalytics() {
+    return this.apiCall('/referral/analytics');
+  }
+
+  async getReferralRewards() {
+    return this.apiCall('/referral/rewards');
+  }
+
+  async generateReferralCode(userId) {
+    return this.apiCall('/referral/generate', {
+      method: 'POST',
+      body: JSON.stringify({ userId })
+    });
+  }
+
+  async useReferralCode(code, userId) {
+    return this.apiCall('/referral/use', {
+      method: 'POST',
+      body: JSON.stringify({ code, userId })
+    });
+  }
+
+  // ==================== SYSTEM HEALTH ====================
+  async getSystemHealth() {
+    return this.apiCall('/health');
+  }
+
+  // ==================== DASHBOARD ANALYTICS ====================
+  async getDashboardStats() {
+    return this.apiCall('/admin/dashboard');
+  }
+
+  async getOrdersByStatus() {
+    return this.apiCall('/admin/orders/grouped-by-status');
+  }
+
+  async getSubscriptionsByPlan() {
+    return this.apiCall('/admin/subscriptions/grouped-by-plan');
+  }
+
+  async getSubscriptionStats() {
+    return this.apiCall('/admin/subscriptions/stats');
+  }
+
+  // ==================== DASHBOARD ANALYTICS ====================
+  async getTrendData() {
+    return this.apiCall('/admin/analytics/trends');
+  }
+
+  async getTopSellingData() {
+    return this.apiCall('/admin/analytics/top-selling');
+  }
+
+  async getRecentActivity() {
+    return this.apiCall('/admin/analytics/recent-activity');
+  }
+
+  // ==================== PROGRAMMES ====================
+  async getProgrammes(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/programmes${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getProgrammeById(id) {
+    return this.apiCall(`/admin/programmes/${id}`);
+  }
+
+  async createProgramme(programmeData) {
+    return this.apiCall('/admin/programmes', {
+      method: 'POST',
+      body: JSON.stringify(programmeData)
+    });
+  }
+
+  async updateProgramme(id, programmeData) {
+    return this.apiCall(`/admin/programmes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(programmeData)
+    });
+  }
+
+  async deleteProgramme(id) {
+    return this.apiCall(`/admin/programmes/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // ==================== PROGRAMME PURCHASES ====================
+  async getProgrammePurchases(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/programmes/purchases${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getProgrammePurchaseById(id) {
+    return this.apiCall(`/admin/programmes/purchases/${id}`);
+  }
+
+  async createProgrammePurchase(purchaseData) {
+    return this.apiCall('/admin/programmes/purchases', {
+      method: 'POST',
+      body: JSON.stringify(purchaseData)
+    });
+  }
+
+  async updateProgrammePurchase(id, purchaseData) {
+    return this.apiCall(`/admin/programmes/purchases/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(purchaseData)
+    });
+  }
+
+  async deleteProgrammePurchase(id) {
+    return this.apiCall(`/admin/programmes/purchases/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // ==================== PROGRAMME STATISTICS ====================
+  async getProgrammeStats() {
+    return this.apiCall('/admin/programmes/stats');
+  }
+
+  async getRevenueOverTime(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/payments/revenue-over-time${queryString ? `?${queryString}` : ''}`);
+  }
+
+  // ==================== COUPONS ====================
+  async getCoupons(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/coupons${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getCouponById(id) {
+    return this.apiCall(`/admin/coupons/${id}`);
+  }
+
+  async createCoupon(couponData) {
+    return this.apiCall('/admin/coupons', {
+      method: 'POST',
+      body: JSON.stringify(couponData)
+    });
+  }
+
+  async updateCoupon(id, couponData) {
+    return this.apiCall(`/admin/coupons/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(couponData)
+    });
+  }
+
+  async deleteCoupon(id) {
+    return this.apiCall(`/admin/coupons/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // ==================== CMS - VIDEOS ====================
+  async getVideos(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/cms/videos${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getVideoById(id) {
+    return this.apiCall(`/admin/cms/videos/${id}`);
+  }
+
+  async createVideo(videoData) {
+    return this.apiCall('/admin/cms/videos', {
+      method: 'POST',
+      body: JSON.stringify(videoData)
+    });
+  }
+
+
+  async deleteVideo(id) {
+    return this.apiCall(`/admin/cms/videos/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // ==================== UPLOADS ====================
+  async uploadImage(file, module = 'general') {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('module', module);
+    
+    return this.apiCall('/images/upload', {
+      method: 'POST',
+      body: formData
+      // No headers - let browser set Content-Type for FormData
+      // Authorization will be added by apiCall method
+    });
+  }
+
+  async uploadVideo(file, module = 'general') {
+    const formData = new FormData();
+    formData.append('video', file);
+    formData.append('module', module);
+    
+    return this.apiCall('/videos/upload', {
+      method: 'POST',
+      body: formData
+      // No headers - let browser set Content-Type for FormData
+      // Authorization will be added by apiCall method
+    });
+  }
+
+  // ==================== CMS - TRANSFORMATIONS ====================
+  async getTransformations(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/transformations${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getTransformationById(id) {
+    return this.apiCall(`/admin/transformations/${id}`);
+  }
+
+  async createTransformation(transformationData) {
+    return this.apiCall('/admin/transformations', {
+      method: 'POST',
+      body: JSON.stringify(transformationData)
+    });
+  }
+
+  async updateTransformation(id, transformationData) {
+    return this.apiCall(`/admin/transformations/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(transformationData)
+    });
+  }
+
+  async deleteTransformation(id) {
+    return this.apiCall(`/admin/transformations/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // ==================== REFERRALS ====================
+  async getReferralStats() {
+    return this.apiCall('/admin/referrals/stats');
+  }
+
+  async getReferralCodes(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/referrals/codes${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getReferralRewards(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/referrals/rewards${queryString ? `?${queryString}` : ''}`);
+  }
+
+
+  // ==================== CMS ====================
+  async getTransformations(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/cms/transformations${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getTransformationById(id) {
+    return this.apiCall(`/admin/cms/transformations/${id}`);
+  }
+
+  async createTransformation(transformationData) {
+    return this.apiCall('/admin/cms/transformations', {
+      method: 'POST',
+      body: JSON.stringify(transformationData)
+    });
+  }
+
+  async updateTransformation(id, transformationData) {
+    return this.apiCall(`/admin/cms/transformations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(transformationData)
+    });
+  }
+
+  async deleteTransformation(id) {
+    return this.apiCall(`/admin/cms/transformations/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async getVideos(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/cms/videos${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getVideoById(id) {
+    return this.apiCall(`/admin/cms/videos/${id}`);
+  }
+
+  async createVideo(videoData) {
+    return this.apiCall('/admin/cms/videos', {
+      method: 'POST',
+      body: JSON.stringify(videoData)
+    });
+  }
+
+  async updateVideo(id, videoData) {
+    return this.apiCall(`/admin/cms/videos/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(videoData)
+    });
+  }
+
+  async deleteVideo(id) {
+    return this.apiCall(`/admin/cms/videos/${id}`, {
+      method: 'DELETE'
+    });
+  }
+}
+
+// Create and export a singleton instance
+const adminApiService = new AdminApiService();
+export default adminApiService;
