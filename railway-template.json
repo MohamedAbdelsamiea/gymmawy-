@@ -1,0 +1,35 @@
+{
+  "name": "Gymmawy PERN Stack",
+  "description": "A comprehensive fitness platform with user management, programme purchases, subscriptions, and admin dashboard",
+  "services": [
+    {
+      "name": "gymmawy-backend",
+      "source": {
+        "repo": "https://github.com/yourusername/gymmawy",
+        "rootDirectory": "gymmawy-backend"
+      },
+      "variables": {
+        "NODE_ENV": "production",
+        "PORT": "3000"
+      }
+    },
+    {
+      "name": "gymmawy-frontend",
+      "source": {
+        "repo": "https://github.com/yourusername/gymmawy",
+        "rootDirectory": "gymmawy-frontend"
+      },
+      "variables": {
+        "REACT_APP_ENVIRONMENT": "production"
+      }
+    },
+    {
+      "name": "gymmawy-db",
+      "image": "postgres:15",
+      "variables": {
+        "POSTGRES_DB": "gymmawy",
+        "POSTGRES_USER": "gymmawy_user"
+      }
+    }
+  ]
+}
