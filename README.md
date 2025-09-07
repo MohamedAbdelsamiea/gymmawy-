@@ -68,6 +68,35 @@ A comprehensive PERN (PostgreSQL, Express, React, Node.js) stack fitness platfor
    - Backend API: http://localhost:3000
    - Admin Dashboard: http://localhost:5173/dashboard
 
+## 🌐 Expose to Internet with Local Tunnel
+
+To make your app accessible worldwide:
+
+1. **Install local tunnel**:
+   ```bash
+   npm install -g localtunnel
+   ```
+
+2. **Start your services** (follow steps above)
+
+3. **Create tunnels**:
+   ```bash
+   # Backend tunnel
+   ./tunnel-backend.sh
+   
+   # Frontend tunnel (new terminal)
+   ./tunnel-frontend.sh
+   ```
+
+4. **Update environment**:
+   ```bash
+   ./update-tunnel-env.sh
+   ```
+
+5. **Restart services** and access via tunnel URLs!
+
+**See [Local Tunnel Guide](LOCAL_TUNNEL_GUIDE.md) for detailed instructions.**
+
 ## 📁 Project Structure
 
 ```
