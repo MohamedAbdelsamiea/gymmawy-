@@ -21,7 +21,7 @@ A comprehensive PERN (PostgreSQL, Express, React, Node.js) stack fitness platfor
 - PostgreSQL (v13 or higher)
 - npm or yarn
 
-### Local Development
+### Installation
 
 1. **Clone the repository**
    ```bash
@@ -67,24 +67,6 @@ A comprehensive PERN (PostgreSQL, Express, React, Node.js) stack fitness platfor
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:3000
    - Admin Dashboard: http://localhost:5173/dashboard
-
-### 🚀 Deploy on Replit
-
-[![Run on Replit](https://replit.com/badge/github/MohamedAbdelsamiea/gymmawy-)](https://replit.com/github/MohamedAbdelsamiea/gymmawy-)
-
-**Quick Deploy:**
-1. Click the "Run on Replit" button above
-2. Wait for the setup to complete
-3. Start PostgreSQL in Replit
-4. Run `./setup-replit.sh`
-5. Update environment variables with your Replit URL
-6. Run `npm run dev`
-
-**Manual Deploy:**
-1. Go to [Replit](https://replit.com)
-2. Create new Repl → Import from GitHub
-3. Enter: `https://github.com/MohamedAbdelsamiea/gymmawy-`
-4. Follow the [Replit Deployment Guide](REPLIT_DEPLOYMENT_GUIDE.md)
 
 ## 📁 Project Structure
 
