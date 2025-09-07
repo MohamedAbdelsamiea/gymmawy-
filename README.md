@@ -68,51 +68,6 @@ A comprehensive PERN (PostgreSQL, Express, React, Node.js) stack fitness platfor
    - Backend API: http://localhost:3000
    - Admin Dashboard: http://localhost:5173/dashboard
 
-## 🚀 Deploy on Railway
-
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/your-template-id)
-
-### Manual Railway Deployment
-
-1. **Fork this repository**
-2. **Connect to Railway**
-   - Go to [Railway](https://railway.app)
-   - Click "New Project" → "Deploy from GitHub repo"
-   - Select your forked repository
-
-3. **Add PostgreSQL Database**
-   - Click "New" → "Database" → "PostgreSQL"
-   - Railway will automatically provide `DATABASE_URL`
-
-4. **Configure Environment Variables**
-   - Go to your backend service settings
-   - Add these variables:
-     ```
-     DATABASE_URL=<from PostgreSQL service>
-     JWT_SECRET=<generate a secure secret>
-     CORS_ORIGIN=<your frontend URL>
-     NODE_ENV=production
-     ```
-
-5. **Deploy Frontend**
-   - Add another service for frontend
-   - Set root directory to `gymmawy-frontend`
-   - Add environment variable:
-     ```
-     REACT_APP_API_URL=<your backend URL>
-     ```
-
-6. **Import Data (Optional)**
-   - Use Railway's terminal feature
-   - Run: `npm run import-data`
-
-### Automated Deployment
-
-```bash
-# Run the deployment script
-./deploy-to-railway.sh
-```
-
 ## 📁 Project Structure
 
 ```
@@ -124,18 +79,14 @@ gymmawy/
 │   │   ├── utils/           # Utility functions
 │   │   └── server.js        # Server entry point
 │   ├── prisma/              # Database schema and migrations
-│   ├── scripts/             # Migration and utility scripts
-│   └── railway.json         # Railway configuration
+│   └── scripts/             # Migration and utility scripts
 ├── gymmawy-frontend/         # React.js frontend
 │   ├── src/
 │   │   ├── components/      # Reusable components
 │   │   ├── pages/          # Page components
 │   │   ├── services/       # API services
 │   │   └── utils/          # Utility functions
-│   └── railway.json         # Railway configuration
-├── railway.json             # Root Railway configuration
-├── setup-env.sh            # Environment setup script
-└── deploy-to-railway.sh    # Deployment script
+└── setup-env.sh            # Environment setup script
 ```
 
 ## 🛠️ Technology Stack
@@ -164,7 +115,7 @@ npm run dev          # Start development server
 npm run start        # Start production server
 npm run export-data  # Export database data
 npm run import-data  # Import database data
-npm run migrate-to-railway  # Run Railway migration
+npm run migrate-to-render  # Run Render migration
 ```
 
 ### Frontend
@@ -218,13 +169,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you encounter any issues or have questions:
 
-1. Check the [Railway Deployment Guide](RAILWAY_DEPLOYMENT_GUIDE.md)
-2. Review the [troubleshooting section](RAILWAY_DEPLOYMENT_GUIDE.md#troubleshooting)
+1. Check the troubleshooting section
+2. Review the documentation
 3. Open an issue on GitHub
 
 ## 🙏 Acknowledgments
 
-- [Railway](https://railway.app) for hosting
 - [Prisma](https://prisma.io) for database management
 - [React](https://reactjs.org) for the frontend framework
 - [Tailwind CSS](https://tailwindcss.com) for styling
