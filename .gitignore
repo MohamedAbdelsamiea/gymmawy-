@@ -97,10 +97,6 @@ Thumbs.db
 *.sqlite
 *.db
 
-# Uploads
-uploads/
-public/uploads/
-
 # Data exports (keep for deployment)
 data-exports/
 
