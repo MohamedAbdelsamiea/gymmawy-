@@ -11,14 +11,14 @@ export function useLocation() {
     currency: 'EGP',
     currencySymbol: 'ج.م',
     loading: true,
-    error: null
+    error: null,
   });
 
   useEffect(() => {
     detectLocation();
   }, []);
 
-  const detectLocation = async () => {
+  const detectLocation = async() => {
     try {
       // Try IP-based detection first (faster and more reliable)
       const ipResponse = await fetch('https://ipapi.co/json/');
@@ -34,7 +34,7 @@ export function useLocation() {
           currency: countryInfo.currency,
           currencySymbol: countryInfo.currencySymbol,
           loading: false,
-          error: null
+          error: null,
         });
         
         // Store in localStorage for future use
@@ -43,7 +43,7 @@ export function useLocation() {
           countryName: ipData.country_name || countryInfo.countryName,
           currency: countryInfo.currency,
           currencySymbol: countryInfo.currencySymbol,
-          detectedAt: new Date().toISOString()
+          detectedAt: new Date().toISOString(),
         }));
         
         return;
@@ -55,11 +55,11 @@ export function useLocation() {
     // Fallback to browser geolocation
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        async (position) => {
+        async(position) => {
           try {
             const { latitude, longitude } = position.coords;
             const response = await fetch(
-              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
             );
             const data = await response.json();
             
@@ -71,7 +71,7 @@ export function useLocation() {
                 currency: countryInfo.currency,
                 currencySymbol: countryInfo.currencySymbol,
                 loading: false,
-                error: null
+                error: null,
               });
             } else {
               setDefaultLocation();
@@ -87,8 +87,8 @@ export function useLocation() {
         },
         {
           timeout: 10000,
-          enableHighAccuracy: false
-        }
+          enableHighAccuracy: false,
+        },
       );
     } else {
       setDefaultLocation();
@@ -102,7 +102,7 @@ export function useLocation() {
       currency: 'EGP',
       currencySymbol: 'ج.م',
       loading: false,
-      error: 'Location detection failed, using default'
+      error: 'Location detection failed, using default',
     });
   };
 
@@ -125,7 +125,7 @@ export function useLocation() {
       'IQ': { countryName: 'Iraq', currency: 'IQD', currencySymbol: 'د.ع' },
       'SY': { countryName: 'Syria', currency: 'SYP', currencySymbol: 'ل.س' },
       'YE': { countryName: 'Yemen', currency: 'YER', currencySymbol: 'ر.ي' },
-      'PS': { countryName: 'Palestine', currency: 'ILS', currencySymbol: '₪' }
+      'PS': { countryName: 'Palestine', currency: 'ILS', currencySymbol: '₪' },
     };
 
     return countryMap[countryCode] || countryMap['EG'];
@@ -139,7 +139,7 @@ export function useLocation() {
       currency: countryInfo.currency,
       currencySymbol: countryInfo.currencySymbol,
       loading: false,
-      error: null
+      error: null,
     });
     
     // Store in localStorage
@@ -148,7 +148,7 @@ export function useLocation() {
       countryName: countryInfo.countryName,
       currency: countryInfo.currency,
       currencySymbol: countryInfo.currencySymbol,
-      detectedAt: new Date().toISOString()
+      detectedAt: new Date().toISOString(),
     }));
   };
 
@@ -167,7 +167,7 @@ export function useLocation() {
           setLocation({
             ...parsed,
             loading: false,
-            error: null
+            error: null,
           });
           return;
         }
@@ -180,6 +180,6 @@ export function useLocation() {
   return {
     ...location,
     setLocation: setLocationManually,
-    refreshLocation: detectLocation
+    refreshLocation: detectLocation,
   };
 }

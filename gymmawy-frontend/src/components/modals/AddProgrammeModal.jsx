@@ -1,18 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import adminApiService from '../../services/adminApiService';
-import ImageUpload from '../common/ImageUpload';
+import AdminImageUpload from '../common/AdminImageUpload';
+import { useToast } from '../../contexts/ToastContext';
 
 const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }) => {
+  const { showSuccess, showError } = useToast();
   const [formData, setFormData] = useState({
     name: { en: '', ar: '' },
-    description: { en: '', ar: '' },
     imageUrl: '',
-    priceEGP: '',
-    priceSAR: '',
-    discount: 0,
+    discountPercentage: 0,
     loyaltyPointsAwarded: 0,
-    loyaltyPointsRequired: 0
+    loyaltyPointsRequired: 0,
+  });
+  
+  // Pricing data for all currencies
+  const [pricing, setPricing] = useState({
+    EGP: '',
+    SAR: '',
+    AED: '',
+    USD: ''
   });
   const [imageUrl, setImageUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,34 +27,60 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
   const [enableLoyaltyPoints, setEnableLoyaltyPoints] = useState(false);
   const [errorField, setErrorField] = useState(null);
 
+  // Effect to initialize form data when modal opens
   useEffect(() => {
     if (isOpen) {
       if (isEdit && editData) {
         // Populate form with edit data
         setFormData({
           name: editData.name || { en: '', ar: '' },
-          description: editData.description || { en: '', ar: '' },
           imageUrl: editData.imageUrl || '',
-          priceEGP: editData.priceEGP || '',
-          priceSAR: editData.priceSAR || '',
-          discount: editData.discount || 0,
+          discountPercentage: editData.discountPercentage || 0,
           loyaltyPointsAwarded: editData.loyaltyPointsAwarded || 0,
-          loyaltyPointsRequired: editData.loyaltyPointsRequired || 0
+          loyaltyPointsRequired: editData.loyaltyPointsRequired || 0,
         });
+        
+        // Extract pricing from editData.prices array or fallback to old structure
+        const programmePrices = {};
+        if (editData.prices && Array.isArray(editData.prices)) {
+          editData.prices.forEach(price => {
+            programmePrices[price.currency] = Number(price.amount).toString();
+          });
+        } else {
+          // Fallback to old structure for backward compatibility
+          programmePrices.EGP = editData.priceEGP?.toString() || '';
+          programmePrices.SAR = editData.priceSAR?.toString() || '';
+          programmePrices.AED = editData.priceAED?.toString() || '';
+          programmePrices.USD = editData.priceUSD?.toString() || '';
+        }
+        
+        setPricing({
+          EGP: programmePrices.EGP || '',
+          SAR: programmePrices.SAR || '',
+          AED: programmePrices.AED || '',
+          USD: programmePrices.USD || ''
+        });
+        
         setEnableLoyaltyPoints((editData.loyaltyPointsAwarded > 0) || (editData.loyaltyPointsRequired > 0));
         setImageUrl(editData.imageUrl || '');
       } else {
         // Reset form when modal opens for new programme
         setFormData({
           name: { en: '', ar: '' },
-          description: { en: '', ar: '' },
           imageUrl: '',
-          priceEGP: '',
-          priceSAR: '',
-          discount: 0,
+          discountPercentage: 0,
           loyaltyPointsAwarded: 0,
-          loyaltyPointsRequired: 0
+          loyaltyPointsRequired: 0,
         });
+        
+        // Reset pricing
+        setPricing({
+          EGP: '',
+          SAR: '',
+          AED: '',
+          USD: ''
+        });
+        
         setEnableLoyaltyPoints(false);
         setImageUrl('');
       }
@@ -55,13 +88,67 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
       setError(null);
       setErrorField(null);
     }
-  }, [isOpen, isEdit, editData]);
+  }, [isOpen, isEdit]); // Removed editData from dependencies
+
+  // Separate effect to handle editData changes without resetting form
+  useEffect(() => {
+    if (isOpen && isEdit && editData) {
+      const newFormData = {
+        name: editData.name || { en: '', ar: '' },
+        imageUrl: editData.imageUrl || '',
+        discountPercentage: editData.discountPercentage || 0,
+        loyaltyPointsAwarded: editData.loyaltyPointsAwarded || 0,
+        loyaltyPointsRequired: editData.loyaltyPointsRequired || 0,
+      };
+      
+      // Only update if the data has actually changed
+      setFormData(prev => {
+        const hasChanged = JSON.stringify(prev) !== JSON.stringify(newFormData);
+        return hasChanged ? newFormData : prev;
+      });
+      
+      // Extract pricing from editData.prices array or fallback to old structure
+      const programmePrices = {};
+      if (editData.prices && Array.isArray(editData.prices)) {
+        editData.prices.forEach(price => {
+          programmePrices[price.currency] = Number(price.amount).toString();
+        });
+      } else {
+        // Fallback to old structure for backward compatibility
+        programmePrices.EGP = editData.priceEGP?.toString() || '';
+        programmePrices.SAR = editData.priceSAR?.toString() || '';
+        programmePrices.AED = editData.priceAED?.toString() || '';
+        programmePrices.USD = editData.priceUSD?.toString() || '';
+      }
+      
+      const newPricing = {
+        EGP: programmePrices.EGP || '',
+        SAR: programmePrices.SAR || '',
+        AED: programmePrices.AED || '',
+        USD: programmePrices.USD || ''
+      };
+      
+      // Only update pricing if it has changed
+      setPricing(prev => {
+        const hasChanged = JSON.stringify(prev) !== JSON.stringify(newPricing);
+        return hasChanged ? newPricing : prev;
+      });
+      
+      // Update loyalty points state only if it's different
+      const newEnableLoyaltyPoints = (editData.loyaltyPointsAwarded > 0) || (editData.loyaltyPointsRequired > 0);
+      setEnableLoyaltyPoints(prev => prev !== newEnableLoyaltyPoints ? newEnableLoyaltyPoints : prev);
+      
+      // Update image URL only if it's different
+      const newImageUrl = editData.imageUrl || '';
+      setImageUrl(prev => prev !== newImageUrl ? newImageUrl : prev);
+    }
+  }, [editData]); // Only depend on editData
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? parseFloat(value) || 0 : value
+      [name]: type === 'number' ? parseFloat(value) || 0 : value,
     }));
     
     // Clear error when user starts typing in the field that had an error
@@ -76,8 +163,15 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
       ...prev,
       [field]: {
         ...prev[field],
-        [language]: value
-      }
+        [language]: value,
+      },
+    }));
+  };
+
+  const handlePricingChange = (currency, value) => {
+    setPricing(prev => ({
+      ...prev,
+      [currency]: value,
     }));
   };
 
@@ -86,13 +180,13 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
     if (element) {
       element.scrollIntoView({ 
         behavior: 'smooth', 
-        block: 'center' 
+        block: 'center', 
       });
       element.focus();
     }
   };
 
-  const showError = (message, fieldName = null) => {
+  const showFormError = (message, fieldName = null) => {
     setError(message);
     setErrorField(fieldName);
     if (fieldName) {
@@ -100,7 +194,7 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -109,7 +203,19 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
     // Client-side validation for loyalty points
     if (enableLoyaltyPoints) {
       if (formData.loyaltyPointsRequired <= 0) {
-        showError('Loyalty points required must be greater than 0', 'loyaltyPointsRequired');
+        showFormError('Loyalty points required must be greater than 0', 'loyaltyPointsRequired');
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Client-side validation for pricing - all currencies are required
+    const requiredCurrencies = ['EGP', 'SAR', 'AED', 'USD'];
+    
+    for (const currency of requiredCurrencies) {
+      const amount = pricing[currency];
+      if (!amount || parseFloat(amount) <= 0) {
+        showFormError(`Price (${currency}) is required and must be greater than 0`, 'pricing');
         setLoading(false);
         return;
       }
@@ -119,20 +225,30 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
       // Extract loyalty points fields from formData to avoid spreading them
       const { loyaltyPointsAwarded, loyaltyPointsRequired, ...restFormData } = formData;
       
+      // Prepare pricing data for submission
+      const prices = [];
+      Object.entries(pricing).forEach(([currency, amount]) => {
+        if (amount && parseFloat(amount) > 0) {
+          prices.push({
+            amount: parseFloat(amount),
+            currency: currency,
+            type: 'NORMAL'
+          });
+        }
+      });
+      
       const programmeData = {
         ...restFormData,
         imageUrl: imageUrl || '', // Send empty string, backend will transform to undefined
-        // Convert string prices to numbers
-        priceEGP: parseFloat(formData.priceEGP) || 0,
-        priceSAR: parseFloat(formData.priceSAR) || 0,
+        prices: prices,
         // Only include loyalty points if enabled, otherwise set to null
         ...(enableLoyaltyPoints ? {
           loyaltyPointsAwarded: parseFloat(loyaltyPointsAwarded) || 0,
-          loyaltyPointsRequired: parseFloat(loyaltyPointsRequired) || 0
+          loyaltyPointsRequired: parseFloat(loyaltyPointsRequired) || 0,
         } : {
           loyaltyPointsAwarded: null,
-          loyaltyPointsRequired: null
-        })
+          loyaltyPointsRequired: null,
+        }),
       };
       
       
@@ -140,8 +256,10 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
 
       if (isEdit && editData) {
         await adminApiService.updateProgramme(editData.id, programmeData);
+        showSuccess('Programme updated successfully!');
       } else {
         await adminApiService.createProgramme(programmeData);
+        showSuccess('Programme created successfully!');
       }
       onSuccess();
       onClose();
@@ -152,7 +270,9 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+return null;
+}
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -215,7 +335,7 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
                 </label>
                 <input
                   type="text"
-                  value={formData.name.en}
+                  value={formData.name.en ?? ''}
                   onChange={(e) => handleBilingualInputChange('name', 'en', e.target.value)}
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
@@ -229,7 +349,7 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
                 </label>
                 <input
                   type="text"
-                  value={formData.name.ar}
+                  value={formData.name.ar ?? ''}
                   onChange={(e) => handleBilingualInputChange('name', 'ar', e.target.value)}
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
@@ -238,66 +358,74 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (English)
-                </label>
-                <textarea
-                  value={formData.description.en}
-                  onChange={(e) => handleBilingualInputChange('description', 'en', e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-                  placeholder="Enter programme description in English"
-                />
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (Arabic)
-                </label>
-                <textarea
-                  value={formData.description.ar}
-                  onChange={(e) => handleBilingualInputChange('description', 'ar', e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-                  placeholder="أدخل وصف البرنامج بالعربية"
-                  dir="rtl"
-                />
-              </div>
+              {/* Programme Pricing */}
+              <div className="space-y-4">
+                <h4 className="text-md font-medium text-gray-800">Programme Pricing</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Price (EGP) *
+                    </label>
+                    <input
+                      type="number"
+                      value={pricing.EGP ?? ''}
+                      onChange={(e) => handlePricingChange('EGP', e.target.value)}
+                      required
+                      step="0.01"
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                      placeholder="0.00"
+                    />
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price (EGP) *
-                  </label>
-                  <input
-                    type="number"
-                    name="priceEGP"
-                    value={formData.priceEGP}
-                    onChange={handleInputChange}
-                    required
-                    step="0.01"
-                    min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-                    placeholder="0.00"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Price (SAR) *
+                    </label>
+                    <input
+                      type="number"
+                      value={pricing.SAR ?? ''}
+                      onChange={(e) => handlePricingChange('SAR', e.target.value)}
+                      required
+                      step="0.01"
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                      placeholder="0.00"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price (SAR) *
-                  </label>
-                  <input
-                    type="number"
-                    name="priceSAR"
-                    value={formData.priceSAR}
-                    onChange={handleInputChange}
-                    required
-                    step="0.01"
-                    min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-                    placeholder="0.00"
-                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Price (AED) *
+                    </label>
+                    <input
+                      type="number"
+                      value={pricing.AED ?? ''}
+                      onChange={(e) => handlePricingChange('AED', e.target.value)}
+                      required
+                      step="0.01"
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Price (USD) *
+                    </label>
+                    <input
+                      type="number"
+                      value={pricing.USD ?? ''}
+                      onChange={(e) => handlePricingChange('USD', e.target.value)}
+                      required
+                      step="0.01"
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                      placeholder="0.00"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -307,8 +435,8 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
                 </label>
                 <input
                   type="number"
-                  name="discount"
-                  value={formData.discount}
+                  name="discountPercentage"
+                  value={formData.discountPercentage ?? ''}
                   onChange={handleInputChange}
                   min="0"
                   max="100"
@@ -321,13 +449,13 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
             {/* Image Upload */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900">Programme Image</h3>
-              <ImageUpload
-                value={imageUrl}
-                onChange={setImageUrl}
-                module="programmes"
-                showUrlInput={true}
-                required={false}
-                maxSize={5}
+              <AdminImageUpload
+                initialImage={imageUrl ? { url: imageUrl } : null}
+                onImageUpload={(uploadedImage) => setImageUrl(uploadedImage.url)}
+                onImageRemove={() => setImageUrl('')}
+                maxSize={5 * 1024 * 1024}
+                showPreview={true}
+                showDetails={true}
               />
             </div>
           </div>
@@ -346,14 +474,14 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
                       setFormData(prev => ({
                         ...prev,
                         loyaltyPointsAwarded: 0,
-                        loyaltyPointsRequired: 0
+                        loyaltyPointsRequired: 0,
                       }));
                     } else {
                       // When enabling loyalty points, set minimum values
                       setFormData(prev => ({
                         ...prev,
                         loyaltyPointsAwarded: prev.loyaltyPointsAwarded || 0,
-                        loyaltyPointsRequired: prev.loyaltyPointsRequired || 1
+                        loyaltyPointsRequired: prev.loyaltyPointsRequired || 1,
                       }));
                     }
                   }}
@@ -372,7 +500,7 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
                   <input
                     type="number"
                     name="loyaltyPointsAwarded"
-                    value={formData.loyaltyPointsAwarded}
+                    value={formData.loyaltyPointsAwarded ?? ''}
                     onChange={handleInputChange}
                     min="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
@@ -386,7 +514,7 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
                   <input
                     type="number"
                     name="loyaltyPointsRequired"
-                    value={formData.loyaltyPointsRequired}
+                    value={formData.loyaltyPointsRequired ?? ''}
                     onChange={handleInputChange}
                     min="1"
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent ${

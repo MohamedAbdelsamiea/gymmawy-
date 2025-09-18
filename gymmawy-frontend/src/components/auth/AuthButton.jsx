@@ -36,7 +36,7 @@ const AuthButton = ({
       bg-transparent hover:bg-gymmawy-primary 
       text-gymmawy-primary border-2 border-gymmawy-primary
       hover:text-white focus:ring-gymmawy-primary
-    `
+    `,
   };
 
   return (

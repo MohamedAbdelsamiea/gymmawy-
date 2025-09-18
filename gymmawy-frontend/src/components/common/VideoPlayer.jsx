@@ -10,7 +10,8 @@ const VideoPlayer = ({
   className = '',
   showControls = true,
   autoPlay = false,
-  muted = false // Changed default to false for audio on by default
+  muted = false, // Changed default to false for audio on by default
+  hideIfNoVideo = false, // New prop to hide component when no video is available
 }) => {
   const { i18n } = useTranslation();
   const [isPlaying, setIsPlaying] = useState(false);
@@ -26,7 +27,9 @@ const VideoPlayer = ({
   // Video event handlers
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video) {
+return;
+}
 
     const handleTimeUpdate = () => setCurrentTime(video.currentTime);
     const handleLoadedMetadata = () => setDuration(video.duration);
@@ -53,13 +56,44 @@ const VideoPlayer = ({
     };
   }, []);
 
-  const handlePlayPause = () => {
+  const handlePlayPause = async() => {
     if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-        setShowThumbnail(false);
+      try {
+        if (isPlaying) {
+          videoRef.current.pause();
+        } else {
+          // Ensure video is loaded before playing
+          if (videoRef.current.readyState < 3) {
+            console.log('Video not ready, loading...');
+            videoRef.current.load();
+            await new Promise((resolve) => {
+              videoRef.current.addEventListener('canplay', resolve, { once: true });
+            });
+          }
+          
+          const playPromise = videoRef.current.play();
+          if (playPromise !== undefined) {
+            await playPromise;
+            setShowThumbnail(false);
+            console.log('Video started playing successfully');
+          }
+        }
+      } catch (error) {
+        console.error('Error playing video:', error);
+        // Handle autoplay restrictions
+        if (error.name === 'NotAllowedError') {
+          console.log('Autoplay blocked, user interaction required');
+          // Try to play with muted first
+          videoRef.current.muted = true;
+          setIsMuted(true);
+          try {
+            await videoRef.current.play();
+            setShowThumbnail(false);
+            console.log('Video started playing muted');
+          } catch (mutedError) {
+            console.error('Even muted play failed:', mutedError);
+          }
+        }
       }
     }
   };
@@ -91,9 +125,10 @@ const VideoPlayer = ({
     }
   };
 
-  const handleVideoClick = () => {
+  const handleVideoClick = async() => {
     if (showThumbnail) {
-      handlePlayPause();
+      console.log('Video thumbnail clicked, starting playback...');
+      await handlePlayPause();
     }
   };
 
@@ -123,6 +158,11 @@ const VideoPlayer = ({
     }
     return title || 'Video';
   };
+
+  // If hideIfNoVideo is true and no video URL is provided, don't render anything
+  if (hideIfNoVideo && !videoUrl) {
+    return null;
+  }
 
   return (
     <>
@@ -157,6 +197,19 @@ const VideoPlayer = ({
           height: 4px;
           border-radius: 2px;
         }
+        
+        /* RTL Support for slider */
+        [dir="rtl"] .slider {
+          direction: rtl;
+        }
+        
+        [dir="rtl"] .slider::-webkit-slider-thumb {
+          transform: scaleX(-1);
+        }
+        
+        [dir="rtl"] .slider::-moz-range-thumb {
+          transform: scaleX(-1);
+        }
       `}</style>
       <div 
         ref={containerRef}
@@ -171,6 +224,10 @@ const VideoPlayer = ({
         muted={isMuted}
         preload="metadata"
         playsInline
+        onLoadStart={() => console.log('Video load started')}
+        onLoadedData={() => console.log('Video data loaded')}
+        onCanPlay={() => console.log('Video can play')}
+        onError={(e) => console.error('Video error:', e)}
       >
         <source src={videoUrl} type="video/mp4" />
         Your browser does not support the video tag.
@@ -189,7 +246,7 @@ const VideoPlayer = ({
           />
           <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
             <div className="w-24 h-24 bg-transparent border-4 border-white rounded-full flex items-center justify-center hover:scale-110 transition-transform duration-300">
-              <Play size={40} className="ml-1 text-white" />
+              <Play size={40} className={`text-white ${i18n.language === 'ar' ? 'mr-1' : 'ml-1'}`} />
             </div>
           </div>
         </div>
@@ -208,14 +265,16 @@ const VideoPlayer = ({
               onChange={handleTimeSliderChange}
               className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
               style={{
-                background: `linear-gradient(to right, #8B5CF6 0%, #8B5CF6 ${(currentTime / duration) * 100}%, #4B5563 ${(currentTime / duration) * 100}%, #4B5563 100%)`
+                background: i18n.language === 'ar' 
+                  ? `linear-gradient(to left, #8B5CF6 0%, #8B5CF6 ${(currentTime / duration) * 100}%, #4B5563 ${(currentTime / duration) * 100}%, #4B5563 100%)`
+                  : `linear-gradient(to right, #8B5CF6 0%, #8B5CF6 ${(currentTime / duration) * 100}%, #4B5563 ${(currentTime / duration) * 100}%, #4B5563 100%)`,
               }}
             />
           </div>
           
           {/* Control Buttons */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+          <div className={`flex items-center justify-between ${i18n.language === 'ar' ? 'flex-row-reverse' : ''}`}>
+            <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-3' : 'space-x-3'}`}>
               <button
                 onClick={handlePlayPause}
                 className="text-white hover:text-gray-300 transition-colors"
@@ -230,11 +289,11 @@ const VideoPlayer = ({
                 {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
               </button>
               
-              <span className="text-white text-sm font-medium">{getTitle()}</span>
+              <span className={`text-white text-sm font-medium ${i18n.language === 'ar' ? 'text-right' : 'text-left'}`}>{getTitle()}</span>
             </div>
             
-            <div className="flex items-center space-x-3">
-              <span className="text-white text-sm">
+            <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-3' : 'space-x-3'}`}>
+              <span className={`text-white text-sm ${i18n.language === 'ar' ? 'text-right' : 'text-left'}`}>
                 {formatTime(currentTime)} / {formatTime(duration)}
               </span>
               

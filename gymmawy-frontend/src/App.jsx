@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { CurrencyProvider } from './contexts/CurrencyContext.jsx';
 import { AppRoutes } from './routes';
 import { ToastContainer } from './components/common/Toast';
 import i18n from './i18n/i18n';
@@ -52,13 +53,15 @@ function App() {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <AuthProvider>
-        <ToastProvider>
-          <Router>
-            <RTLHandler />
-            <AppRoutes />
-            <ToastContainer />
-          </Router>
-        </ToastProvider>
+        <CurrencyProvider>
+          <ToastProvider>
+            <Router>
+              <RTLHandler />
+              <AppRoutes />
+              <ToastContainer />
+            </Router>
+          </ToastProvider>
+        </CurrencyProvider>
       </AuthProvider>
     </Suspense>
   );

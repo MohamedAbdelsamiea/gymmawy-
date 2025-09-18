@@ -1,197 +1,58 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Eye, Download, Package, CreditCard, Play } from 'lucide-react';
-import { DataTable, StatusBadge } from '../../../components/dashboard';
+import { Link } from 'react-router-dom';
+import { Package, CreditCard, Play, ArrowRight, Plus } from 'lucide-react';
+import { StatusBadge } from '../../../components/dashboard';
 import programmeService from '../../../services/programmeService';
 import subscriptionService from '../../../services/subscriptionService';
 
-const PurchaseHistory = () => {
+const UserDashboard = () => {
   const { t } = useTranslation("dashboard");
-  const [activeTab, setActiveTab] = useState('programmes');
   const [programmes, setProgrammes] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchPurchaseHistory();
+    fetchDashboardData();
   }, []);
 
-  const fetchPurchaseHistory = async () => {
+  const fetchDashboardData = async() => {
     try {
       setLoading(true);
       setError(null);
       
-      // Fetch user's programmes
-      const programmesData = await programmeService.getUserProgrammes();
-      setProgrammes(programmesData.items || []);
+      // Fetch user's programmes and subscriptions in parallel
+      const [programmesData, subscriptionsData] = await Promise.allSettled([
+        programmeService.getUserProgrammes(),
+        subscriptionService.getUserSubscriptions(),
+      ]);
       
-      // Fetch user's subscriptions
-      const subscriptionsData = await subscriptionService.getUserSubscriptions();
-      setSubscriptions(subscriptionsData.items || []);
+      setProgrammes(programmesData.status === 'fulfilled' ? (programmesData.value.items || []) : []);
+      setSubscriptions(subscriptionsData.status === 'fulfilled' ? (subscriptionsData.value.items || []) : []);
     } catch (err) {
       setError(err.message);
-      console.error('Error fetching purchase history:', err);
+      console.error('Error fetching dashboard data:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const programmeColumns = [
-    {
-      key: 'purchaseNumber',
-      label: 'Purchase Number',
-      sortable: true,
-      render: (value) => (
-        <span className="font-medium text-gymmawy-primary">{value}</span>
-      )
-    },
-    {
-      key: 'programme',
-      label: 'Programme',
-      sortable: true,
-      render: (value) => (
-        <div className="flex items-center">
-          <Play className="h-4 w-4 mr-2 text-gymmawy-primary" />
-          <span className="font-medium">{value.name}</span>
-        </div>
-      )
-    },
-    {
-      key: 'purchasedAt',
-      label: 'Purchase Date',
-      sortable: true,
-      render: (value) => (
-        <span>{new Date(value).toLocaleDateString()}</span>
-      )
-    },
-    {
-      key: 'price',
-      label: 'Price',
-      sortable: true,
-      render: (value) => (
-        <span className="font-medium text-green-600">
-          {value} EGP
-        </span>
-      )
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      sortable: true,
-      render: (value) => (
-        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-          value === 'COMPLETE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-        }`}>
-          {value}
-        </span>
-      )
-    },
-    {
-      key: 'actions',
-      label: 'Actions',
-      render: (_, row) => (
-        <div className="flex items-center space-x-2">
-          <button className="p-1 text-gray-400 hover:text-blue-600" title="View Details">
-            <Eye className="h-4 w-4" />
-          </button>
-        </div>
-      )
-    }
-  ];
-
-  const subscriptionColumns = [
-    {
-      key: 'id',
-      label: 'Subscription ID',
-      sortable: true,
-      render: (value) => (
-        <span className="font-medium text-gymmawy-primary">{value}</span>
-      )
-    },
-    {
-      key: 'subscriptionPlan',
-      label: 'Plan',
-      sortable: true,
-      render: (value) => (
-        <div className="flex items-center">
-          <CreditCard className="h-4 w-4 mr-2 text-gymmawy-primary" />
-          <span className="font-medium">{value.name}</span>
-        </div>
-      )
-    },
-    {
-      key: 'createdAt',
-      label: 'Start Date',
-      sortable: true,
-      render: (value) => (
-        <span>{new Date(value).toLocaleDateString()}</span>
-      )
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      sortable: true,
-      render: (value) => (
-        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-          value === 'ACTIVE' ? 'bg-green-100 text-green-800' : 
-          value === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-          'bg-red-100 text-red-800'
-        }`}>
-          {value}
-        </span>
-      )
-    },
-    {
-      key: 'price',
-      label: 'Amount',
-      sortable: true,
-      render: (value) => (
-        <span className="font-medium text-green-600">
-          {value} EGP
-        </span>
-      )
-    },
-    {
-      key: 'actions',
-      label: 'Actions',
-      render: (_, row) => (
-        <div className="flex items-center space-x-2">
-          <button className="p-1 text-gray-400 hover:text-blue-600" title="View Details">
-            <Eye className="h-4 w-4" />
-          </button>
-          {row.status === 'ACTIVE' && (
-            <button className="p-1 text-gray-400 hover:text-red-600" title="Cancel Subscription">
-              <CreditCard className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-      )
-    }
-  ];
-
-  const handleExport = (data) => {
-    // Exporting purchase history data
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gymmawy-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading purchase history...</p>
-        </div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gymmawy-primary"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <div className="text-red-600 mb-4">Error loading purchase history: {error}</div>
+      <div className="text-center py-8">
+        <div className="text-red-600 mb-4">Error: {error}</div>
         <button 
-          onClick={fetchPurchaseHistory}
-          className="px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary"
+          onClick={fetchDashboardData}
+          className="px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-primary-dark"
         >
           Try Again
         </button>
@@ -200,93 +61,143 @@ const PurchaseHistory = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Purchase History</h1>
-          <p className="text-gray-600 mt-1">View your programmes and subscriptions</p>
-        </div>
-        <button className="flex items-center px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary transition-colors">
-          <Download className="h-4 w-4 mr-2" />
-          Export History
-        </button>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-600 mt-2">Manage your programmes, subscriptions, and profile</p>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('programmes')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'programmes'
-                ? 'border-gymmawy-primary text-gymmawy-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <Play className="h-4 w-4 inline mr-2" />
-            Programmes
-          </button>
-          <button
-            onClick={() => setActiveTab('subscriptions')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'subscriptions'
-                ? 'border-gymmawy-primary text-gymmawy-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <CreditCard className="h-4 w-4 inline mr-2" />
-            Subscriptions
-          </button>
-        </nav>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-2xl font-bold text-blue-600">{programmes.length}</div>
-          <div className="text-sm text-gray-600">Total Programmes</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-2xl font-bold text-green-600">
-            {programmes.reduce((sum, p) => sum + parseFloat(p.price), 0).toFixed(2)} EGP
+      {/* Programmes Section */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <Play className="h-6 w-6 text-gymmawy-primary mr-3" />
+            <h2 className="text-xl font-semibold text-gray-900">My Programmes</h2>
           </div>
-          <div className="text-sm text-gray-600">Total Spent on Programmes</div>
+          <Link 
+            to="/programmes" 
+            className="flex items-center text-gymmawy-primary hover:text-gymmawy-primary-dark font-medium"
+          >
+            View All Programmes
+            <ArrowRight className="h-4 w-4 ml-1" />
+          </Link>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-2xl font-bold text-purple-600">{subscriptions.length}</div>
-          <div className="text-sm text-gray-600">Total Subscriptions</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-2xl font-bold text-orange-600">
-            {subscriptions.filter(s => s.status === 'ACTIVE').length}
+
+        {programmes.length > 0 ? (
+          <div className="space-y-4">
+            {programmes.slice(0, 3).map((programme) => (
+              <div key={programme.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center">
+                  <Play className="h-5 w-5 text-gymmawy-primary mr-3" />
+                  <div>
+                    <h3 className="font-medium text-gray-900">{programme.programme?.name || 'Unknown Programme'}</h3>
+                    <p className="text-sm text-gray-500">
+                      Purchased on {new Date(programme.purchasedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm font-medium text-green-600">
+                    ${programme.price?.toFixed(2) || '0.00'}
+                  </span>
+                  <StatusBadge status={programme.status} />
+                </div>
+              </div>
+            ))}
+            {programmes.length > 3 && (
+              <div className="text-center">
+                <Link 
+                  to="/programmes" 
+                  className="text-gymmawy-primary hover:text-gymmawy-primary-dark font-medium"
+                >
+                  View {programmes.length - 3} more programmes
+                </Link>
+              </div>
+            )}
           </div>
-          <div className="text-sm text-gray-600">Active Subscriptions</div>
-        </div>
+        ) : (
+          <div className="text-center py-8">
+            <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Programmes Yet</h3>
+            <p className="text-gray-500 mb-4">Start your fitness journey with our amazing programmes</p>
+            <Link 
+              to="/programmes" 
+              className="inline-flex items-center px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-primary-dark"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Browse Programmes
+            </Link>
+          </div>
+        )}
       </div>
 
-      {/* Content */}
-      {activeTab === 'programmes' ? (
-        <DataTable
-          data={programmes}
-          columns={programmeColumns}
-          searchable={true}
-          filterable={true}
-          exportable={true}
-          onExport={handleExport}
-        />
-      ) : (
-        <DataTable
-          data={subscriptions}
-          columns={subscriptionColumns}
-          searchable={true}
-          filterable={true}
-          exportable={true}
-          onExport={handleExport}
-        />
-      )}
+      {/* Subscriptions Section */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <CreditCard className="h-6 w-6 text-gymmawy-primary mr-3" />
+            <h2 className="text-xl font-semibold text-gray-900">My Subscriptions</h2>
+          </div>
+          <Link 
+            to="/packages" 
+            className="flex items-center text-gymmawy-primary hover:text-gymmawy-primary-dark font-medium"
+          >
+            View All Packages
+            <ArrowRight className="h-4 w-4 ml-1" />
+          </Link>
+        </div>
+
+        {subscriptions.length > 0 ? (
+          <div className="space-y-4">
+            {subscriptions.slice(0, 3).map((subscription) => (
+              <div key={subscription.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center">
+                  <CreditCard className="h-5 w-5 text-gymmawy-primary mr-3" />
+                  <div>
+                    <h3 className="font-medium text-gray-900">{subscription.subscriptionPlan?.name || 'Unknown Plan'}</h3>
+                    <p className="text-sm text-gray-500">
+                      {subscription.startDate ? `Started ${new Date(subscription.startDate).toLocaleDateString()}` : 'Not started yet'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm font-medium text-green-600">
+                    ${subscription.price?.toFixed(2) || '0.00'}
+                  </span>
+                  <StatusBadge status={subscription.status} />
+                </div>
+              </div>
+            ))}
+            {subscriptions.length > 3 && (
+              <div className="text-center">
+                <Link 
+                  to="/packages" 
+                  className="text-gymmawy-primary hover:text-gymmawy-primary-dark font-medium"
+                >
+                  View {subscriptions.length - 3} more subscriptions
+                </Link>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Subscriptions Yet</h3>
+            <p className="text-gray-500 mb-4">Choose a subscription plan that fits your fitness goals</p>
+            <Link 
+              to="/packages" 
+              className="inline-flex items-center px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-primary-dark"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Browse Packages
+            </Link>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 };
 
-export default PurchaseHistory;
+export default UserDashboard;

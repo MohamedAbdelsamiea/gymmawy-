@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AuthCard, FloatingInput, AuthButton, AuthLink } from '../../components/auth';
-import { isValidPassword } from '../../utils/validators';
+import { 
+  isValidPassword, 
+  validatePassword, 
+} from '../../utils/validators';
 import { getValidationErrors, getFieldError, getGeneralErrorMessage } from '../../utils/errorUtils';
 import authService from '../../services/authService';
 
@@ -13,29 +16,55 @@ const ResetPassword = () => {
   
   const [formData, setFormData] = useState({
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
 
   const [errors, setErrors] = useState({});
   const [validationErrors, setValidationErrors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [realTimeErrors, setRealTimeErrors] = useState({});
+  const [passwordStrength, setPasswordStrength] = useState({});
 
   const token = searchParams.get('token');
   const email = searchParams.get('email');
+
+
+  const validateField = (fieldName, value) => {
+    let validation = { isValid: true, error: null };
+    
+    switch (fieldName) {
+      case 'password':
+        validation = validatePassword(value);
+        setPasswordStrength(validation);
+        break;
+      case 'confirmPassword':
+        if (value && formData.password !== value) {
+          validation = { isValid: false, error: 'confirmPasswordMismatch' };
+        }
+        break;
+      default:
+        break;
+    }
+    
+    setRealTimeErrors(prev => ({
+      ...prev,
+      [fieldName]: validation.isValid ? null : validation.error,
+    }));
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
-        [name]: ''
+        [name]: '',
       }));
     }
     
@@ -43,30 +72,37 @@ const ResetPassword = () => {
     if (validationErrors.length > 0) {
       setValidationErrors([]);
     }
+    
+    // Real-time validation
+    validateField(name, value);
+    
+    // Re-validate confirm password when password changes
+    if (name === 'password' && formData.confirmPassword) {
+      validateField('confirmPassword', formData.confirmPassword);
+    }
   };
 
   const validateForm = () => {
     const newErrors = {};
 
     // Password
-    if (!formData.password.trim()) {
-      newErrors.password = t('resetPassword.errors.passwordRequired');
-    } else if (!isValidPassword(formData.password)) {
-      newErrors.password = t('resetPassword.errors.weakPassword');
+    const passwordValidation = validatePassword(formData.password);
+    if (!passwordValidation.isValid) {
+      newErrors.password = t(`resetPassword.errors.${passwordValidation.error}`);
     }
 
     // Confirm Password
     if (!formData.confirmPassword.trim()) {
-      newErrors.confirmPassword = t('resetPassword.errors.confirmPasswordRequired');
+      newErrors.confirmPassword = t('resetPassword.errors.confirmPasswordEmpty');
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = t('resetPassword.errors.passwordMismatch');
+      newErrors.confirmPassword = t('resetPassword.errors.confirmPasswordMismatch');
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -75,7 +111,7 @@ const ResetPassword = () => {
 
     if (!token || !email) {
       setErrors({ 
-        general: 'Invalid or missing reset token or email. Please request a new password reset.' 
+        general: 'Invalid or missing reset token or email. Please request a new password reset.', 
       });
       return;
     }
@@ -96,7 +132,7 @@ const ResetPassword = () => {
       } else {
         // Handle general errors
         setErrors({ 
-          general: getGeneralErrorMessage(error.response?.data || error) || 'Failed to reset password. Please try again or request a new reset link.' 
+          general: getGeneralErrorMessage(error.response?.data || error) || 'Failed to reset password. Please try again or request a new reset link.', 
         });
         setValidationErrors([]);
       }
@@ -164,6 +200,7 @@ const ResetPassword = () => {
           </div>
         )}
 
+
         {/* Password Input */}
         <FloatingInput
           label={t('resetPassword.password')}
@@ -171,7 +208,7 @@ const ResetPassword = () => {
           name="password"
           value={formData.password}
           onChange={handleInputChange}
-          error={errors.password || getFieldError(validationErrors, 'newPassword')}
+          error={errors.password || getFieldError(validationErrors, 'newPassword') || (realTimeErrors.password ? t(`resetPassword.errors.${realTimeErrors.password}`, t(`register.errors.${realTimeErrors.password}`, realTimeErrors.password)) : null)}
           required
         />
 
@@ -182,9 +219,17 @@ const ResetPassword = () => {
           name="confirmPassword"
           value={formData.confirmPassword}
           onChange={handleInputChange}
-          error={errors.confirmPassword}
+          error={errors.confirmPassword || (realTimeErrors.confirmPassword ? t(`resetPassword.errors.${realTimeErrors.confirmPassword}`, t(`register.errors.${realTimeErrors.confirmPassword}`, realTimeErrors.confirmPassword)) : null)}
           required
         />
+
+        {/* Password Match Indicator */}
+        {formData.confirmPassword && formData.password === formData.confirmPassword && (
+          <div className="text-green-600 text-sm flex items-center">
+            <span className="mr-2">✓</span>
+            {t('resetPassword.passwordsMatch', 'Passwords match')}
+          </div>
+        )}
 
         {/* Submit Button */}
         <AuthButton

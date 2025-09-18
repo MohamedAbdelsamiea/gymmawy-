@@ -8,7 +8,8 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
     discountValue: '',
     expirationDate: '',
     maxRedemptionsPerUser: '',
-    isActive: true
+    maxRedemptions: '',
+    isActive: true,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -18,10 +19,11 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
     if (isEdit && editData) {
       setFormData({
         code: editData.code || '',
-        discountValue: editData.discountValue?.toString() || '',
+        discountValue: editData.discountPercentage?.toString() || '',
         expirationDate: editData.expirationDate ? new Date(editData.expirationDate).toISOString().split('T')[0] : '',
         maxRedemptionsPerUser: editData.maxRedemptionsPerUser?.toString() || '',
-        isActive: editData.isActive ?? true
+        maxRedemptions: editData.maxRedemptions?.toString() || '',
+        isActive: editData.isActive ?? true,
       });
     } else {
       setFormData({
@@ -29,7 +31,8 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
         discountValue: '',
         expirationDate: '',
         maxRedemptionsPerUser: '',
-        isActive: true
+        maxRedemptions: '',
+        isActive: true,
       });
     }
     setError(null);
@@ -63,12 +66,19 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
       newErrors.expirationDate = 'Expiration date must be in the future';
     }
 
-    if (!formData.maxRedemptionsPerUser || formData.maxRedemptionsPerUser === '') {
-      newErrors.maxRedemptionsPerUser = 'Max redemptions per user is required';
-    } else {
+    // Max redemptions per user is optional - if empty, it defaults to unlimited (0)
+    if (formData.maxRedemptionsPerUser && formData.maxRedemptionsPerUser !== '') {
       const maxRedemptionsPerUser = parseInt(formData.maxRedemptionsPerUser);
       if (isNaN(maxRedemptionsPerUser) || maxRedemptionsPerUser < 0) {
         newErrors.maxRedemptionsPerUser = 'Max redemptions per user must be a non-negative number';
+      }
+    }
+
+    // Max total redemptions is optional - if empty, it defaults to unlimited (0)
+    if (formData.maxRedemptions && formData.maxRedemptions !== '') {
+      const maxRedemptions = parseInt(formData.maxRedemptions);
+      if (isNaN(maxRedemptions) || maxRedemptions < 0) {
+        newErrors.maxRedemptions = 'Max total redemptions must be a non-negative number';
       }
     }
 
@@ -76,7 +86,7 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -90,9 +100,13 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
       const submitData = {
         ...formData,
         discountValue: parseFloat(formData.discountValue),
-        maxRedemptionsPerUser: parseInt(formData.maxRedemptionsPerUser) || 0,
-        expirationDate: new Date(formData.expirationDate).toISOString()
+        maxRedemptionsPerUser: formData.maxRedemptionsPerUser ? parseInt(formData.maxRedemptionsPerUser) : 0,
+        maxRedemptions: formData.maxRedemptions ? parseInt(formData.maxRedemptions) : 0,
+        expirationDate: new Date(formData.expirationDate).toISOString(),
       };
+
+      console.log('Frontend formData:', formData);
+      console.log('Frontend submitData:', submitData);
 
       if (isEdit) {
         await adminApiService.updateCoupon(editData.id, submitData);
@@ -113,19 +127,21 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : value,
     }));
     
     // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
-        [name]: ''
+        [name]: '',
       }));
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+return null;
+}
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -225,7 +241,7 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
           {/* Max Redemptions Per User */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Max Redemptions Per User *
+              Max Redemptions Per User
             </label>
             <input
               type="number"
@@ -233,7 +249,6 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
               value={formData.maxRedemptionsPerUser}
               onChange={handleInputChange}
               min="0"
-              required
               className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                 errors.maxRedemptionsPerUser ? 'border-red-300' : 'border-gray-300'
               }`}
@@ -243,6 +258,28 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
               <p className="mt-1 text-sm text-red-600">{errors.maxRedemptionsPerUser}</p>
             )}
             <p className="mt-1 text-xs text-gray-500">Maximum times a single user can redeem this coupon. Set to 0 for unlimited redemptions per user.</p>
+          </div>
+
+          {/* Max Total Redemptions */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Max Total Redemptions
+            </label>
+            <input
+              type="number"
+              name="maxRedemptions"
+              value={formData.maxRedemptions}
+              onChange={handleInputChange}
+              min="0"
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                errors.maxRedemptions ? 'border-red-300' : 'border-gray-300'
+              }`}
+              placeholder="0 = unlimited"
+            />
+            {errors.maxRedemptions && (
+              <p className="mt-1 text-sm text-red-600">{errors.maxRedemptions}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">Maximum total times this coupon can be redeemed by all users. Set to 0 for unlimited total redemptions.</p>
           </div>
 
           {/* Active Status */}
@@ -271,7 +308,7 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? 'Saving...' : (isEdit ? 'Update Coupon' : 'Create Coupon')}
             </button>

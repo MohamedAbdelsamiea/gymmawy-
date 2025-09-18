@@ -7,7 +7,8 @@ class TransformationService {
   async getTransformations(filters = {}) {
     try {
       const queryParams = new URLSearchParams(filters).toString();
-      const response = await fetch(`${API_BASE_URL}/cms/transformations?${queryParams}`, {
+      // Use relative URL to go through Vite proxy
+      const response = await fetch(`/api/cms/transformations?${queryParams}`, {
         method: 'GET',
       });
       
@@ -24,7 +25,7 @@ class TransformationService {
 
   async getTransformation(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/cms/transformations/${id}`, {
+      const response = await fetch(`/api/cms/transformations/${id}`, {
         method: 'GET',
       });
       
@@ -42,7 +43,7 @@ class TransformationService {
   // Admin methods
   async createTransformation(transformationData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/cms/transformations`, {
+      const response = await fetch(`/api/cms/transformations`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -64,7 +65,7 @@ class TransformationService {
 
   async updateTransformation(id, transformationData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/cms/transformations/${id}`, {
+      const response = await fetch(`/api/cms/transformations/${id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -86,7 +87,7 @@ class TransformationService {
 
   async deleteTransformation(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/cms/transformations/${id}`, {
+      const response = await fetch(`/api/cms/transformations/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,

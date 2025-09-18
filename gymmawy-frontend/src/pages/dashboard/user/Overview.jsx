@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calendar, Clock, Gift, TrendingUp, Package, CreditCard } from 'lucide-react';
+import { Calendar, Clock, Gift, TrendingUp, Package, CreditCard, Award, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { StatCard, StatusBadge } from '../../../components/dashboard';
 import { useAuth } from '../../../contexts/AuthContext';
 import userService from '../../../services/userService';
 import subscriptionService from '../../../services/subscriptionService';
 import orderService from '../../../services/orderService';
-import referralService from '../../../services/referralService';
+import loyaltyService from '../../../services/loyaltyService';
 
 const UserOverview = () => {
   const { t } = useTranslation("dashboard");
@@ -26,6 +26,12 @@ const UserOverview = () => {
   });
   const [recentActivity, setRecentActivity] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [loyaltyTransactions, setLoyaltyTransactions] = useState([]);
+  const [loyaltyStats, setLoyaltyStats] = useState({
+    totalEarned: 0,
+    totalRedeemed: 0,
+    currentBalance: 0
+  });
 
   useEffect(() => {
     if (user) {
@@ -39,11 +45,31 @@ const UserOverview = () => {
       setError(null);
 
       // Load data in parallel
-      const [subscriptions, orders, referralRewards] = await Promise.allSettled([
+      const [userStatsResponse, subscriptions, orders, loyaltyTransactionsResponse, loyaltyStatsResponse] = await Promise.allSettled([
+        userService.getUserStats(),
         subscriptionService.getUserSubscriptions(),
         orderService.getOrders(),
-        referralService.getReferralRewards()
+        loyaltyService.getRecentTransactions(),
+        loyaltyService.getStats()
       ]);
+
+      // Process user stats
+      let stats = {
+        loyaltyPoints: 0,
+        totalOrders: 0,
+        totalSpent: '$0.00',
+        workoutsThisMonth: 0
+      };
+
+      if (userStatsResponse.status === 'fulfilled' && userStatsResponse.value?.stats) {
+        const userStatsData = userStatsResponse.value.stats;
+        stats = {
+          loyaltyPoints: userStatsData.loyaltyPoints || 0,
+          totalOrders: userStatsData.orders?.total || 0,
+          totalSpent: `$${(userStatsData.spending?.total || 0).toFixed(2)}`,
+          workoutsThisMonth: userStatsData.workoutsThisMonth || 0
+        };
+      }
 
       // Process subscriptions
       let activeSubscription = null;
@@ -51,18 +77,16 @@ const UserOverview = () => {
         activeSubscription = subscriptions.value.data.find(sub => sub.status === 'active');
       }
 
-      // Process orders
-      let totalOrders = 0;
-      let totalSpent = 0;
+      // Process orders for recent activity
+      let recentActivities = [];
       if (orders.status === 'fulfilled' && orders.value?.data) {
-        totalOrders = orders.value.data.length;
-        totalSpent = orders.value.data.reduce((sum, order) => sum + (order.total || 0), 0);
-      }
-
-      // Process referral rewards
-      let loyaltyPoints = 0;
-      if (referralRewards.status === 'fulfilled' && referralRewards.value?.data) {
-        loyaltyPoints = referralRewards.value.data.reduce((sum, reward) => sum + (reward.points || 0), 0);
+        recentActivities = orders.value.data.slice(0, 4).map((order, index) => ({
+          id: index + 1,
+          action: t('user.overview.orderPlaced'),
+          description: `Order #${order.id} - ${order.status}`,
+          time: formatTimeAgo(order.createdAt),
+          type: 'order'
+        }));
       }
 
       setUserStats({
@@ -77,21 +101,22 @@ const UserOverview = () => {
           expiryDate: null,
           autoRenew: false
         },
-        loyaltyPoints,
-        totalOrders,
-        totalSpent: `$${totalSpent.toFixed(2)}`
+        ...stats
       });
 
-      // Generate recent activity from orders
-      if (orders.status === 'fulfilled' && orders.value?.data) {
-        const activities = orders.value.data.slice(0, 4).map((order, index) => ({
-          id: index + 1,
-          action: t('user.overview.orderPlaced'),
-          description: `Order #${order.id} - ${order.status}`,
-          time: formatTimeAgo(order.createdAt),
-          type: 'order'
-        }));
-        setRecentActivity(activities);
+      setRecentActivity(recentActivities);
+
+      // Process loyalty transactions
+      if (loyaltyTransactionsResponse.status === 'fulfilled' && loyaltyTransactionsResponse.value.success) {
+        const formattedTransactions = loyaltyTransactionsResponse.value.transactions.map(transaction => 
+          loyaltyService.formatTransaction(transaction)
+        );
+        setLoyaltyTransactions(formattedTransactions);
+      }
+
+      // Process loyalty stats
+      if (loyaltyStatsResponse.status === 'fulfilled' && loyaltyStatsResponse.value.success) {
+        setLoyaltyStats(loyaltyStatsResponse.value.stats);
       }
 
     } catch (err) {
@@ -182,7 +207,7 @@ const UserOverview = () => {
         />
         <StatCard
           title={t('user.overview.workoutsThisMonth')}
-          value="24"
+          value={userStats.workoutsThisMonth}
           change="+15%"
           changeType="positive"
           icon={TrendingUp}
@@ -274,6 +299,60 @@ const UserOverview = () => {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Recent Loyalty Activity */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Recent Loyalty Activity</h3>
+          <button 
+            onClick={() => window.location.href = '/dashboard/loyalty-history'}
+            className="text-sm text-gymmawy-primary hover:text-gymmawy-primary-dark font-medium flex items-center"
+          >
+            View Full History
+            <ArrowUpRight className="h-4 w-4 ml-1" />
+          </button>
+        </div>
+        
+        <div className="space-y-3">
+          {loyaltyTransactions.length > 0 ? (
+            loyaltyTransactions.slice(0, 5).map((transaction) => (
+              <div key={transaction.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+                <div className="flex items-center space-x-3">
+                  <div className={`p-2 rounded-lg ${loyaltyService.getTransactionColorClass(transaction)}`}>
+                    {transaction.isEarned ? (
+                      <ArrowUpRight className="h-4 w-4" />
+                    ) : (
+                      <ArrowDownRight className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {transaction.action} {Math.abs(transaction.points)} points
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      {transaction.sourceDisplay} • {transaction.reason || 'No reason provided'}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className={`text-sm font-semibold ${transaction.isEarned ? 'text-green-600' : 'text-red-600'}`}>
+                    {transaction.pointsDisplay}
+                  </p>
+                  <p className="text-xs text-gray-500">{transaction.formattedDate}</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8">
+              <div className="p-3 bg-gymmawy-primary bg-opacity-10 rounded-lg w-fit mx-auto mb-3">
+                <Award className="h-6 w-6 text-gymmawy-primary" />
+              </div>
+              <p className="text-gray-500 text-sm">No loyalty activity yet</p>
+              <p className="text-xs text-gray-400 mt-1">Start earning points by making purchases or referring friends!</p>
+            </div>
+          )}
         </div>
       </div>
 

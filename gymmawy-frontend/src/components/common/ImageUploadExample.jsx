@@ -73,7 +73,7 @@ const ImageUploadExample = () => {
             subscriptionImage,
             programmeImage,
             productImage,
-            cmsImage
+            cmsImage,
           }, null, 2)}
         </pre>
         

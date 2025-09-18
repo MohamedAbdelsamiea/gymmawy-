@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Users, UserCheck, UserX, Clock, Shield } from 'lucide-react';
+import { Search, Filter, Download, Users, UserCheck, UserX, Clock, Shield, UserPlus } from 'lucide-react';
 import { DataTable, TableWithFilters } from '../../../components/dashboard';
 import adminApiService from '../../../services/adminApiService';
+import AddAdminModal from '../../../components/modals/AddAdminModal';
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
@@ -10,12 +11,12 @@ const AdminUsers = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [showAddAdminModal, setShowAddAdminModal] = useState(false);
 
   // Fetch users on mount and when filters change
   useEffect(() => {
     fetchUsers();
-  }, [filterRole, filterStatus]);
+  }, [filterRole]);
 
   // Client-side filtering effect - no API calls, just filtering
   useEffect(() => {
@@ -33,7 +34,7 @@ const AdminUsers = () => {
         user.country?.toLowerCase().includes(searchLower) ||
         user.street?.toLowerCase().includes(searchLower) ||
         user.building?.toLowerCase().includes(searchLower) ||
-        user.postcode?.toLowerCase().includes(searchLower)
+        user.postcode?.toLowerCase().includes(searchLower),
       );
     }
 
@@ -42,27 +43,25 @@ const AdminUsers = () => {
       filtered = filtered.filter(user => user.role === filterRole);
     }
 
-    // Apply verification status filter
-    if (filterStatus !== 'all') {
-      const isVerified = filterStatus === 'verified';
-      filtered = filtered.filter(user => user.emailVerified === isVerified);
-    }
 
     setFilteredUsers(filtered);
-  }, [users, searchTerm, filterRole, filterStatus]);
+  }, [users, searchTerm, filterRole]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async() => {
     try {
       setLoading(true);
       setError(null);
       
-      // Only send server-side filters (role and verification status)
+      // Only send server-side filters (role)
       const params = {};
-      if (filterRole !== 'all') params.role = filterRole;
-      if (filterStatus !== 'all') params.emailVerified = filterStatus === 'verified';
+      if (filterRole !== 'all') {
+params.role = filterRole;
+}
       
       const response = await adminApiService.getUsers(params);
-      setUsers(Array.isArray(response.items) ? response.items : Array.isArray(response) ? response : []);
+      // Handle response structure: { items: [...], total: 2, page: 1, pageSize: 10 }
+      const usersData = response.items || response;
+      setUsers(Array.isArray(usersData) ? usersData : []);
     } catch (err) {
       setError(err.message);
       console.error('Error fetching users:', err);
@@ -71,7 +70,7 @@ const AdminUsers = () => {
     }
   };
 
-  const handleUpdateUser = async (userId, userData) => {
+  const handleUpdateUser = async(userId, userData) => {
     try {
       await adminApiService.updateUser(userId, userData);
       fetchUsers(); // Refresh the list
@@ -91,7 +90,6 @@ const AdminUsers = () => {
         'Mobile': user.mobileNumber || '',
         'Date of Birth': user.birthDate ? new Date(user.birthDate).toLocaleDateString() : '',
         'Role': user.role || '',
-        'Is Verified': user.emailVerified ? 'Verified' : 'Unverified',
         'Loyalty Points': user.loyaltyPoints || 0,
         'Building': user.building || '',
         'Street': user.street || '',
@@ -99,7 +97,7 @@ const AdminUsers = () => {
         'Country': user.country || '',
         'Postcode': user.postcode || '',
         'Joined': user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '',
-        'Last Active': user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never'
+        'Last Active': user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never',
       }));
 
       // Convert to CSV
@@ -113,8 +111,8 @@ const AdminUsers = () => {
             return typeof value === 'string' && (value.includes(',') || value.includes('"')) 
               ? `"${value.replace(/"/g, '""')}"` 
               : value;
-          }).join(',')
-        )
+          }).join(','),
+        ),
       ].join('\n');
 
       // Create and download file
@@ -134,15 +132,28 @@ const AdminUsers = () => {
 
   const columns = [
     {
-      key: 'name',
+      key: 'firstName',
       label: 'Name',
       sortable: true,
+      sortFunction: (a, b, direction) => {
+        // Create full names for comparison
+        const aName = `${a.firstName || ''} ${a.lastName || ''}`.trim().toLowerCase();
+        const bName = `${b.firstName || ''} ${b.lastName || ''}`.trim().toLowerCase();
+        
+        if (aName < bName) {
+          return direction === 'asc' ? -1 : 1;
+        }
+        if (aName > bName) {
+          return direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      },
       render: (_, row) => (
         <div className="font-medium text-gray-900">
           {row.firstName && row.lastName ? `${row.firstName} ${row.lastName}` : 
            row.firstName || row.lastName || 'No Name'}
         </div>
-      )
+      ),
     },
     {
       key: 'email',
@@ -152,7 +163,7 @@ const AdminUsers = () => {
         <div className="text-sm text-gray-900">
           {value}
         </div>
-      )
+      ),
     },
     {
       key: 'mobileNumber',
@@ -162,7 +173,7 @@ const AdminUsers = () => {
         <div className="text-sm">
           {value || '-'}
         </div>
-      )
+      ),
     },
     {
       key: 'birthDate',
@@ -172,7 +183,7 @@ const AdminUsers = () => {
         <div className="text-sm">
           {value ? new Date(value).toLocaleDateString() : '-'}
         </div>
-      )
+      ),
     },
     {
       key: 'role',
@@ -186,19 +197,7 @@ const AdminUsers = () => {
         }`}>
           {value}
         </span>
-      )
-    },
-    {
-      key: 'emailVerified',
-      label: 'Is Verified',
-      sortable: true,
-      render: (value) => (
-        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-          value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-        }`}>
-          {value ? 'Verified' : 'Unverified'}
-        </span>
-      )
+      ),
     },
     {
       key: 'loyaltyPoints',
@@ -208,7 +207,7 @@ const AdminUsers = () => {
         <div className="text-center">
           <div className="font-medium text-green-600">{value || 0}</div>
         </div>
-      )
+      ),
     },
     {
       key: 'location',
@@ -216,11 +215,21 @@ const AdminUsers = () => {
       sortable: false,
       render: (_, row) => {
         const addressParts = [];
-        if (row.building) addressParts.push(row.building);
-        if (row.street) addressParts.push(row.street);
-        if (row.city) addressParts.push(row.city);
-        if (row.country) addressParts.push(row.country);
-        if (row.postcode) addressParts.push(row.postcode);
+        if (row.building) {
+addressParts.push(row.building);
+}
+        if (row.street) {
+addressParts.push(row.street);
+}
+        if (row.city) {
+addressParts.push(row.city);
+}
+        if (row.country) {
+addressParts.push(row.country);
+}
+        if (row.postcode) {
+addressParts.push(row.postcode);
+}
         
         return (
           <div className="text-sm">
@@ -238,7 +247,7 @@ const AdminUsers = () => {
             )}
           </div>
         );
-      }
+      },
     },
     {
       key: 'createdAt',
@@ -251,14 +260,16 @@ const AdminUsers = () => {
             {Math.floor((Date.now() - new Date(value).getTime()) / (1000 * 60 * 60 * 24))} days ago
           </div>
         </div>
-      )
+      ),
     },
     {
       key: 'lastLoginAt',
       label: 'Last Active',
       sortable: true,
       render: (value) => {
-        if (!value) return <span className="text-gray-400">Never</span>;
+        if (!value) {
+return <span className="text-gray-400">Never</span>;
+}
         const daysAgo = Math.floor((Date.now() - new Date(value).getTime()) / (1000 * 60 * 60 * 24));
         return (
           <div className="text-sm">
@@ -268,8 +279,8 @@ const AdminUsers = () => {
             </div>
           </div>
         );
-      }
-    }
+      },
+    },
   ];
 
   if (loading) {
@@ -302,6 +313,13 @@ const AdminUsers = () => {
           <h1 className="text-2xl font-bold text-gray-900">Users Management</h1>
           <p className="text-gray-600 mt-1">View all platform users and their information</p>
         </div>
+        <button
+          onClick={() => setShowAddAdminModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary transition-colors"
+        >
+          <UserPlus className="h-4 w-4" />
+          Add Admin
+        </button>
       </div>
 
       {/* Stats Cards */}
@@ -314,19 +332,6 @@ const AdminUsers = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Users</p>
               <p className="text-2xl font-bold text-gray-900">{Array.isArray(users) ? users.length : 0}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <UserCheck className="h-6 w-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Verified Users</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {Array.isArray(users) ? users.filter(u => u.emailVerified).length : 0}
-              </p>
             </div>
           </div>
         </div>
@@ -364,12 +369,11 @@ const AdminUsers = () => {
           <div className="text-sm text-gray-600">
             Showing <span className="font-medium text-gray-900">{filteredUsers.length}</span> of <span className="font-medium text-gray-900">{users.length}</span> users
           </div>
-          {(searchTerm || filterRole !== 'all' || filterStatus !== 'all') && (
+          {(searchTerm || filterRole !== 'all') && (
             <button
               onClick={() => {
                 setSearchTerm('');
                 setFilterRole('all');
-                setFilterStatus('all');
               }}
               className="text-sm text-gymmawy-primary hover:text-gymmawy-secondary underline"
             >
@@ -394,25 +398,24 @@ const AdminUsers = () => {
             options: [
               { value: "all", label: "All Roles" },
               { value: "ADMIN", label: "Admin" },
-              { value: "MEMBER", label: "Member" }
-            ]
+              { value: "MEMBER", label: "Member" },
+            ],
           },
-          {
-            label: "Is Verified",
-            value: filterStatus,
-            onChange: setFilterStatus,
-            options: [
-              { value: "all", label: "All Users" },
-              { value: "verified", label: "Verified" },
-              { value: "unverified", label: "Unverified" }
-            ]
-          }
         ]}
         onApplyFilters={fetchUsers}
         onExport={handleExport}
         showApplyButton={false}
         showExportButton={true}
         exportButtonText="Export"
+      />
+
+      {/* Add Admin Modal */}
+      <AddAdminModal
+        isOpen={showAddAdminModal}
+        onClose={() => setShowAddAdminModal(false)}
+        onSuccess={() => {
+          fetchUsers(); // Refresh the users list
+        }}
       />
 
     </div>

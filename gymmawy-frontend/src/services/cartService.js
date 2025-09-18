@@ -35,7 +35,7 @@ class CartService {
         body: JSON.stringify({ 
           productId, 
           quantity,
-          ...(variantId && { variantId })
+          ...(variantId && { variantId }),
         }),
       });
       

@@ -7,7 +7,7 @@ export const useLanguageInit = () => {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const initializeLanguage = async () => {
+    const initializeLanguage = async() => {
       try {
         // Check if language is already set in cookie
         const savedLanguage = Cookies.get('i18next');

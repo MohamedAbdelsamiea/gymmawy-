@@ -6,7 +6,7 @@ const API_BASE_URL = config.API_BASE_URL;
 class SubscriptionService {
   async getPlans(language = 'en') {
     try {
-      const response = await fetch(`${API_BASE_URL}/subscriptions/plans?lang=${language}&t=${Date.now()}`, {
+      const response = await fetch(`${API_BASE_URL}/api/subscriptions/plans?lang=${language}&t=${Date.now()}`, {
         method: 'GET',
         cache: 'no-cache',
       });
@@ -24,7 +24,7 @@ class SubscriptionService {
 
   async subscribe(subscriptionData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/subscriptions`, {
+      const response = await fetch(`${API_BASE_URL}/api/subscriptions`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -46,7 +46,7 @@ class SubscriptionService {
 
   async getUserSubscriptions() {
     try {
-      const response = await fetch(`${API_BASE_URL}/subscriptions`, {
+      const response = await fetch(`${API_BASE_URL}/api/subscriptions`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -66,7 +66,7 @@ class SubscriptionService {
 
   async cancelSubscription(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/subscriptions/${id}/cancel`, {
+      const response = await fetch(`${API_BASE_URL}/api/subscriptions/${id}/cancel`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,

@@ -12,13 +12,13 @@ const TableFilters = ({
   showExportButton = true,
   applyButtonText = "Apply Filters",
   exportButtonText = "Export",
-  className = ""
+  className = "",
 }) => {
   return (
     <div className={`p-6 border-b border-gray-200 ${className}`}>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Search Input */}
-        <div>
+        <div className="md:max-w-xs">
           <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />

@@ -15,7 +15,7 @@ class ApiClient {
     console.log('API Client - Token from localStorage:', token);
     const headers = {
       ...(token && { 'Authorization': `Bearer ${token}` }),
-      ...customHeaders
+      ...customHeaders,
     };
     
     // Only set Content-Type if not FormData and not already set
@@ -48,7 +48,7 @@ class ApiClient {
     }
 
     try {
-      const response = await fetch(`${this.baseURL}/auth/refresh`, {
+      const response = await fetch(`${this.baseURL}/api/auth/refresh`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${refreshToken}`,
@@ -76,11 +76,13 @@ class ApiClient {
 
   // Make API request with automatic token refresh
   async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
+    // Ensure endpoint starts with /api/ if it doesn't already
+    const apiEndpoint = endpoint.startsWith('/api/') ? endpoint : `/api${endpoint}`;
+    const url = `${this.baseURL}${apiEndpoint}`;
     const isFormData = options.body instanceof FormData;
     const config = {
       headers: this.getAuthHeaders(options.headers || {}, isFormData),
-      ...options
+      ...options,
     };
 
     console.log('API Client - Making request to:', url);
@@ -91,8 +93,8 @@ class ApiClient {
       console.log('API Client - Response status:', response.status);
       console.log('API Client - Response headers:', response.headers);
 
-      // If token is expired, try to refresh
-      if (response.status === 401 && !options._retry) {
+      // If token is expired, try to refresh (but not for auth endpoints)
+      if (response.status === 401 && !options._retry && !endpoint.startsWith('/auth/')) {
         if (this.isRefreshing) {
           // If already refreshing, queue this request
           return new Promise((resolve, reject) => {
@@ -102,9 +104,9 @@ class ApiClient {
               ...options,
               headers: {
                 ...config.headers,
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
               },
-              _retry: true
+              _retry: true,
             });
           }).catch(err => {
             return Promise.reject(err);
@@ -122,9 +124,9 @@ class ApiClient {
             ...options,
             headers: {
               ...config.headers,
-              'Authorization': `Bearer ${newToken}`
+              'Authorization': `Bearer ${newToken}`,
             },
-            _retry: true
+            _retry: true,
           });
         } catch (refreshError) {
           this.processQueue(refreshError, null);
@@ -135,8 +137,22 @@ class ApiClient {
       }
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        try {
+          const errorData = await response.json();
+          // Handle both direct message and nested error.message structure
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error && errorData.error.message) {
+            errorMessage = errorData.error.message;
+          }
+        } catch (parseError) {
+          // If JSON parsing fails, use the status text or default message
+          errorMessage = response.statusText || `HTTP error! status: ${response.status}`;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       // Handle 204 No Content responses
@@ -162,7 +178,7 @@ class ApiClient {
     return this.request(endpoint, {
       ...options,
       method: 'POST',
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   }
 
@@ -170,7 +186,7 @@ class ApiClient {
     return this.request(endpoint, {
       ...options,
       method: 'PUT',
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   }
 
@@ -178,7 +194,7 @@ class ApiClient {
     return this.request(endpoint, {
       ...options,
       method: 'PATCH',
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   }
 

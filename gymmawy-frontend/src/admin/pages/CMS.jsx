@@ -13,7 +13,7 @@ const CMS = () => {
 
   const tabs = [
     { id: 'transformations', label: 'Transformations', icon: Image },
-    { id: 'videos', label: 'Videos', icon: Video }
+    { id: 'videos', label: 'Videos', icon: Video },
   ];
 
   const handleAdd = () => {
@@ -126,7 +126,7 @@ const TransformationsTab = ({ searchTerm, onSearchChange, onEdit }) => {
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
-    total: 0
+    total: 0,
   });
 
   const columns = [
@@ -139,7 +139,7 @@ const TransformationsTab = ({ searchTerm, onSearchChange, onEdit }) => {
           <div className="font-medium text-gray-900">{value?.en || 'N/A'}</div>
           <div className="text-sm text-gray-500">{value?.ar || 'N/A'}</div>
         </div>
-      )
+      ),
     },
     {
       key: 'imageUrl',
@@ -156,13 +156,13 @@ const TransformationsTab = ({ searchTerm, onSearchChange, onEdit }) => {
             <Image className="h-6 w-6 text-gray-400" />
           </div>
         )
-      )
+      ),
     },
     {
       key: 'createdAt',
       label: 'Created',
       sortable: true,
-      render: (value) => new Date(value).toLocaleDateString()
+      render: (value) => new Date(value).toLocaleDateString(),
     },
     {
       key: 'actions',
@@ -184,24 +184,24 @@ const TransformationsTab = ({ searchTerm, onSearchChange, onEdit }) => {
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
-  const fetchTransformations = async () => {
+  const fetchTransformations = async() => {
     try {
       setLoading(true);
       const params = {
         page: pagination.page,
         limit: pagination.limit,
-        q: searchTerm || undefined
+        q: searchTerm || undefined,
       };
 
       const response = await adminApiService.getTransformations(params);
       setTransformations(response.items || []);
       setPagination(prev => ({
         ...prev,
-        total: response.total || 0
+        total: response.total || 0,
       }));
     } catch (err) {
       setError('Failed to fetch transformations');
@@ -211,7 +211,7 @@ const TransformationsTab = ({ searchTerm, onSearchChange, onEdit }) => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async(id) => {
     if (window.confirm('Are you sure you want to delete this transformation?')) {
       try {
         await adminApiService.deleteTransformation(id);
@@ -271,7 +271,7 @@ const VideosTab = ({ searchTerm, onSearchChange, onEdit }) => {
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
-    total: 0
+    total: 0,
   });
 
   const columns = [
@@ -284,7 +284,7 @@ const VideosTab = ({ searchTerm, onSearchChange, onEdit }) => {
           <div className="font-medium text-gray-900">{value?.en || 'N/A'}</div>
           <div className="text-sm text-gray-500">{value?.ar || 'N/A'}</div>
         </div>
-      )
+      ),
     },
     {
       key: 'videoUrl',
@@ -293,7 +293,7 @@ const VideosTab = ({ searchTerm, onSearchChange, onEdit }) => {
         <div className="w-24 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
           <Video className="h-6 w-6 text-gray-400" />
         </div>
-      )
+      ),
     },
     {
       key: 'thumbnailUrl',
@@ -310,13 +310,13 @@ const VideosTab = ({ searchTerm, onSearchChange, onEdit }) => {
             <Image className="h-6 w-6 text-gray-400" />
           </div>
         )
-      )
+      ),
     },
     {
       key: 'createdAt',
       label: 'Created',
       sortable: true,
-      render: (value) => new Date(value).toLocaleDateString()
+      render: (value) => new Date(value).toLocaleDateString(),
     },
     {
       key: 'actions',
@@ -338,24 +338,24 @@ const VideosTab = ({ searchTerm, onSearchChange, onEdit }) => {
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
-  const fetchVideos = async () => {
+  const fetchVideos = async() => {
     try {
       setLoading(true);
       const params = {
         page: pagination.page,
         limit: pagination.limit,
-        q: searchTerm || undefined
+        q: searchTerm || undefined,
       };
 
       const response = await adminApiService.getVideos(params);
       setVideos(response.items || []);
       setPagination(prev => ({
         ...prev,
-        total: response.total || 0
+        total: response.total || 0,
       }));
     } catch (err) {
       setError('Failed to fetch videos');
@@ -365,7 +365,7 @@ const VideosTab = ({ searchTerm, onSearchChange, onEdit }) => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async(id) => {
     if (window.confirm('Are you sure you want to delete this video?')) {
       try {
         await adminApiService.deleteVideo(id);

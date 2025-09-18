@@ -6,7 +6,7 @@ const UnauthorizedAccess = ({
   type = 'login', // 'login', 'admin', 'permission'
   title = 'Authentication Required',
   message = 'You need to be logged in to access this page.',
-  showBackButton = true 
+  showBackButton = true, 
 }) => {
   const getIcon = () => {
     switch (type) {

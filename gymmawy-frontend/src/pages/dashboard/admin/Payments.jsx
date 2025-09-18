@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, CheckCircle, XCircle, Download, CreditCard, Search, Filter, Clock, TrendingUp } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Download, CreditCard, Search, Filter, Clock } from 'lucide-react';
 import { DataTable, StatusBadge, TableWithFilters } from '../../../components/dashboard';
+import PaymentProofModal from '../../../components/modals/PaymentProofModal';
 import adminApiService from '../../../services/adminApiService';
 
 const AdminPayments = () => {
@@ -11,7 +12,9 @@ const AdminPayments = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterMethod, setFilterMethod] = useState('all');
-  const [selectedCurrency, setSelectedCurrency] = useState('EGP');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Fetch payments on mount and when server-side filters change
   useEffect(() => {
@@ -38,22 +41,26 @@ const AdminPayments = () => {
         payment.amount?.toString().includes(searchLower) ||
         payment.currency?.toLowerCase().includes(searchLower) ||
         payment.method?.toLowerCase().includes(searchLower) ||
-        payment.status?.toLowerCase().includes(searchLower)
+        payment.status?.toLowerCase().includes(searchLower),
       );
     }
 
     setFilteredPayments(filtered);
   }, [payments, searchTerm]);
 
-  const fetchPayments = async () => {
+  const fetchPayments = async() => {
     try {
       setLoading(true);
       setError(null);
       
       // Only send server-side filters (status and method)
       const params = {};
-      if (filterStatus !== 'all') params.status = filterStatus;
-      if (filterMethod !== 'all') params.method = filterMethod;
+      if (filterStatus !== 'all') {
+params.status = filterStatus;
+}
+      if (filterMethod !== 'all') {
+params.method = filterMethod;
+}
       
       const response = await adminApiService.getPayments(params);
       console.log('Payments API response:', response);
@@ -66,7 +73,7 @@ const AdminPayments = () => {
     }
   };
 
-  const handleVerifyPayment = async (paymentId) => {
+  const handleVerifyPayment = async(paymentId) => {
     try {
       await adminApiService.verifyPayment(paymentId);
       fetchPayments(); // Refresh the list
@@ -75,30 +82,41 @@ const AdminPayments = () => {
     }
   };
 
-  // Calculate revenue in different currencies
-  const calculateRevenue = (currency) => {
-    const successfulPayments = Array.isArray(filteredPayments) 
-      ? filteredPayments.filter(p => p.status === 'SUCCESS') 
-      : [];
-    
-    return successfulPayments.reduce((sum, payment) => {
-      const amount = parseFloat(payment.amount) || 0;
-      const paymentCurrency = payment.currency || 'EGP';
-      
-      // Convert to target currency if needed
-      if (paymentCurrency === currency) {
-        return sum + amount;
-      } else if (paymentCurrency === 'EGP' && currency === 'SAR') {
-        // Convert EGP to SAR (approximate rate: 1 EGP = 0.13 SAR)
-        return sum + (amount * 0.13);
-      } else if (paymentCurrency === 'SAR' && currency === 'EGP') {
-        // Convert SAR to EGP (approximate rate: 1 SAR = 7.7 EGP)
-        return sum + (amount * 7.7);
-      }
-      
-      return sum + amount; // Default to original amount if conversion not available
-    }, 0);
+  const handleViewPaymentProof = (payment) => {
+    setSelectedPayment(payment);
+    setShowPaymentModal(true);
   };
+
+  const handleApprovePayment = async (paymentId) => {
+    try {
+      setIsProcessing(true);
+      await adminApiService.approvePayment(paymentId);
+      setShowPaymentModal(false);
+      setSelectedPayment(null);
+      fetchPayments(); // Refresh the list
+    } catch (err) {
+      console.error('Error approving payment:', err);
+      alert('Failed to approve payment. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRejectPayment = async (paymentId) => {
+    try {
+      setIsProcessing(true);
+      await adminApiService.rejectPayment(paymentId);
+      setShowPaymentModal(false);
+      setSelectedPayment(null);
+      fetchPayments(); // Refresh the list
+    } catch (err) {
+      console.error('Error rejecting payment:', err);
+      alert('Failed to reject payment. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
 
   const handleExport = () => {
     try {
@@ -123,8 +141,8 @@ const AdminPayments = () => {
           'Payment Reference': payment.paymentReference || '',
           'User': payment.user ? `${payment.user.firstName || ''} ${payment.user.lastName || ''}`.trim() : 'N/A',
           'Email': payment.user?.email || 'N/A',
-          'Purchase Reference': purchaseReference,
-          'Purchase Type': purchaseType,
+          'Paymentable Reference': purchaseReference,
+          'Paymentable Type': purchaseType,
           'Amount': payment.amount || '0',
           'Currency': payment.currency || 'N/A',
           'Method': payment.method || 'N/A',
@@ -132,14 +150,14 @@ const AdminPayments = () => {
           'Transaction ID': payment.transactionId || 'N/A',
           'Processed At': payment.processedAt ? new Date(payment.processedAt).toLocaleDateString() : 'N/A',
           'Status': payment.status || 'N/A',
-          'Proof File': payment.proofFile || 'N/A'
+          'Proof File': payment.paymentProofUrl || payment.proofFile || 'N/A',
         };
       });
 
       // Convert to CSV
       const csvContent = [
         Object.keys(dataToExport[0] || {}).join(','),
-        ...dataToExport.map(row => Object.values(row).map(value => `"${value}"`).join(','))
+        ...dataToExport.map(row => Object.values(row).map(value => `"${value}"`).join(',')),
       ].join('\n');
 
       // Download CSV
@@ -164,7 +182,7 @@ const AdminPayments = () => {
       sortable: true,
       render: (value) => (
         <span className="font-mono text-sm text-gray-600 font-semibold">{value}</span>
-      )
+      ),
     },
     {
       key: 'user',
@@ -172,7 +190,9 @@ const AdminPayments = () => {
       sortable: true,
       render: (value, row) => {
         const user = row.user;
-        if (!user) return <span className="text-gray-500">N/A</span>;
+        if (!user) {
+return <span className="text-gray-500">N/A</span>;
+}
         
         const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'N/A';
         return (
@@ -181,11 +201,11 @@ const AdminPayments = () => {
             <div className="text-sm text-gray-500">{user.email}</div>
           </div>
         );
-      }
+      },
     },
     {
-      key: 'purchaseReference',
-      label: 'Purchase Reference',
+      key: 'paymentableReference',
+      label: 'Paymentable Reference',
       sortable: true,
       render: (value, row) => {
         const order = row.order;
@@ -213,11 +233,11 @@ const AdminPayments = () => {
         }
         
         return <span className="text-gray-500">N/A</span>;
-      }
+      },
     },
     {
-      key: 'purchaseType',
-      label: 'Purchase Type',
+      key: 'paymentableType',
+      label: 'Paymentable Type',
       sortable: true,
       render: (value, row) => {
         const order = row.order;
@@ -245,7 +265,7 @@ const AdminPayments = () => {
         }
         
         return <span className="text-gray-500">N/A</span>;
-      }
+      },
     },
     {
       key: 'amount',
@@ -255,7 +275,7 @@ const AdminPayments = () => {
         <span className="font-semibold">
           {value} {row.currency}
         </span>
-      )
+      ),
     },
     {
       key: 'method',
@@ -265,7 +285,7 @@ const AdminPayments = () => {
         <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
           {value}
         </span>
-      )
+      ),
     },
     {
       key: 'gatewayId',
@@ -273,7 +293,7 @@ const AdminPayments = () => {
       sortable: true,
       render: (value) => (
         <span className="font-mono text-sm text-gray-600">{value || 'N/A'}</span>
-      )
+      ),
     },
     {
       key: 'transactionId',
@@ -281,7 +301,7 @@ const AdminPayments = () => {
       sortable: true,
       render: (value) => (
         <span className="font-mono text-sm text-gray-600">{value || 'N/A'}</span>
-      )
+      ),
     },
     {
       key: 'processedAt',
@@ -317,7 +337,7 @@ const AdminPayments = () => {
             </div>
           </div>
         );
-      }
+      },
     },
     {
       key: 'status',
@@ -328,7 +348,7 @@ const AdminPayments = () => {
           'PENDING': 'bg-yellow-100 text-yellow-800',
           'SUCCESS': 'bg-green-100 text-green-800',
           'FAILED': 'bg-red-100 text-red-800',
-          'REFUNDED': 'bg-blue-100 text-blue-800'
+          'REFUNDED': 'bg-blue-100 text-blue-800',
         };
         
         return (
@@ -336,26 +356,30 @@ const AdminPayments = () => {
             {value}
           </span>
         );
-      }
+      },
     },
     {
       key: 'proofFile',
       label: 'Proof File',
       sortable: false,
       render: (value, row) => {
-        if (!value) return <span className="text-gray-500">N/A</span>;
+        const proofUrl = row.paymentProofUrl || value;
+        if (!proofUrl) {
+          return <span className="text-gray-500">N/A</span>;
+        }
         
         return (
           <button
-            onClick={() => window.open(value, '_blank')}
-            className="text-blue-600 hover:text-blue-800 text-xs px-2 py-1 border border-blue-300 rounded hover:bg-blue-50 transition-colors"
-            title="Click to view payment proof in new tab"
+            onClick={() => handleViewPaymentProof(row)}
+            className="text-blue-600 hover:text-blue-800 text-xs px-2 py-1 border border-blue-300 rounded hover:bg-blue-50 transition-colors flex items-center gap-1"
+            title="Click to view payment proof and approve/reject"
           >
+            <Eye className="w-3 h-3" />
             View Proof
           </button>
         );
-      }
-    }
+      },
+    },
   ];
 
   if (loading) {
@@ -389,7 +413,7 @@ const AdminPayments = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center">
             <div className="p-2 bg-green-100 rounded-lg">
@@ -426,44 +450,6 @@ const AdminPayments = () => {
               <p className="text-2xl font-bold text-gray-900">
                 {Array.isArray(filteredPayments) ? filteredPayments.filter(p => p.status === 'FAILED').length : 0}
               </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 relative">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {selectedCurrency} {calculateRevenue(selectedCurrency).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-            </div>
-          </div>
-          {/* Currency Toggle - Bottom Right */}
-          <div className="absolute bottom-2 right-2 mt-1">
-            <div className="bg-gray-100 rounded-lg p-1 flex">
-              <button
-                onClick={() => setSelectedCurrency('EGP')}
-                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                  selectedCurrency === 'EGP'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                EGP
-              </button>
-              <button
-                onClick={() => setSelectedCurrency('SAR')}
-                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                  selectedCurrency === 'SAR'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                SAR
-              </button>
             </div>
           </div>
         </div>
@@ -511,8 +497,8 @@ const AdminPayments = () => {
               { value: "SUCCESS", label: "Success" },
               { value: "PENDING", label: "Pending" },
               { value: "FAILED", label: "Failed" },
-              { value: "REFUNDED", label: "Refunded" }
-            ]
+              { value: "REFUNDED", label: "Refunded" },
+            ],
           },
           {
             label: "Method",
@@ -525,15 +511,28 @@ const AdminPayments = () => {
               { value: "TAMARA", label: "Tamara" },
               { value: "VODAFONE_CASH", label: "Vodafone Cash" },
               { value: "INSTAPAY", label: "InstaPay" },
-              { value: "OTHER", label: "Other" }
-            ]
-          }
+              { value: "OTHER", label: "Other" },
+            ],
+          },
         ]}
         onApplyFilters={fetchPayments}
         onExport={handleExport}
         showApplyButton={false}
         showExportButton={true}
         exportButtonText="Export"
+      />
+
+      {/* Payment Proof Modal */}
+      <PaymentProofModal
+        isOpen={showPaymentModal}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setSelectedPayment(null);
+        }}
+        payment={selectedPayment}
+        onApprove={handleApprovePayment}
+        onReject={handleRejectPayment}
+        isLoading={isProcessing}
       />
     </div>
   );

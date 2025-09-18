@@ -11,7 +11,7 @@ const StatusBadge = ({ status, variant = 'default' }) => {
       return {
         bg: 'bg-green-100',
         text: 'text-green-800',
-        dot: 'bg-green-400'
+        dot: 'bg-green-400',
       };
     }
     
@@ -19,7 +19,7 @@ const StatusBadge = ({ status, variant = 'default' }) => {
       return {
         bg: 'bg-yellow-100',
         text: 'text-yellow-800',
-        dot: 'bg-yellow-400'
+        dot: 'bg-yellow-400',
       };
     }
     
@@ -27,7 +27,7 @@ const StatusBadge = ({ status, variant = 'default' }) => {
       return {
         bg: 'bg-blue-100',
         text: 'text-blue-800',
-        dot: 'bg-blue-400'
+        dot: 'bg-blue-400',
       };
     }
     
@@ -35,7 +35,7 @@ const StatusBadge = ({ status, variant = 'default' }) => {
       return {
         bg: 'bg-red-100',
         text: 'text-red-800',
-        dot: 'bg-red-400'
+        dot: 'bg-red-400',
       };
     }
     
@@ -43,7 +43,7 @@ const StatusBadge = ({ status, variant = 'default' }) => {
       return {
         bg: 'bg-gray-100',
         text: 'text-gray-800',
-        dot: 'bg-gray-400'
+        dot: 'bg-gray-400',
       };
     }
     
@@ -51,14 +51,21 @@ const StatusBadge = ({ status, variant = 'default' }) => {
     return {
       bg: 'bg-gray-100',
       text: 'text-gray-800',
-      dot: 'bg-gray-400'
+      dot: 'bg-gray-400',
     };
   };
 
   const config = getStatusConfig(status);
 
   // Get translated status text
-  const translatedStatus = t(`common.${statusLower}`) || status;
+  const translatedStatus = (() => {
+    const translation = t(`common.${statusLower}`);
+    // Handle case where translation might return an object
+    if (typeof translation === 'object' && translation !== null) {
+      return translation.en || translation.ar || status;
+    }
+    return translation || status;
+  })();
 
   if (variant === 'dot') {
     return (

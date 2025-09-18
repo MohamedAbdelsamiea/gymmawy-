@@ -12,7 +12,7 @@ const Payments = () => {
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
-    total: 0
+    total: 0,
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -24,7 +24,7 @@ const Payments = () => {
       sortable: true,
       render: (value) => (
         <span className="font-mono text-sm text-gray-600">#{value.slice(0, 8)}</span>
-      )
+      ),
     },
     {
       key: 'amount',
@@ -34,7 +34,7 @@ const Payments = () => {
         <span className="font-semibold">
           {value} {row.currency}
         </span>
-      )
+      ),
     },
     {
       key: 'method',
@@ -44,7 +44,7 @@ const Payments = () => {
         <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
           {value}
         </span>
-      )
+      ),
     },
     {
       key: 'status',
@@ -56,20 +56,20 @@ const Payments = () => {
           SUCCESS: 'bg-green-100 text-green-800',
           COMPLETED: 'bg-green-100 text-green-800',
           FAILED: 'bg-red-100 text-red-800',
-          CANCELLED: 'bg-gray-100 text-gray-800'
+          CANCELLED: 'bg-gray-100 text-gray-800',
         };
         return (
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[value] || 'bg-gray-100 text-gray-800'}`}>
             {value}
           </span>
         );
-      }
+      },
     },
     {
       key: 'createdAt',
       label: 'Date',
       sortable: true,
-      render: (value) => new Date(value).toLocaleDateString()
+      render: (value) => new Date(value).toLocaleDateString(),
     },
     {
       key: 'actions',
@@ -84,11 +84,11 @@ const Payments = () => {
             <CheckCircle className="h-4 w-4" />
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
-  const fetchPayments = async () => {
+  const fetchPayments = async() => {
     try {
       setLoading(true);
       console.log('User role:', user?.role);
@@ -99,7 +99,7 @@ const Payments = () => {
         page: pagination.page,
         limit: pagination.limit,
         q: searchTerm || undefined,
-        status: statusFilter || undefined
+        status: statusFilter || undefined,
       };
 
       console.log('Fetching payments with params:', params);
@@ -111,7 +111,7 @@ const Payments = () => {
       setPayments(response.items || []);
       setPagination(prev => ({
         ...prev,
-        total: response.total || 0
+        total: response.total || 0,
       }));
       
       console.log('Payments state set to:', response.items || []);

@@ -8,7 +8,7 @@ const StatCard = ({
   changeType = 'neutral', 
   icon: Icon, 
   color = 'blue',
-  className = '' 
+  className = '', 
 }) => {
   const colorClasses = {
     blue: 'bg-blue-500',
@@ -16,7 +16,7 @@ const StatCard = ({
     purple: 'bg-gymmawy-primary',
     orange: 'bg-orange-500',
     red: 'bg-red-500',
-    yellow: 'bg-yellow-500'
+    yellow: 'bg-yellow-500',
   };
 
   const textColorClasses = {
@@ -25,7 +25,7 @@ const StatCard = ({
     purple: 'text-gymmawy-primary',
     orange: 'text-orange-600',
     red: 'text-red-600',
-    yellow: 'text-yellow-600'
+    yellow: 'text-yellow-600',
   };
 
   return (

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, X, AlertCircle, Play } from 'lucide-react';
 import adminApiService from '../../services/adminApiService';
+import { config } from '../../config';
 
 const VideoUpload = ({ 
   value = '', 
@@ -11,7 +12,7 @@ const VideoUpload = ({
   showUrlInput = true,
   required = false,
   maxSize = 100, // MB
-  acceptedTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/avi', 'video/mov']
+  acceptedTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/avi', 'video/mov'],
 }) => {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(value);
@@ -41,7 +42,9 @@ const VideoUpload = ({
   };
 
   const extractFilenameFromUrl = (url) => {
-    if (!url) return null;
+    if (!url) {
+return null;
+}
     const parts = url.split('/');
     return parts[parts.length - 1];
   };
@@ -71,8 +74,10 @@ const VideoUpload = ({
   };
 
   // Handle file selection
-  const handleFileSelect = async (selectedFile) => {
-    if (!selectedFile) return;
+  const handleFileSelect = async(selectedFile) => {
+    if (!selectedFile) {
+return;
+}
 
     try {
       setError('');
@@ -82,7 +87,7 @@ const VideoUpload = ({
         console.log('Deleting old video before uploading new one:', uploadedFilename);
         try {
           await adminApiService.apiCall(`/videos/${uploadedFilename}?module=${module}`, {
-            method: 'DELETE'
+            method: 'DELETE',
           });
           console.log('Old video deleted successfully from server');
         } catch (deleteError) {
@@ -96,7 +101,7 @@ const VideoUpload = ({
           console.log('Deleting old video from preview URL before uploading new one:', filename);
           try {
             await adminApiService.apiCall(`/videos/${filename}?module=${module}`, {
-              method: 'DELETE'
+              method: 'DELETE',
             });
             console.log('Old video deleted successfully from server');
           } catch (deleteError) {
@@ -122,7 +127,7 @@ const VideoUpload = ({
       
       if (result.success) {
         // Use the uploaded URL - convert relative URL to full URL
-        const baseURL = 'http://localhost:3000';
+        const baseURL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || config.API_BASE_URL;
         const videoUrl = result.data.url.startsWith('http') 
           ? result.data.url 
           : `${baseURL}${result.data.url}`;
@@ -165,7 +170,9 @@ const VideoUpload = ({
     e.stopPropagation();
     setDragActive(false);
     
-    if (disabled) return;
+    if (disabled) {
+return;
+}
     
     const files = e.dataTransfer.files;
     if (files && files[0]) {
@@ -195,7 +202,7 @@ const VideoUpload = ({
   };
 
   // Remove video
-  const handleRemove = async () => {
+  const handleRemove = async() => {
     try {
       setDeleting(true);
       setError('');
@@ -210,7 +217,7 @@ const VideoUpload = ({
         console.log('Deleting uploaded video:', uploadedFilename, 'from module:', module);
         try {
           const result = await adminApiService.apiCall(`/videos/${uploadedFilename}?module=${module}`, {
-            method: 'DELETE'
+            method: 'DELETE',
           });
           console.log('Video deleted successfully from server:', result);
         } catch (deleteError) {
@@ -224,7 +231,7 @@ const VideoUpload = ({
           console.log('Deleting video from preview URL:', filename, 'from module:', module);
           try {
             const result = await adminApiService.apiCall(`/videos/${filename}?module=${module}`, {
-              method: 'DELETE'
+              method: 'DELETE',
             });
             console.log('Video deleted successfully from server:', result);
           } catch (deleteError) {
@@ -259,7 +266,9 @@ const VideoUpload = ({
 
   // Open file dialog
   const handleClick = () => {
-    if (disabled) return;
+    if (disabled) {
+return;
+}
     fileInputRef.current?.click();
   };
 

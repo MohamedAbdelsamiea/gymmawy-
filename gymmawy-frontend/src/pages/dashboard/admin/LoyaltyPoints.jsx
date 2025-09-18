@@ -117,12 +117,14 @@ const LoyaltyPoints = () => {
     {
       key: 'user',
       label: 'User',
-      sortable: true
+      sortable: true,
+      render: (value) => value || 'N/A'
     },
     {
       key: 'email',
       label: 'Email',
-      sortable: true
+      sortable: true,
+      render: (value) => value || 'N/A'
     },
     {
       key: 'type',
@@ -143,7 +145,8 @@ const LoyaltyPoints = () => {
     {
       key: 'reason',
       label: 'Reason',
-      sortable: true
+      sortable: true,
+      render: (value) => value || 'N/A'
     },
     {
       key: 'balance',
@@ -156,7 +159,8 @@ const LoyaltyPoints = () => {
     {
       key: 'date',
       label: 'Date',
-      sortable: true
+      sortable: true,
+      render: (value) => value ? new Date(value).toLocaleDateString() : 'N/A'
     },
     {
       key: 'actions',
@@ -186,7 +190,8 @@ const LoyaltyPoints = () => {
     {
       key: 'name',
       label: 'Reward Name',
-      sortable: true
+      sortable: true,
+      render: (value) => value || 'N/A'
     },
     {
       key: 'pointsRequired',
@@ -199,7 +204,8 @@ const LoyaltyPoints = () => {
     {
       key: 'description',
       label: 'Description',
-      sortable: true
+      sortable: true,
+      render: (value) => value || 'N/A'
     },
     {
       key: 'status',
@@ -253,12 +259,14 @@ const LoyaltyPoints = () => {
     {
       key: 'name',
       label: 'User',
-      sortable: true
+      sortable: true,
+      render: (value) => value || 'N/A'
     },
     {
       key: 'email',
       label: 'Email',
-      sortable: true
+      sortable: true,
+      render: (value) => value || 'N/A'
     },
     {
       key: 'totalPoints',
@@ -271,7 +279,8 @@ const LoyaltyPoints = () => {
     {
       key: 'joinDate',
       label: 'Join Date',
-      sortable: true
+      sortable: true,
+      render: (value) => value ? new Date(value).toLocaleDateString() : 'N/A'
     }
   ];
 

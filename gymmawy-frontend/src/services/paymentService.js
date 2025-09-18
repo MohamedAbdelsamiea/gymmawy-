@@ -67,7 +67,7 @@ class PaymentService {
       const response = await apiClient.post(`${this.baseURL}/intent`, {
         amount,
         currency,
-        orderId
+        orderId,
       });
       return response;
     } catch (error) {
@@ -92,7 +92,7 @@ class PaymentService {
     try {
       const response = await apiClient.post(`${this.baseURL}/${paymentId}/refund`, {
         amount,
-        reason
+        reason,
       });
       return response;
     } catch (error) {

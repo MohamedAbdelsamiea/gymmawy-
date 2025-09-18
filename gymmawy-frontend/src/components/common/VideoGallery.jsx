@@ -7,23 +7,25 @@ const VideoGallery = ({
   title = "Our Videos", 
   maxVideos = 6, 
   showTitle = true,
-  className = "" 
+  className = "", 
 }) => {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchVideos = async () => {
+    const fetchVideos = async() => {
       try {
         setLoading(true);
         setError(null);
         const response = await videoService.getVideos({ 
           pageSize: maxVideos,
           sortBy: 'createdAt',
-          sortOrder: 'desc'
+          sortOrder: 'desc',
         });
-        setVideos(response.items || []);
+        // Filter for active videos only
+        const activeVideos = (response.items || []).filter(video => video.isActive === true);
+        setVideos(activeVideos);
       } catch (err) {
         setError(err.message);
         console.error('Error fetching videos:', err);
@@ -39,7 +41,7 @@ const VideoGallery = ({
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   };
 

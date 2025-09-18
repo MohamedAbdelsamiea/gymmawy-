@@ -15,7 +15,7 @@ const Coupons = () => {
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
-    total: 0
+    total: 0,
   });
 
   const columns = [
@@ -25,7 +25,7 @@ const Coupons = () => {
       sortable: true,
       render: (value) => (
         <span className="font-mono font-semibold text-blue-600">{value}</span>
-      )
+      ),
     },
     {
       key: 'discountType',
@@ -39,7 +39,7 @@ const Coupons = () => {
         }`}>
           {value}
         </span>
-      )
+      ),
     },
     {
       key: 'discountValue',
@@ -49,7 +49,7 @@ const Coupons = () => {
         <span className="font-semibold">
           {row.discountType === 'PERCENTAGE' ? `${value}%` : `$${value}`}
         </span>
-      )
+      ),
     },
     {
       key: 'redemptions',
@@ -59,7 +59,7 @@ const Coupons = () => {
         <span className="text-gray-600">
           {value} / {row.maxRedemptions === 0 ? '∞' : row.maxRedemptions}
         </span>
-      )
+      ),
     },
     {
       key: 'expirationDate',
@@ -73,7 +73,7 @@ const Coupons = () => {
             {date.toLocaleDateString()}
           </span>
         );
-      }
+      },
     },
     {
       key: 'isActive',
@@ -87,7 +87,7 @@ const Coupons = () => {
         }`}>
           {value ? 'Active' : 'Inactive'}
         </span>
-      )
+      ),
     },
     {
       key: 'actions',
@@ -109,25 +109,25 @@ const Coupons = () => {
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
-  const fetchCoupons = async () => {
+  const fetchCoupons = async() => {
     try {
       setLoading(true);
       const params = {
         page: pagination.page,
         limit: pagination.limit,
         q: searchTerm || undefined,
-        isActive: filterActive === '' ? undefined : filterActive === 'true'
+        isActive: filterActive === '' ? undefined : filterActive === 'true',
       };
 
       const response = await adminApiService.getCoupons(params);
       setCoupons(response.items || []);
       setPagination(prev => ({
         ...prev,
-        total: response.total || 0
+        total: response.total || 0,
       }));
     } catch (err) {
       setError('Failed to fetch coupons');
@@ -156,7 +156,7 @@ const Coupons = () => {
     setIsAddModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async(id) => {
     if (window.confirm('Are you sure you want to delete this coupon?')) {
       try {
         await adminApiService.deleteCoupon(id);

@@ -8,22 +8,19 @@ import {
   ShoppingBag,
   Users,
   Package,
-  FileText,
-  Gift,
   LogOut,
   Menu,
   X,
   ChevronDown,
   Bell,
   Search,
-  Tag,
   CreditCard,
   Truck,
-  Share2,
   Video,
   Percent,
   UserCheck,
-  Play
+  Play,
+  Home
 } from 'lucide-react';
 
 const DashboardLayout = ({ children }) => {
@@ -46,7 +43,6 @@ const DashboardLayout = ({ children }) => {
         { path: '/dashboard', icon: LayoutDashboard, label: 'Overview' },
         { path: '/dashboard/users', icon: Users, label: 'Users' },
         { path: '/dashboard/products', icon: Package, label: 'Products' },
-        { path: '/dashboard/categories', icon: Tag, label: 'Categories' },
         { path: '/dashboard/orders', icon: ShoppingBag, label: 'Orders' },
         { path: '/dashboard/subscriptions', icon: UserCheck, label: 'Subscriptions' },
         { path: '/dashboard/programmes', icon: Play, label: 'Programmes' },
@@ -55,13 +51,10 @@ const DashboardLayout = ({ children }) => {
         { path: '/dashboard/coupons', icon: Percent, label: 'Coupons' },
         { path: '/dashboard/cms', icon: Video, label: 'CMS' },
         { path: '/dashboard/shipping', icon: Truck, label: 'Shipping' },
-        { path: '/dashboard/referrals', icon: Share2, label: 'Referrals' }
       ];
     } else {
       return [
-        { path: '/dashboard', icon: ShoppingBag, label: t('user.purchaseHistory.title') },
-        { path: '/dashboard/orders', icon: ShoppingBag, label: t('user.purchaseHistory.orders') },
-        { path: '/dashboard/subscriptions', icon: Package, label: t('user.purchaseHistory.subscriptions') }
+        { path: '/dashboard', icon: ShoppingBag, label: t('user.purchaseHistory.title') }
       ];
     }
   };
@@ -165,23 +158,27 @@ const DashboardLayout = ({ children }) => {
 
             {/* Right side actions */}
             <div className="flex items-center space-x-4">
-              {/* Search */}
-              <div className="hidden md:block">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder={t('common.search')}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-                  />
+              {/* Search - Only for admin users */}
+              {userType === 'admin' && (
+                <div className="hidden md:block">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder={t('common.search')}
+                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Notifications */}
-              <button className="p-2 text-gray-400 hover:text-gray-600 relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
-              </button>
+              {/* Notifications - Only for admin users */}
+              {userType === 'admin' && (
+                <button className="p-2 text-gray-400 hover:text-gray-600 relative">
+                  <Bell className="h-5 w-5" />
+                  <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
+                </button>
+              )}
 
               {/* Profile dropdown */}
               <div className="relative">
@@ -204,11 +201,20 @@ const DashboardLayout = ({ children }) => {
                 {profileDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
                     <Link
+                      to="/"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setProfileDropdownOpen(false)}
+                    >
+                      <Home className="inline h-4 w-4 mr-2" />
+                      {t('common.backToWebsite')}
+                    </Link>
+                    <Link
                       to="/dashboard/profile"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       onClick={() => setProfileDropdownOpen(false)}
                     >
-{t('common.profileSettings')}
+                      <UserCheck className="inline h-4 w-4 mr-2" />
+                      {t('common.profileSettings')}
                     </Link>
                     <button
                       onClick={handleLogout}

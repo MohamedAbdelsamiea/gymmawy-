@@ -14,7 +14,7 @@ const AdminShipping = () => {
     fetchShipments();
   }, [searchTerm, filterStatus]);
 
-  const fetchShipments = async () => {
+  const fetchShipments = async() => {
     try {
       setLoading(true);
       setError(null);
@@ -30,7 +30,7 @@ const AdminShipping = () => {
           destination: '123 Main St, New York, NY 10001',
           estimatedDelivery: '2024-01-15',
           actualDelivery: null,
-          createdAt: '2024-01-10'
+          createdAt: '2024-01-10',
         },
         {
           id: 'SH002',
@@ -41,15 +41,15 @@ const AdminShipping = () => {
           destination: '456 Oak Ave, Los Angeles, CA 90210',
           estimatedDelivery: '2024-01-12',
           actualDelivery: '2024-01-11',
-          createdAt: '2024-01-08'
-        }
+          createdAt: '2024-01-08',
+        },
       ];
       
       let data = Array.isArray(mockShipments) ? mockShipments : [];
       if (searchTerm && Array.isArray(data)) {
         data = data.filter(shipment =>
           shipment.trackingNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          shipment.orderId.toLowerCase().includes(searchTerm.toLowerCase())
+          shipment.orderId.toLowerCase().includes(searchTerm.toLowerCase()),
         );
       }
       if (filterStatus !== 'all' && Array.isArray(data)) {
@@ -65,7 +65,7 @@ const AdminShipping = () => {
     }
   };
 
-  const handleTrackShipment = async (trackingNumber) => {
+  const handleTrackShipment = async(trackingNumber) => {
     try {
       const response = await adminApiService.trackShipment(trackingNumber);
       console.log('Tracking info:', response);
@@ -74,7 +74,7 @@ const AdminShipping = () => {
     }
   };
 
-  const handleGenerateLabel = async (orderId) => {
+  const handleGenerateLabel = async(orderId) => {
     try {
       const response = await adminApiService.generateShippingLabel(orderId, {
         // Add label data
@@ -92,7 +92,7 @@ const AdminShipping = () => {
       sortable: true,
       render: (value) => (
         <span className="font-medium text-gymmawy-primary">{value}</span>
-      )
+      ),
     },
     {
       key: 'orderId',
@@ -100,7 +100,7 @@ const AdminShipping = () => {
       sortable: true,
       render: (value) => (
         <span className="font-medium text-blue-600">{value}</span>
-      )
+      ),
     },
     {
       key: 'trackingNumber',
@@ -110,7 +110,7 @@ const AdminShipping = () => {
         <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
           {value}
         </span>
-      )
+      ),
     },
     {
       key: 'carrier',
@@ -120,7 +120,7 @@ const AdminShipping = () => {
         <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
           {value}
         </span>
-      )
+      ),
     },
     {
       key: 'status',
@@ -135,7 +135,7 @@ const AdminShipping = () => {
         }`}>
           {value?.replace('_', ' ')}
         </span>
-      )
+      ),
     },
     {
       key: 'destination',
@@ -146,19 +146,19 @@ const AdminShipping = () => {
           <MapPin className="h-3 w-3 inline mr-1" />
           {value}
         </div>
-      )
+      ),
     },
     {
       key: 'estimatedDelivery',
       label: 'Est. Delivery',
       sortable: true,
-      render: (value) => new Date(value).toLocaleDateString()
+      render: (value) => new Date(value).toLocaleDateString(),
     },
     {
       key: 'actualDelivery',
       label: 'Actual Delivery',
       sortable: true,
-      render: (value) => value ? new Date(value).toLocaleDateString() : '-'
+      render: (value) => value ? new Date(value).toLocaleDateString() : '-',
     },
     {
       key: 'actions',
@@ -180,8 +180,8 @@ const AdminShipping = () => {
             <Package className="h-4 w-4" />
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   if (loading) {
@@ -263,13 +263,13 @@ const AdminShipping = () => {
               { value: "SHIPPED", label: "Shipped" },
               { value: "IN_TRANSIT", label: "In Transit" },
               { value: "DELIVERED", label: "Delivered" },
-              { value: "FAILED", label: "Failed" }
-            ]
-          }
+              { value: "FAILED", label: "Failed" },
+            ],
+          },
         ]}
         onApplyFilters={fetchShipments}
         onExport={() => {}}
-        showApplyButton={true}
+        showApplyButton={false}
         showExportButton={false}
         applyButtonText="Apply Filters"
       />

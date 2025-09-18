@@ -16,7 +16,7 @@ const TableWithFilters = ({
   applyButtonText = "Apply Filters",
   exportButtonText = "Export",
   resultsCounter = null,
-  className = ""
+  className = "",
 }) => {
   return (
     <div className={`bg-white rounded-xl shadow-sm border border-gray-200 ${className}`}>
@@ -49,6 +49,7 @@ const TableWithFilters = ({
           searchable={false} // We have custom search
           filterable={false} // We have custom filters
           exportable={false} // We have custom export
+          sortable={true} // Enable sorting
           className="border-0 shadow-none" // Remove extra styling since we're inside a card
         />
       </div>

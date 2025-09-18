@@ -4,11 +4,75 @@ export const isValidEmail = (email) => {
   return emailRegex.test(email);
 };
 
+// Enhanced email validation with detailed feedback
+export const validateEmail = (email) => {
+  if (!email) {
+    return { isValid: false, error: 'emailRequired' };
+  }
+  
+  if (!isValidEmail(email)) {
+    return { isValid: false, error: 'emailFormat' };
+  }
+  
+  return { isValid: true, error: null };
+};
+
 // Password validation
 export const isValidPassword = (password) => {
   // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/;
   return passwordRegex.test(password);
+};
+
+// Enhanced password validation with detailed feedback
+export const validatePassword = (password, firstName = '', lastName = '', email = '') => {
+  if (!password) {
+    return { isValid: false, error: 'passwordRequired' };
+  }
+  
+  const errors = [];
+  
+  if (password.length < 8) {
+    errors.push('passwordLength');
+  }
+  
+  if (!/[A-Z]/.test(password)) {
+    errors.push('passwordUppercase');
+  }
+  
+  if (!/[a-z]/.test(password)) {
+    errors.push('passwordLowercase');
+  }
+  
+  if (!/\d/.test(password)) {
+    errors.push('passwordNumber');
+  }
+  
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push('passwordSpecial');
+  }
+  
+  // Check for common passwords
+  const commonPasswords = ['password', '123456', '123456789', 'qwerty', 'abc123', 'password123', 'admin', 'letmein'];
+  if (commonPasswords.includes(password.toLowerCase())) {
+    errors.push('passwordCommon');
+  }
+  
+  // Check for personal information
+  const personalInfo = [firstName.toLowerCase(), lastName.toLowerCase(), email.split('@')[0].toLowerCase()].filter(Boolean);
+  const containsPersonalInfo = personalInfo.some(info => 
+    info.length > 2 && password.toLowerCase().includes(info),
+  );
+  
+  if (containsPersonalInfo) {
+    errors.push('passwordPersonalInfo');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    error: errors.length > 0 ? errors[0] : null,
+    allErrors: errors,
+  };
 };
 
 // Phone number validation - accepts international formats
@@ -20,9 +84,57 @@ export const isValidPhone = (phone) => {
   return phoneRegex.test(cleanPhone);
 };
 
+// Enhanced phone validation with detailed feedback
+export const validatePhone = (phone) => {
+  if (!phone) {
+    return { isValid: false, error: 'phoneRequired' };
+  }
+  
+  const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+  
+  if (!/^[\+]?[0-9]+$/.test(cleanPhone)) {
+    return { isValid: false, error: 'phoneFormat' };
+  }
+  
+  if (cleanPhone.length < 7 || cleanPhone.length > 15) {
+    return { isValid: false, error: 'phoneLength' };
+  }
+  
+  if (!isValidPhone(phone)) {
+    return { isValid: false, error: 'phoneFormat' };
+  }
+  
+  return { isValid: true, error: null };
+};
+
 // Name validation
 export const isValidName = (name) => {
   return name.trim().length >= 2 && name.trim().length <= 50;
+};
+
+// Enhanced name validation with detailed feedback
+export const validateName = (name, fieldName = 'name') => {
+  const trimmedName = name.trim();
+  
+  if (!trimmedName) {
+    return { isValid: false, error: `${fieldName}Required` };
+  }
+  
+  if (trimmedName.length < 2) {
+    return { isValid: false, error: `${fieldName}Length` };
+  }
+  
+  if (trimmedName.length > 50) {
+    return { isValid: false, error: `${fieldName}Length` };
+  }
+  
+  // Check for valid characters (letters, spaces, hyphens, apostrophes)
+  const nameRegex = /^[a-zA-Z\u0600-\u06FF\s\-']+$/;
+  if (!nameRegex.test(trimmedName)) {
+    return { isValid: false, error: `${fieldName}Invalid` };
+  }
+  
+  return { isValid: true, error: null };
 };
 
 // Required field validation
@@ -49,6 +161,38 @@ export const isValidNumber = (value) => {
 export const isValidDate = (date) => {
   const d = new Date(date);
   return d instanceof Date && !isNaN(d);
+};
+
+// Enhanced birth date validation with detailed feedback
+export const validateBirthDate = (birthDate) => {
+  if (!birthDate) {
+    return { isValid: true, error: null }; // Birth date is optional
+  }
+  
+  const date = new Date(birthDate);
+  const today = new Date();
+  
+  if (!isValidDate(birthDate)) {
+    return { isValid: false, error: 'birthDateInvalid' };
+  }
+  
+  const age = today.getFullYear() - date.getFullYear();
+  const monthDiff = today.getMonth() - date.getMonth();
+  
+  // Adjust age if birthday hasn't occurred this year
+  const actualAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate()) 
+    ? age - 1 
+    : age;
+  
+  if (actualAge < 13) {
+    return { isValid: false, error: 'birthDateTooYoung' };
+  }
+  
+  if (actualAge > 120) {
+    return { isValid: false, error: 'birthDateTooOld' };
+  }
+  
+  return { isValid: true, error: null };
 };
 
 // File size validation (in bytes)
@@ -109,6 +253,6 @@ export const validateForm = (formData, validationRules) => {
 
   return {
     isValid: Object.keys(errors).length === 0,
-    errors
+    errors,
   };
 };

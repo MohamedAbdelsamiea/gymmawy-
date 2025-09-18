@@ -70,18 +70,24 @@ const Header = () => {
 
 
   const handleNavigation = (item) => {
-    if (item.isToggle || item.isLogo) return;
+    if (item.isToggle || item.isLogo) {
+return;
+}
 
     if (item.isSection) {
       if (location.pathname !== "/") {
         navigate("/");
         setTimeout(() => {
           const element = document.getElementById(item.sectionId);
-          if (element) element.scrollIntoView({ behavior: "smooth" });
+          if (element) {
+element.scrollIntoView({ behavior: "smooth" });
+}
         }, 100);
       } else {
         const element = document.getElementById(item.sectionId);
-        if (element) element.scrollIntoView({ behavior: "smooth" });
+        if (element) {
+element.scrollIntoView({ behavior: "smooth" });
+}
       }
       setIsMenuOpen(false);
     } else if (item.isPage) {
@@ -95,7 +101,7 @@ const Header = () => {
     i18n.changeLanguage(newLang);
   };
 
-  const handleLogout = async () => {
+  const handleLogout = async() => {
     try {
       await logout();
       navigate('/');
@@ -133,7 +139,7 @@ const Header = () => {
         {/* Left Navigation */}
         <nav className="hidden lg:flex items-center justify-end" style={{ width: 'calc(50% - 100px)' }}>
           <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-12' : 'space-x-12'}`}>
-            {navItems.slice(0, i18n.language === 'ar' ? 4 : 4).map((item) => (
+            {navItems.slice(0, i18n.language === 'ar' ? 5 : 5).map((item) => (
               <button
                 key={item.key}
                 onClick={() => handleNavigation(item)}
@@ -155,7 +161,7 @@ const Header = () => {
         {/* Right Navigation */}
         <nav className="hidden lg:flex items-center justify-start" style={{ width: 'calc(50% - 100px)' }}>
           <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-12' : 'space-x-12'}`}>
-            {navItems.slice(i18n.language === 'ar' ? 4 : 4, 8).map((item) => (
+            {navItems.slice(i18n.language === 'ar' ? 5 : 5, 8).map((item) => (
               <button
                 key={item.key}
                 onClick={() => handleNavigation(item)}
@@ -184,7 +190,7 @@ const Header = () => {
                 
                 {/* Profile Dropdown Menu */}
                 {profileDropdownOpen && (
-                  <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50`}>
+                  <div className={`absolute ${i18n.language === 'ar' ? 'right-0' : 'right-0'} mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50`}>
                     {/* Loyalty Points - Only for regular users, not admins */}
                     {user?.role !== 'ADMIN' && user?.role !== 'admin' && (
                       <div className={`px-4 py-2 text-sm text-gray-600 ${i18n.language === 'ar' ? 'text-right' : 'text-left'}`}>

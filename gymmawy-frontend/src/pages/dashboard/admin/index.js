@@ -1,7 +1,6 @@
 export { default as AdminOverview } from './Overview';
 export { default as AdminUsers } from './Users';
 export { default as AdminProducts } from './Products';
-export { default as AdminCategories } from './Categories';
 export { default as AdminOrders } from './Orders';
 export { default as AdminSubscriptions } from './Subscriptions';
 export { default as AdminProgrammes } from './Programmes';
@@ -10,4 +9,3 @@ export { default as AdminLeads } from './Leads';
 export { default as AdminCoupons } from './Coupons';
 export { default as AdminCMS } from './CMS';
 export { default as AdminShipping } from './Shipping';
-export { default as AdminReferrals } from './Referrals';

@@ -4,11 +4,21 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthCard, FloatingInput, AuthButton, AuthLink } from '../../components/auth';
 import CountryCodeSelector from '../../components/auth/CountryCodeSelector';
-import { isValidEmail, isValidPassword, isValidPhone, isValidName } from '../../utils/validators';
+import { 
+  isValidEmail, 
+  isValidPassword, 
+  isValidPhone, 
+  isValidName,
+  validateName,
+  validateEmail,
+  validatePhone,
+  validatePassword,
+  validateBirthDate,
+} from '../../utils/validators';
 import { getValidationErrors, getFieldError, getGeneralErrorMessage } from '../../utils/errorUtils';
 
 const Register = () => {
-  const { t } = useTranslation("auth");
+  const { t, i18n } = useTranslation("auth");
   const { register, loading, error, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
@@ -25,13 +35,15 @@ const Register = () => {
     building: '',
     street: '',
     city: '',
-    country: 'Egypt', // Default to Egypt
-    postcode: ''
+    country: '', // No default value
+    postcode: '',
   });
 
   const [errors, setErrors] = useState({});
   const [validationErrors, setValidationErrors] = useState([]);
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [realTimeErrors, setRealTimeErrors] = useState({});
+  const [passwordStrength, setPasswordStrength] = useState({});
 
   // Redirect authenticated users to home page
   useEffect(() => {
@@ -39,6 +51,7 @@ const Register = () => {
       navigate('/');
     }
   }, [isAuthenticated, user, navigate]);
+
 
   // Show loading while checking authentication
   if (loading && !error) {
@@ -56,14 +69,14 @@ const Register = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
-        [name]: ''
+        [name]: '',
       }));
     }
     
@@ -71,20 +84,86 @@ const Register = () => {
     if (validationErrors.length > 0) {
       setValidationErrors([]);
     }
+    
+    // Real-time validation
+    validateField(name, value);
+  };
+
+  const validateField = (fieldName, value) => {
+    let validation = { isValid: true, error: null };
+    
+    switch (fieldName) {
+      case 'firstName':
+        validation = validateName(value, 'firstName');
+        break;
+      case 'lastName':
+        validation = validateName(value, 'lastName');
+        break;
+      case 'email':
+        validation = validateEmail(value);
+        break;
+      case 'phone':
+        validation = validatePhone(value);
+        break;
+      case 'birthDate':
+        validation = validateBirthDate(value);
+        break;
+      case 'password':
+        validation = validatePassword(value, formData.firstName, formData.lastName, formData.email);
+        setPasswordStrength(validation);
+        break;
+      case 'confirmPassword':
+        if (value && formData.password !== value) {
+          validation = { isValid: false, error: 'confirmPasswordMismatch' };
+        }
+        break;
+      case 'building':
+        if (value && value.trim().length > 0 && value.trim().length < 2) {
+          validation = { isValid: false, error: 'buildingLength' };
+        }
+        break;
+      case 'street':
+        if (value && value.trim().length > 0 && value.trim().length < 5) {
+          validation = { isValid: false, error: 'streetLength' };
+        }
+        break;
+      case 'city':
+        if (value && value.trim().length > 0 && value.trim().length < 2) {
+          validation = { isValid: false, error: 'cityLength' };
+        }
+        break;
+      case 'postcode':
+        if (value && value.trim().length > 0 && value.trim().length < 3) {
+          validation = { isValid: false, error: 'postcodeLength' };
+        }
+        break;
+      default:
+        break;
+    }
+    
+    setRealTimeErrors(prev => ({
+      ...prev,
+      [fieldName]: validation.isValid ? null : validation.error,
+    }));
   };
 
   const handleCountryCodeChange = (countryCode) => {
     setFormData(prev => ({
       ...prev,
-      countryCode
+      countryCode,
     }));
     
     // Clear phone error when country code changes
     if (errors.phone) {
       setErrors(prev => ({
         ...prev,
-        phone: ''
+        phone: '',
       }));
+    }
+    
+    // Re-validate phone number with new country code
+    if (formData.phone) {
+      validateField('phone', formData.phone);
     }
   };
 
@@ -92,107 +171,97 @@ const Register = () => {
     const newErrors = {};
 
     // First Name
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = t('register.errors.firstNameRequired');
-    } else if (!isValidName(formData.firstName)) {
-      newErrors.firstName = 'First name must be 2-50 characters';
+    const firstNameValidation = validateName(formData.firstName, 'firstName');
+    if (!firstNameValidation.isValid) {
+      newErrors.firstName = t(`register.errors.${firstNameValidation.error}`);
     }
 
     // Last Name
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = t('register.errors.lastNameRequired');
-    } else if (!isValidName(formData.lastName)) {
-      newErrors.lastName = 'Last name must be 2-50 characters';
+    const lastNameValidation = validateName(formData.lastName, 'lastName');
+    if (!lastNameValidation.isValid) {
+      newErrors.lastName = t(`register.errors.${lastNameValidation.error}`);
     }
 
     // Email
-    if (!formData.email.trim()) {
-      newErrors.email = t('register.errors.emailRequired');
-    } else if (!isValidEmail(formData.email)) {
-      newErrors.email = t('register.errors.invalidEmail');
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.isValid) {
+      newErrors.email = t(`register.errors.${emailValidation.error}`);
     }
 
     // Phone
-    if (!formData.phone.trim()) {
-      newErrors.phone = t('register.errors.phoneRequired');
-    } else {
-      const fullPhone = formData.countryCode + formData.phone.trim();
-      if (!isValidPhone(fullPhone)) {
-        newErrors.phone = t('register.errors.invalidPhone');
-      }
+    const phoneValidation = validatePhone(formData.phone);
+    if (!phoneValidation.isValid) {
+      newErrors.phone = t(`register.errors.${phoneValidation.error}`);
     }
 
     // Birth Date (optional but validate if provided)
-    if (formData.birthDate && formData.birthDate.trim()) {
-      const birthDate = new Date(formData.birthDate);
-      const today = new Date();
-      const age = today.getFullYear() - birthDate.getFullYear();
-      if (age < 13) {
-        newErrors.birthDate = 'You must be at least 13 years old';
-      } else if (age > 120) {
-        newErrors.birthDate = 'Please enter a valid birth date';
-      }
+    const birthDateValidation = validateBirthDate(formData.birthDate);
+    if (!birthDateValidation.isValid) {
+      newErrors.birthDate = t(`register.errors.${birthDateValidation.error}`);
     }
 
     // Address fields (optional but validate if provided)
-    if (formData.building && formData.building.trim().length < 2) {
-      newErrors.building = 'Building must be at least 2 characters';
+    if (formData.building && formData.building.trim().length > 0 && formData.building.trim().length < 2) {
+      newErrors.building = t('register.errors.buildingLength');
     }
     
-    if (formData.street && formData.street.trim().length < 5) {
-      newErrors.street = 'Street must be at least 5 characters';
+    if (formData.street && formData.street.trim().length > 0 && formData.street.trim().length < 5) {
+      newErrors.street = t('register.errors.streetLength');
     }
     
-    if (formData.city && formData.city.trim().length < 2) {
-      newErrors.city = 'City must be at least 2 characters';
+    if (formData.city && formData.city.trim().length > 0 && formData.city.trim().length < 2) {
+      newErrors.city = t('register.errors.cityLength');
     }
     
-    if (formData.postcode && formData.postcode.trim().length < 3) {
-      newErrors.postcode = 'Postcode must be at least 3 characters';
+    if (formData.postcode && formData.postcode.trim().length > 0 && formData.postcode.trim().length < 3) {
+      newErrors.postcode = t('register.errors.postcodeLength');
     }
 
     // Password
-    if (!formData.password.trim()) {
-      newErrors.password = t('register.errors.passwordRequired');
-    } else if (!isValidPassword(formData.password)) {
-      newErrors.password = t('register.errors.weakPassword');
+    const passwordValidation = validatePassword(formData.password, formData.firstName, formData.lastName, formData.email);
+    if (!passwordValidation.isValid) {
+      newErrors.password = t(`register.errors.${passwordValidation.error}`);
     }
 
     // Confirm Password
     if (!formData.confirmPassword.trim()) {
-      newErrors.confirmPassword = t('register.errors.confirmPasswordRequired');
+      newErrors.confirmPassword = t('register.errors.confirmPasswordEmpty');
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = t('register.errors.passwordMismatch');
+      newErrors.confirmPassword = t('register.errors.confirmPasswordMismatch');
     }
 
     // Terms Agreement
     if (!agreeTerms) {
-      newErrors.terms = t('register.errors.termsRequired');
+      newErrors.terms = t('register.errors.termsNotAgreed');
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
 
+    // Remove leading zero from phone number when concatenating with country code
+    const cleanPhone = formData.phone.startsWith('0') ? formData.phone.substring(1) : formData.phone;
+    
     const userData = {
       firstName: formData.firstName,
       lastName: formData.lastName,
       email: formData.email,
-      mobileNumber: formData.countryCode + formData.phone,
+      mobileNumber: formData.countryCode + cleanPhone,
       password: formData.password,
       birthDate: formData.birthDate || "",
       building: formData.building || "",
       street: formData.street || "",
       city: formData.city || "",
       country: formData.country || "",
-      postcode: formData.postcode || ""
+      postcode: formData.postcode || "",
+      language: i18n.language, // Include current language
     };
 
     const result = await register(userData);
@@ -208,10 +277,30 @@ const Register = () => {
         setValidationErrors(validationErrs);
         setErrors({});
       } else {
-        // Handle general errors
-        const errorMessage = result.error?.message || result.error?.response?.data?.error?.message || 'Registration failed. Please try again.';
+        // Handle general errors - check multiple possible error structures
+        let errorMessage = 'Registration failed. Please try again.';
+        
+        if (result.error?.response?.data?.message) {
+          errorMessage = result.error.response.data.message;
+        } else if (result.error?.response?.data?.error?.message) {
+          errorMessage = result.error.response.data.error.message;
+        } else if (result.error?.message) {
+          errorMessage = result.error.message;
+        } else if (typeof result.error === 'string') {
+          errorMessage = result.error;
+        }
+        
+        // Handle specific error cases
+        if (errorMessage.includes('409') || errorMessage.includes('Conflict')) {
+          const translatedMessage = t('register.errors.emailAlreadyExists');
+          errorMessage = translatedMessage !== 'register.errors.emailAlreadyExists' ? translatedMessage : 'This email is already registered. Please use a different email or try logging in.';
+        } else if (errorMessage.includes('400') || errorMessage.includes('Bad Request')) {
+          const translatedMessage = t('register.errors.invalidData');
+          errorMessage = translatedMessage !== 'register.errors.invalidData' ? translatedMessage : 'Please check your information and try again.';
+        }
+        
         setErrors({ 
-          general: errorMessage
+          general: errorMessage,
         });
         setValidationErrors([]);
       }
@@ -262,7 +351,7 @@ const Register = () => {
             name="firstName"
             value={formData.firstName}
             onChange={handleInputChange}
-            error={errors.firstName || getFieldError(validationErrors, 'firstName')}
+            error={errors.firstName || (realTimeErrors.firstName ? t(`register.errors.${realTimeErrors.firstName}`) : null) || getFieldError(validationErrors, 'firstName')}
             required
           />
           <FloatingInput
@@ -271,7 +360,7 @@ const Register = () => {
             name="lastName"
             value={formData.lastName}
             onChange={handleInputChange}
-            error={errors.lastName || getFieldError(validationErrors, 'lastName')}
+            error={errors.lastName || (realTimeErrors.lastName ? t(`register.errors.${realTimeErrors.lastName}`) : null) || getFieldError(validationErrors, 'lastName')}
             required
           />
         </div>
@@ -283,7 +372,7 @@ const Register = () => {
           name="email"
           value={formData.email}
           onChange={handleInputChange}
-          error={errors.email || getFieldError(validationErrors, 'email')}
+          error={errors.email || (realTimeErrors.email ? t(`register.errors.${realTimeErrors.email}`) : null) || getFieldError(validationErrors, 'email')}
           required
         />
 
@@ -292,7 +381,7 @@ const Register = () => {
           <label className="block text-sm font-medium text-gray-700 mb-2 uppercase">
             {t('register.phone')} <span className="text-red-500">*</span>
           </label>
-          <div className="flex">
+          <div className="flex ltr:flex-row rtl:flex-row-reverse">
             <CountryCodeSelector
               value={formData.countryCode}
               onChange={handleCountryCodeChange}
@@ -304,12 +393,12 @@ const Register = () => {
                 name="phone"
                 value={formData.phone}
                 onChange={handleInputChange}
-                placeholder="Enter phone number"
+                placeholder={t('register.phonePlaceholder')}
                 className={`
                   w-full px-3 py-2 border-b-2 bg-transparent text-lg md:text-xl 
                   focus:outline-none transition-colors duration-200
-                  ltr:text-left rtl:text-right rounded-r-md
-                  ${errors.phone 
+                  text-left ltr:rounded-r-md rtl:rounded-l-md
+                  ${errors.phone || realTimeErrors.phone
                     ? 'border-red-500 text-red-500' 
                     : 'border-gray-300 text-gray-700 focus:border-gymmawy-primary'
                   }
@@ -318,9 +407,9 @@ const Register = () => {
               />
             </div>
           </div>
-          {errors.phone && (
+          {(errors.phone || realTimeErrors.phone) && (
             <p className="text-xs text-red-500 mt-2 ltr:text-left rtl:text-right">
-              {errors.phone}
+              {errors.phone || (realTimeErrors.phone ? t(`register.errors.${realTimeErrors.phone}`) : null)}
             </p>
           )}
         </div>
@@ -328,7 +417,7 @@ const Register = () => {
         {/* Birth Date */}
         <div className="w-full">
           <label className="block text-sm font-medium text-gray-700 mb-2 uppercase">
-            Birth Date
+            {t('register.birthDate')}
           </label>
           <input
             type="date"
@@ -339,15 +428,15 @@ const Register = () => {
               w-full border-b-2 bg-transparent pt-2 pb-4 text-lg md:text-xl 
               focus:outline-none transition-colors duration-200
               ltr:text-left rtl:text-right
-              ${errors.birthDate 
+              ${errors.birthDate || realTimeErrors.birthDate
                 ? 'border-red-500 text-red-500' 
                 : 'border-gray-300 text-gray-700 focus:border-gymmawy-primary'
               }
             `}
           />
-          {errors.birthDate && (
+          {(errors.birthDate || realTimeErrors.birthDate) && (
             <p className="text-xs text-red-500 mt-2 ltr:text-left rtl:text-right">
-              {errors.birthDate}
+              {errors.birthDate || (realTimeErrors.birthDate ? t(`register.errors.${realTimeErrors.birthDate}`) : null)}
             </p>
           )}
         </div>
@@ -355,41 +444,41 @@ const Register = () => {
         {/* Address Section */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
-            Address Information (Optional)
+            {t('register.addressInfo')}
           </h3>
           
           {/* Building and Street */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FloatingInput
-              label="Building"
+              label={t('register.building')}
               type="text"
               name="building"
               value={formData.building}
               onChange={handleInputChange}
-              error={errors.building}
+              error={errors.building || (realTimeErrors.building ? t(`register.errors.${realTimeErrors.building}`) : null)}
             />
             <FloatingInput
-              label="Street"
+              label={t('register.street')}
               type="text"
               name="street"
               value={formData.street}
               onChange={handleInputChange}
-              error={errors.street}
+              error={errors.street || (realTimeErrors.street ? t(`register.errors.${realTimeErrors.street}`) : null)}
             />
           </div>
 
           {/* City, Country, and Postcode */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FloatingInput
-              label="City"
+              label={t('register.city')}
               type="text"
               name="city"
               value={formData.city}
               onChange={handleInputChange}
-              error={errors.city}
+              error={errors.city || (realTimeErrors.city ? t(`register.errors.${realTimeErrors.city}`) : null)}
             />
             <FloatingInput
-              label="Country"
+              label={t('register.country')}
               type="text"
               name="country"
               value={formData.country}
@@ -397,36 +486,72 @@ const Register = () => {
               error={errors.country}
             />
             <FloatingInput
-              label="Postcode"
+              label={t('register.postcode')}
               type="text"
               name="postcode"
               value={formData.postcode}
               onChange={handleInputChange}
-              error={errors.postcode}
+              error={errors.postcode || (realTimeErrors.postcode ? t(`register.errors.${realTimeErrors.postcode}`) : null)}
             />
           </div>
         </div>
 
         {/* Password Fields */}
-        <FloatingInput
-          label={t('register.password')}
-          type="password"
-          name="password"
-          value={formData.password}
-          onChange={handleInputChange}
-          error={errors.password || getFieldError(validationErrors, 'password')}
-          required
-        />
+        <div className="space-y-2">
+          <FloatingInput
+            label={t('register.password')}
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleInputChange}
+            error={getFieldError(validationErrors, 'password')}
+            required
+          />
+          
+          {/* Password Strength Indicator */}
+          {formData.password && (
+            <div className="space-y-1">
+              <div className="text-xs text-gray-600">
+                {t('register.errors.passwordRequirements')}
+              </div>
+              <div className="space-y-1 text-xs">
+                {passwordStrength.allErrors && passwordStrength.allErrors.length > 0 ? (
+                  passwordStrength.allErrors.map((error, index) => (
+                    <div key={index} className="flex items-center text-red-500">
+                      <span className="mr-1">✗</span>
+                      <span>{t(`register.errors.${error}`)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex items-center text-green-500">
+                    <span className="mr-1">✓</span>
+                    <span>{t('register.errors.passwordMeetsRequirements')}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
-        <FloatingInput
-          label={t('register.confirmPassword')}
-          type="password"
-          name="confirmPassword"
-          value={formData.confirmPassword}
-          onChange={handleInputChange}
-          error={errors.confirmPassword}
-          required
-        />
+        <div className="space-y-2">
+          <FloatingInput
+            label={t('register.confirmPassword')}
+            type="password"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleInputChange}
+            error={errors.confirmPassword || (realTimeErrors.confirmPassword ? t(`register.errors.${realTimeErrors.confirmPassword}`) : null)}
+            required
+          />
+          
+          {/* Password Match Indicator */}
+          {formData.confirmPassword && formData.password === formData.confirmPassword && (
+            <div className="flex items-center text-green-500 text-xs">
+              <span className="mr-1">✓</span>
+              <span>{t('register.errors.passwordsMatch')}</span>
+            </div>
+          )}
+        </div>
 
         {/* Terms Agreement */}
         <div className="flex items-start">

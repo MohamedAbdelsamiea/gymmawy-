@@ -5,7 +5,7 @@ import { AuthCard, AuthButton, AuthLink } from '../../components/auth';
 import authService from '../../services/authService';
 
 const EmailVerification = () => {
-  const { t } = useTranslation("auth");
+  const { t, i18n } = useTranslation("auth");
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
@@ -15,7 +15,7 @@ const EmailVerification = () => {
 
   const email = searchParams.get('email');
 
-  const handleResendEmail = async () => {
+  const handleResendEmail = async() => {
     if (!email) {
       setError('Email address not found. Please try registering again.');
       return;
@@ -25,7 +25,7 @@ const EmailVerification = () => {
     setError('');
     
     try {
-      await authService.resendVerificationEmail(email);
+      await authService.resendVerificationEmail(email, i18n.language);
       setSuccess(true);
     } catch (error) {
       setError(error.message || t('emailVerification.errors.resendFailed'));

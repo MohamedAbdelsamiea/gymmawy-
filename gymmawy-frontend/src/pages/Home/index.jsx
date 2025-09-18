@@ -11,6 +11,7 @@ import VideoPlayer from "../../components/common/VideoPlayer";
 import videoService from "../../services/videoService";
 import transformationService from "../../services/transformationService";
 import subscriptionService from "../../services/subscriptionService";
+import { config } from "../../config";
 
 const HomePage = () => {
   const { t, i18n } = useTranslation("home");
@@ -25,13 +26,15 @@ const HomePage = () => {
   const [plansLoading, setPlansLoading] = useState(true);
   const [selectedPlanOptions, setSelectedPlanOptions] = useState({});
   const [openDropdowns, setOpenDropdowns] = useState({});
+  const [plansCurrency, setPlansCurrency] = useState('EGP');
 
   // Fetch featured video
   useEffect(() => {
-    const fetchFeaturedVideo = async () => {
+    const fetchFeaturedVideo = async() => {
       try {
         setVideoLoading(true);
         const video = await videoService.getFeaturedVideo();
+        console.log('Featured video data:', video);
         setFeaturedVideo(video);
       } catch (error) {
         console.error('Error fetching featured video:', error);
@@ -45,15 +48,20 @@ const HomePage = () => {
 
   // Fetch transformations
   useEffect(() => {
-    const fetchTransformations = async () => {
+    const fetchTransformations = async() => {
       try {
         setTransformationsLoading(true);
+        console.log('=== FETCHING TRANSFORMATIONS ===');
         const response = await transformationService.getTransformations({
-          pageSize: 10,
-          sortBy: 'createdAt',
-          sortOrder: 'desc'
+          isActive: true,
+          language: i18n.language,
         });
-        setTransformations(response.items || []);
+        console.log('=== TRANSFORMATIONS RESPONSE ===');
+        console.log('Response:', response);
+        console.log('Transformations:', response.transformations);
+        console.log('Transformations length:', response.transformations?.length);
+        console.log('=====================================');
+        setTransformations(response.transformations || []);
       } catch (error) {
         console.error('Error fetching transformations:', error);
       } finally {
@@ -62,7 +70,7 @@ const HomePage = () => {
     };
 
     fetchTransformations();
-  }, []);
+  }, [i18n.language]);
 
   // Fetch subscription plans
   useEffect(() => {
@@ -71,7 +79,7 @@ const HomePage = () => {
     console.log('Timestamp:', Date.now());
     console.log('=====================================');
     
-    const fetchSubscriptionPlans = async () => {
+    const fetchSubscriptionPlans = async() => {
       try {
         setPlansLoading(true);
         setSubscriptionPlans([]); // Clear existing data first
@@ -82,8 +90,10 @@ const HomePage = () => {
         console.log('First plan:', response.items?.[0]);
         console.log('First plan subscriptionPeriodDays:', response.items?.[0]?.subscriptionPeriodDays);
         console.log('First plan giftPeriodDays:', response.items?.[0]?.giftPeriodDays);
+        console.log('Currency from API:', response.currency);
         console.log('=====================================');
         setSubscriptionPlans(response.items || []);
+        setPlansCurrency(response.currency || 'EGP');
       } catch (error) {
         console.error('Error fetching subscription plans:', error);
       } finally {
@@ -96,6 +106,9 @@ const HomePage = () => {
 
   // Helper function to get bilingual text
   const getBilingualText = (text, fallback = '') => {
+    if (!text) {
+return fallback;
+}
     if (typeof text === 'object') {
       return i18n.language === 'ar' && text.ar 
         ? text.ar 
@@ -155,7 +168,9 @@ const HomePage = () => {
 
   // Helper function to format gift period
   const formatGiftPeriod = (days) => {
-    if (days === 0) return '';
+    if (days === 0) {
+return '';
+}
     return i18n.language === 'ar' 
       ? ` + ${formatSubscriptionPeriod(days)}`
       : ` + ${formatSubscriptionPeriod(days)}`;
@@ -165,12 +180,12 @@ const HomePage = () => {
   const handlePlanOptionChange = (planId, option) => {
     setSelectedPlanOptions(prev => ({
       ...prev,
-      [planId]: option
+      [planId]: option,
     }));
     // Close dropdown after selection
     setOpenDropdowns(prev => ({
       ...prev,
-      [planId]: false
+      [planId]: false,
     }));
   };
 
@@ -178,7 +193,7 @@ const HomePage = () => {
   const toggleDropdown = (planId) => {
     setOpenDropdowns(prev => ({
       ...prev,
-      [planId]: !prev[planId]
+      [planId]: !prev[planId],
     }));
   };
 
@@ -205,7 +220,7 @@ const HomePage = () => {
   const handleChoosePlan = (plan) => {
     if (!isAuthenticated) {
       navigate('/auth/login', { 
-        state: { from: '/checkout', plan, type: 'subscription' } 
+        state: { from: '/checkout', plan, type: 'subscription' }, 
       });
       return;
     }
@@ -226,10 +241,10 @@ const HomePage = () => {
           giftPeriodDays: plan.giftPeriodDays,
           discountPercentage: plan.discountPercentage,
           benefits: plan.benefits || [],
-          image: plan.image
+          image: plan.image,
         },
-        type: 'subscription'
-      }
+        type: 'subscription',
+      },
     });
   };
 
@@ -367,37 +382,21 @@ const HomePage = () => {
           </div>
 
           {/* Video Player - Dynamic from CMS */}
-          <div className="max-w-[1300px] mx-auto mb-12 px-4">
-            {videoLoading ? (
-              <div className="relative w-full aspect-video bg-gray-200 overflow-hidden rounded-lg flex items-center justify-center">
-                <div className="text-gray-500">Loading video...</div>
-              </div>
-            ) : featuredVideo ? (
+          {!videoLoading && featuredVideo && (
+            <div className="max-w-[1300px] mx-auto mb-12 px-4">
               <VideoPlayer
-                videoUrl={featuredVideo.videoUrl}
-                thumbnailEn={featuredVideo.thumbnailEn}
-                thumbnailAr={featuredVideo.thumbnailAr}
+                videoUrl={featuredVideo.videoUrl.startsWith('http') ? featuredVideo.videoUrl : `http://localhost:3000${featuredVideo.videoUrl}`}
+                thumbnailEn={featuredVideo.thumbnailEn ? (featuredVideo.thumbnailEn.startsWith('http') ? featuredVideo.thumbnailEn : `http://localhost:3000${featuredVideo.thumbnailEn}`) : null}
+                thumbnailAr={featuredVideo.thumbnailAr ? (featuredVideo.thumbnailAr.startsWith('http') ? featuredVideo.thumbnailAr : `http://localhost:3000${featuredVideo.thumbnailAr}`) : null}
                 title={featuredVideo.title?.en || featuredVideo.title?.ar || 'Featured Video'}
                 className="rounded-lg"
                 showControls={true}
                 autoPlay={false}
                 muted={false}
+                hideIfNoVideo={true}
               />
-            ) : (
-              <div className="relative w-full aspect-video bg-black overflow-hidden rounded-lg">
-                <img
-                  src={videoThumbnail}
-                  alt="Video Thumbnail"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                  <div className="w-24 h-24 bg-transparent border-4 border-white rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-transform duration-300">
-                    <Play size={40} className="ml-1 text-white" />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Feature Cards */}
           <div className="max-w-[1300px] mx-auto px-4">
@@ -593,9 +592,12 @@ const HomePage = () => {
                   <div key={transformation.id} className="px-2">
                     <div className="overflow-hidden rounded-lg">
                       <img
-                        src={transformation.imageUrl}
+                        src={transformation.imageUrl ? (transformation.imageUrl.startsWith('http') ? transformation.imageUrl : `${config.API_BASE_URL}${transformation.imageUrl}`) : ''}
                         alt={getTransformationTitle()}
                         className="w-full h-auto object-cover rounded-lg shadow-lg transform transition-transform duration-500 hover:scale-105 hover:brightness-110"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
                       />
                     </div>
                   </div>
@@ -644,6 +646,7 @@ const HomePage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {subscriptionPlans.map((plan, index) => {
                 // Debug: Log the plan data to see its structure
+                console.log('🔍 Plan imageUrl:', plan.imageUrl);
                 const planName = getBilingualText(plan.name, 'Package');
                 const planDescription = getBilingualText(plan.description, '');
                 
@@ -694,35 +697,70 @@ const HomePage = () => {
                 const discountedPrice = calculateDiscountedPrice(currentPrice, plan.discountPercentage || 0);
                 const hasDiscount = (plan.discountPercentage || 0) > 0;
                 
-                // Get currency symbol from backend or default to L.E
-                const currencySymbol = (plan.price && plan.price.currencySymbol) || 'L.E';
+                // Get currency symbol from API response or use default
+                let currencySymbol;
+                const planCurrency = plan.price?.currency || plansCurrency || 'EGP';
+                
+                if (i18n.language === 'ar') {
+                  // Arabic currency symbols
+                  switch (planCurrency) {
+                    case 'USD':
+                      currencySymbol = '$';
+                      break;
+                    case 'SAR':
+                      currencySymbol = 'رس';
+                      break;
+                    case 'EGP':
+                    default:
+                      currencySymbol = 'جم';
+                      break;
+                  }
+                } else {
+                  // English currency symbols
+                  switch (planCurrency) {
+                    case 'USD':
+                      currencySymbol = '$';
+                      break;
+                    case 'SAR':
+                      currencySymbol = 'S.R';
+                      break;
+                    case 'EGP':
+                    default:
+                      currencySymbol = 'L.E';
+                      break;
+                  }
+                }
                 
                 return (
               <div
                 key={index}
-                className="relative bg-[#ebebeb] rounded-3xl border-[2px] border-[#190143] shadow-lg flex flex-col"
+                className="relative bg-[#ebebeb] rounded-3xl border-[2px] shadow-lg flex flex-col"
+                style={{
+                  borderColor: plan.crownColor || '#190143'
+                }}
               >
-                {/* Crown badge above card - show only for 6 weeks challenge */}
-                {(planName.toLowerCase().includes('6 weeks') || planName.toLowerCase().includes('6 أسابيع')) && (
+                {/* Crown badge above card - show when crown data is available */}
+                {plan.crown && (plan.crown.en || plan.crown.ar) && (
                   <div className="absolute -top-7 left-1/2 -translate-x-1/2 w-2/3 z-20">
                     <div
                       className="
-                        bg-[#190143] 
-                        text-[#ebebeb] 
+                        text-white 
                         text-center 
                         py-0.5 px-3
                         font-bold text-sm tracking-wide shadow-md
-                        border-x-[3px] border-t-[3px] border-[#190143]
+                        border-x-[3px] border-t-[3px]
                         relative overflow-hidden
                       "
                       style={{
+                        backgroundColor: plan.crownColor || '#190143',
+                        borderColor: plan.crownColor || '#190143',
                         borderTopLeftRadius: "15px",
                         borderTopRightRadius: "15px",
                         borderBottomLeftRadius: "0px",
                         borderBottomRightRadius: "0px",
                       }}
                     >
-                      {i18n.language === 'ar' ? 'GYMMAWY CHALLENGE' : 'GYMMAWY\'S CHALLENGE'}
+                      {getBilingualText(plan.crown, '')}
                     </div>
                   </div>
                 )}
@@ -733,9 +771,13 @@ const HomePage = () => {
                   <div className="w-14 h-14 mb-4">
                     {plan.imageUrl ? (
                       <img
-                        src={plan.imageUrl}
+                        src={plan.imageUrl.startsWith('http') ? plan.imageUrl : `${config.API_BASE_URL}${plan.imageUrl}`}
                         alt={planName}
                         className="w-full h-full object-cover rounded-lg"
+                        onError={(e) => {
+                          console.error('Image load error:', e);
+                          e.target.style.display = 'none';
+                        }}
                       />
                     ) : (
                       <div className="w-full h-full bg-[#190143] rounded-lg flex items-center justify-center">
@@ -752,7 +794,7 @@ const HomePage = () => {
                   {/* Price with discount display */}
                   <div className="mb-2 mt-1">
                     {hasDiscount && currentPrice > 0 ? (
-                      <div className="flex items-center space-x-2">
+                      <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
                         <span className="text-2xl font-medium text-gray-500 line-through">
                           {currentPrice.toFixed(0)} {currencySymbol}
                         </span>
@@ -833,7 +875,7 @@ const HomePage = () => {
                   {plan.benefits && plan.benefits.length > 0 && (
                     <ul className="space-y-2">
                       {plan.benefits.map((benefit, featureIndex) => {
-                        const benefitDescription = getBilingualText(benefit.benefit?.description, '');
+                        const benefitDescription = getBilingualText(benefit.benefit?.description || benefit.description, '');
                         return (
                           <li
                             key={featureIndex}

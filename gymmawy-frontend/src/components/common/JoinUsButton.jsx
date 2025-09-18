@@ -16,7 +16,7 @@ const JoinUsButton = ({ className = '', onClick }) => {
     if (packagesSection) {
       packagesSection.scrollIntoView({ 
         behavior: 'smooth',
-        block: 'start'
+        block: 'start',
       });
     }
   };

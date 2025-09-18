@@ -18,14 +18,14 @@ const StorePage = () => {
     loadStoreData();
   }, []);
 
-  const loadStoreData = async () => {
+  const loadStoreData = async() => {
     try {
       setLoading(true);
       setError(null);
 
       const [productsResponse, categoriesResponse] = await Promise.allSettled([
         productService.getProducts(),
-        productService.getCategories()
+        productService.getCategories(),
       ]);
 
       if (productsResponse.status === 'fulfilled') {
@@ -42,7 +42,7 @@ const StorePage = () => {
     }
   };
 
-  const handleAddToCart = async (productId) => {
+  const handleAddToCart = async(productId) => {
     if (!isAuthenticated) {
       window.location.href = '/auth/login';
       return;

@@ -5,7 +5,7 @@ export const useFetch = (url, options = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async() => {
     try {
       setLoading(true);
       setError(null);

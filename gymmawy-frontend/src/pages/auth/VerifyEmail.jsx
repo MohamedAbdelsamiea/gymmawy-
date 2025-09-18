@@ -5,7 +5,7 @@ import { AuthCard, AuthButton, AuthLink } from '../../components/auth';
 import authService from '../../services/authService';
 
 const VerifyEmail = () => {
-  const { t } = useTranslation("auth");
+  const { t, i18n } = useTranslation("auth");
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
@@ -20,13 +20,13 @@ const VerifyEmail = () => {
     if (token && email) {
       handleVerifyEmail();
     } else {
-      setError('Invalid verification link. Please check your email and try again.');
+      setError(t('verifyEmail.errors.invalidLink'));
     }
   }, [token, email]);
 
-  const handleVerifyEmail = async () => {
+  const handleVerifyEmail = async() => {
     if (!token || !email) {
-      setError('Invalid verification link. Please check your email and try again.');
+      setError(t('verifyEmail.errors.invalidLink'));
       return;
     }
 
@@ -34,22 +34,34 @@ const VerifyEmail = () => {
     setError('');
     
     try {
-      await authService.verifyEmail(token, email);
+      const result = await authService.verifyEmail(token, email);
       setSuccess(true);
       // Redirect to login after 3 seconds
       setTimeout(() => {
         navigate('/auth/login');
       }, 3000);
     } catch (error) {
-      setError(error.message || 'Email verification failed. Please try again.');
+      // Handle different error scenarios
+      if (error.message?.includes('already exists') || error.message?.includes('P2002')) {
+        setError(t('verifyEmail.success.alreadyVerified'));
+        // Still show success state for better UX
+        setSuccess(true);
+        setTimeout(() => {
+          navigate('/auth/login');
+        }, 3000);
+      } else if (error.message?.includes('expired') || error.message?.includes('invalid')) {
+        setError(t('verifyEmail.errors.expiredLink'));
+      } else {
+        setError(error.message || t('verifyEmail.errors.verificationFailed'));
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResendEmail = async () => {
+  const handleResendEmail = async() => {
     if (!email) {
-      setError('Email address not found. Please try registering again.');
+      setError(t('verifyEmail.errors.emailNotFound'));
       return;
     }
 
@@ -57,10 +69,10 @@ const VerifyEmail = () => {
     setError('');
     
     try {
-      await authService.resendVerificationEmail(email);
+      await authService.resendVerificationEmail(email, i18n.language);
       setSuccess(true);
     } catch (error) {
-      setError(error.message || 'Failed to resend verification email.');
+      setError(error.message || t('verifyEmail.errors.resendFailed'));
     } finally {
       setLoading(false);
     }
@@ -68,8 +80,8 @@ const VerifyEmail = () => {
 
   return (
     <AuthCard 
-      title="Email Verification" 
-      subtitle="Verify your email address"
+      title={t('verifyEmail.title')} 
+      subtitle={t('verifyEmail.subtitle')}
     >
       <div className="text-center space-y-6">
         {/* Email Icon */}
@@ -85,7 +97,7 @@ const VerifyEmail = () => {
         {loading && !success && (
           <div className="space-y-4">
             <p className="text-gray-600 text-sm">
-              Verifying your email address...
+              {t('verifyEmail.verifying')}
             </p>
             <div className="flex justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gymmawy-primary"></div>
@@ -97,15 +109,23 @@ const VerifyEmail = () => {
         {success && (
           <div className="space-y-4">
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-green-700 text-sm">
-                Email verified successfully! Redirecting to login...
-              </p>
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <p className="text-green-700 text-sm font-medium">
+                  {error?.includes('already verified') ? 
+                    t('verifyEmail.success.alreadyVerified') : 
+                    t('verifyEmail.success.verified')
+                  }
+                </p>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Error State */}
-        {error && (
+        {/* Error State - only show if not in success state */}
+        {error && !success && (
           <div className="space-y-4">
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <p className="text-red-600 text-sm">{error}</p>
@@ -118,7 +138,7 @@ const VerifyEmail = () => {
                 variant="outline"
                 className="w-full"
               >
-                Resend Verification Email
+                {t('verifyEmail.resendEmail')}
               </AuthButton>
             )}
           </div>
@@ -127,7 +147,7 @@ const VerifyEmail = () => {
         {/* Back to Login Link */}
         <div className="text-center">
           <AuthLink to="/auth/login">
-            Back to Login
+            {t('verifyEmail.backToLogin')}
           </AuthLink>
         </div>
       </div>

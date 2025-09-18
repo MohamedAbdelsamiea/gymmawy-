@@ -23,6 +23,7 @@ export const AuthProvider = ({ children }) => {
     
     // Listen for token refresh failures
     const handleTokenRefreshFailed = () => {
+      console.log('Token refresh failed, clearing user state');
       setUser(null);
       setError('Session expired. Please log in again.');
     };
@@ -35,38 +36,57 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = async() => {
     try {
-      const token = authService.getToken();
-      if (token) {
-        // Check if token needs refresh
-        const needsRefresh = await tokenManager.checkAndRefreshToken();
-        
-        // Verify token and get user data
-        const userData = await authService.getProfile();
-        setUser(userData.user || userData);
-        
-        // Start automatic token refresh
-        tokenManager.startTokenRefresh();
-      } else {
+      // Check if we have valid tokens
+      if (!authService.hasValidTokens()) {
+        console.log('No valid tokens found');
         setUser(null);
         tokenManager.stopTokenRefresh();
+        return;
       }
-    } catch (error) {
-      console.error('Auth check failed:', error);
-      // Only remove token if it's actually invalid (401/403)
-      if (error.message.includes('401') || error.message.includes('403') || error.message.includes('Unauthorized')) {
+
+      const token = authService.getToken();
+      
+      // Check if token needs refresh
+      const refreshSuccess = await tokenManager.checkAndRefreshToken();
+      
+      // If refresh was needed but failed, clear user state
+      if (refreshSuccess === false && tokenManager.isTokenExpired(token)) {
+        console.log('Token refresh failed, clearing user state');
         authService.removeToken();
         authService.removeRefreshToken();
         setUser(null);
         tokenManager.stopTokenRefresh();
+        return;
+      }
+      
+      // Verify token and get user data
+      const userData = await authService.getProfile();
+      setUser(userData.user || userData);
+      
+      // Start automatic token refresh
+      tokenManager.startTokenRefresh();
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      // Only remove token if it's actually invalid (401/403)
+      if (error.message.includes('401') || error.message.includes('403') || error.message.includes('Unauthorized') || error.message.includes('Token refresh failed')) {
+        console.log('Invalid token, clearing user state');
+        authService.removeToken();
+        authService.removeRefreshToken();
+        setUser(null);
+        tokenManager.stopTokenRefresh();
+      } else {
+        // For other errors (network, etc.), don't clear user state immediately
+        // Just log the error and let the periodic checks handle it
+        console.log('Auth check failed due to network error, will retry');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const login = async (credentials) => {
+  const login = async(credentials) => {
     try {
       setLoading(true);
       setError(null);
@@ -79,24 +99,36 @@ export const AuthProvider = ({ children }) => {
           authService.setRefreshToken(response.refreshToken);
         }
         
-        setUser(response.user || response);
+        // Fetch complete user profile data after successful login
+        let completeUserData = response.user || response;
+        try {
+          const userData = await authService.getProfile();
+          completeUserData = userData.user || userData;
+          setUser(completeUserData);
+        } catch (profileError) {
+          console.error('Failed to fetch user profile after login:', profileError);
+          // Fallback to basic user data from login response
+          setUser(response.user || response);
+        }
         
         // Start automatic token refresh
         tokenManager.startTokenRefresh();
         
-        return { success: true, user: response.user || response };
+        return { success: true, user: completeUserData };
       } else {
         throw new Error('Invalid response from server');
       }
     } catch (error) {
-      setError(error.message);
-      return { success: false, error: error.message };
+      console.error('Login error:', error);
+      const errorMessage = error.message || 'An unexpected error occurred. Please try again.';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
   };
 
-  const register = async (userData) => {
+  const register = async(userData) => {
     try {
       setLoading(true);
       setError(null);
@@ -114,7 +146,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
+  const logout = async() => {
     try {
       await authService.logout();
     } catch (error) {
@@ -126,7 +158,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateProfile = async (profileData) => {
+  const updateProfile = async(profileData) => {
     try {
       setLoading(true);
       setError(null);
@@ -148,7 +180,7 @@ export const AuthProvider = ({ children }) => {
     setError(null);
   };
 
-  const refreshAuth = async () => {
+  const refreshAuth = async() => {
     await checkAuthStatus();
   };
 

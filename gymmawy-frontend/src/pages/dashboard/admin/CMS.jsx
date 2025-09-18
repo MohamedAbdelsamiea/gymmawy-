@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Eye, Video, Image, Search, Filter } from 'lucide-react';
 import { DataTable, StatusBadge, TableWithFilters } from '../../../components/dashboard';
+import ToggleSwitch from '../../../components/common/ToggleSwitch';
 import adminApiService from '../../../services/adminApiService';
 import AddTransformationModal from '../../../components/modals/AddTransformationModal';
 import AddVideoModal from '../../../components/modals/AddVideoModal';
+import { config } from '../../../config';
 
 const AdminCMS = () => {
   const [activeTab, setActiveTab] = useState('transformations');
@@ -29,13 +31,15 @@ const AdminCMS = () => {
     }
   }, [activeTab, searchTerm]);
 
-  const fetchTransformations = async () => {
+  const fetchTransformations = async() => {
     try {
       setLoading(true);
       setError(null);
       
       const response = await adminApiService.getTransformations();
-      let data = Array.isArray(response.items) ? response.items : Array.isArray(response) ? response : [];
+      let data = Array.isArray(response.transformations) ? response.transformations : 
+                 Array.isArray(response.items) ? response.items : 
+                 Array.isArray(response) ? response : [];
       
       if (searchTerm && Array.isArray(data)) {
         data = data.filter(item => {
@@ -55,13 +59,15 @@ const AdminCMS = () => {
     }
   };
 
-  const fetchVideos = async () => {
+  const fetchVideos = async() => {
     try {
       setLoading(true);
       setError(null);
       
       const response = await adminApiService.getVideos();
-      let data = Array.isArray(response.items) ? response.items : Array.isArray(response) ? response : [];
+      let data = Array.isArray(response.videos) ? response.videos : 
+                 Array.isArray(response.items) ? response.items : 
+                 Array.isArray(response) ? response : [];
       
       if (searchTerm && Array.isArray(data)) {
         data = data.filter(item => {
@@ -81,7 +87,7 @@ const AdminCMS = () => {
     }
   };
 
-  const handleDeleteTransformation = async (id) => {
+  const handleDeleteTransformation = async(id) => {
     if (window.confirm('Are you sure you want to delete this transformation?')) {
       try {
         await adminApiService.deleteTransformation(id);
@@ -92,7 +98,78 @@ const AdminCMS = () => {
     }
   };
 
-  const handleDeleteVideo = async (id) => {
+
+  const handleEditTransformation = (transformation) => {
+    setEditingTransformation(transformation);
+    setShowTransformationModal(true);
+  };
+
+  const handleToggleVideoStatus = async (videoId, currentStatus) => {
+    try {
+      const newStatus = !currentStatus;
+      
+      // If trying to activate a video, first deactivate all others
+      if (newStatus === true) {
+        setVideos(prevVideos => 
+          prevVideos.map(video => 
+            video.id === videoId 
+              ? { ...video, isActive: true }
+              : { ...video, isActive: false }
+          )
+        );
+      } else {
+        // If trying to deactivate, just update the current video
+        setVideos(prevVideos => 
+          prevVideos.map(video => 
+            video.id === videoId 
+              ? { ...video, isActive: false }
+              : video
+          )
+        );
+      }
+      
+      // Then make the API call
+      await adminApiService.updateVideo(videoId, { isActive: newStatus });
+    } catch (err) {
+      console.error('Error toggling video status:', err);
+      setError('Failed to update video status');
+      
+      // Revert the optimistic update on error
+      fetchVideos();
+    }
+  };
+
+  const handleToggleTransformationStatus = async (transformationId, currentStatus) => {
+    try {
+      const newStatus = !currentStatus;
+      
+      // Optimistically update the local state first for immediate UI feedback
+      setTransformations(prevTransformations => 
+        prevTransformations.map(transformation => 
+          transformation.id === transformationId 
+            ? { ...transformation, isActive: newStatus }
+            : transformation
+        )
+      );
+      
+      // Then make the API call
+      await adminApiService.updateTransformation(transformationId, { isActive: newStatus });
+    } catch (err) {
+      console.error('Error toggling transformation status:', err);
+      setError('Failed to update transformation status');
+      
+      // Revert the optimistic update on error
+      setTransformations(prevTransformations => 
+        prevTransformations.map(transformation => 
+          transformation.id === transformationId 
+            ? { ...transformation, isActive: currentStatus }
+            : transformation
+        )
+      );
+    }
+  };
+
+  const handleDeleteVideo = async(id) => {
     if (window.confirm('Are you sure you want to delete this video?')) {
       try {
         await adminApiService.deleteVideo(id);
@@ -109,11 +186,6 @@ const AdminCMS = () => {
     setEditingTransformation(null);
     setEditingVideo(null);
     setShowVideoModal(false);
-    setShowTransformationModal(true);
-  };
-
-  const handleEditTransformation = (transformation) => {
-    setEditingTransformation(transformation);
     setShowTransformationModal(true);
   };
 
@@ -163,42 +235,67 @@ const AdminCMS = () => {
           <div>{value?.en || 'N/A'}</div>
           <div className="text-sm text-gray-500" dir="rtl">{value?.ar || 'N/A'}</div>
         </div>
-      )
+      ),
     },
     {
       key: 'imageUrl',
       label: 'Image',
       sortable: false,
-      render: (value) => (
-        <div className="w-16 h-16">
-          {value ? (
-            <img
-              src={value}
-              alt="Transformation"
-              className="w-full h-full object-cover rounded"
-              onError={(e) => {
-                e.target.style.display = 'none';
-              }}
-            />
-          ) : (
-            <div className="w-full h-full bg-gray-200 rounded flex items-center justify-center">
-              <span className="text-gray-400 text-xs">No Image</span>
+      render: (value) => {
+        // Convert relative URL to full URL
+        const imageUrl = value ? (value.startsWith('http') ? value : `${config.API_BASE_URL}${value}`) : null;
+        return (
+          <div className="w-16 h-16">
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt="Transformation"
+                className="w-full h-full object-cover rounded"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  // Show error indicator
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div className="w-full h-full bg-gray-200 rounded flex items-center justify-center" style={{ display: imageUrl ? 'none' : 'flex' }}>
+              <span className="text-gray-400 text-xs">
+                {imageUrl ? 'Failed to load' : 'No Image'}
+              </span>
             </div>
-          )}
-        </div>
-      )
+          </div>
+        );
+      },
+    },
+    {
+      key: 'isActive',
+      label: 'Status',
+      sortable: true,
+      render: (value, row) => (
+        <ToggleSwitch
+          checked={value}
+          onChange={() => handleToggleTransformationStatus(row.id, value)}
+        />
+      ),
     },
     {
       key: 'createdAt',
       label: 'Created',
       sortable: true,
-      render: (value) => new Date(value).toLocaleDateString()
+      render: (value) => new Date(value).toLocaleDateString(),
     },
     {
       key: 'actions',
       label: 'Actions',
       render: (_, row) => (
         <div className="flex items-center space-x-2">
+          <button 
+            className="p-1 text-gray-400 hover:text-blue-600" 
+            title="Edit Transformation"
+            onClick={() => handleEditTransformation(row)}
+          >
+            <Edit className="h-4 w-4" />
+          </button>
           <button 
             className="p-1 text-gray-400 hover:text-red-600" 
             title="Delete Transformation"
@@ -207,8 +304,8 @@ const AdminCMS = () => {
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   const videoColumns = [
@@ -221,58 +318,77 @@ const AdminCMS = () => {
           <div>{value?.en || 'N/A'}</div>
           <div className="text-sm text-gray-500" dir="rtl">{value?.ar || 'N/A'}</div>
         </div>
-      )
+      ),
     },
     {
       key: 'videoUrl',
       label: 'Video',
       sortable: false,
-      render: (value) => (
-        <div className="w-16 h-16">
-          {value ? (
-            <video
-              src={value}
-              className="w-full h-full object-cover rounded"
-              onError={(e) => {
-                e.target.style.display = 'none';
-              }}
-            />
-          ) : (
-            <div className="w-full h-full bg-gray-200 rounded flex items-center justify-center">
-              <span className="text-gray-400 text-xs">No Video</span>
-            </div>
-          )}
-        </div>
-      )
+      render: (value) => {
+        const videoUrl = value ? (value.startsWith('http') ? value : `${config.API_BASE_URL}${value}`) : null;
+        return (
+          <div className="w-16 h-16">
+            {videoUrl ? (
+              <video
+                src={videoUrl}
+                className="w-full h-full object-cover rounded"
+                controls={false}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-200 rounded flex items-center justify-center">
+                <span className="text-gray-400 text-xs">No Video</span>
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'thumbnailEn',
       label: 'Thumbnail',
       sortable: false,
+      render: (value, row) => {
+        const thumbnailUrl = (value || row.thumbnailAr) ? 
+          ((value || row.thumbnailAr).startsWith('http') ? (value || row.thumbnailAr) : `${config.API_BASE_URL}${value || row.thumbnailAr}`) : null;
+        return (
+          <div className="w-16 h-16">
+            {thumbnailUrl ? (
+              <img
+                src={thumbnailUrl}
+                alt="Thumbnail"
+                className="w-full h-full object-cover rounded"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-200 rounded flex items-center justify-center">
+                <span className="text-gray-400 text-xs">No Thumbnail</span>
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'isActive',
+      label: 'Status',
+      sortable: true,
       render: (value, row) => (
-        <div className="w-16 h-16">
-          {value || row.thumbnailAr ? (
-            <img
-              src={value || row.thumbnailAr}
-              alt="Thumbnail"
-              className="w-full h-full object-cover rounded"
-              onError={(e) => {
-                e.target.style.display = 'none';
-              }}
-            />
-          ) : (
-            <div className="w-full h-full bg-gray-200 rounded flex items-center justify-center">
-              <span className="text-gray-400 text-xs">No Thumbnail</span>
-            </div>
-          )}
-        </div>
-      )
+        <ToggleSwitch
+          checked={value}
+          onChange={() => handleToggleVideoStatus(row.id, value)}
+        />
+      ),
     },
     {
       key: 'createdAt',
       label: 'Created',
       sortable: true,
-      render: (value) => new Date(value).toLocaleDateString()
+      render: (value) => new Date(value).toLocaleDateString(),
     },
     {
       key: 'actions',
@@ -294,8 +410,8 @@ const AdminCMS = () => {
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   if (loading) {
@@ -385,12 +501,11 @@ const AdminCMS = () => {
             )}
           </div>
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-600">
-              {activeTab === 'transformations' 
-                ? `${Array.isArray(transformations) ? transformations.filter(t => t.status === 'active').length : 0} active`
-                : `${Array.isArray(videos) ? videos.reduce((sum, v) => sum + (v.views || 0), 0) : 0} total views`
-              }
-            </span>
+            {activeTab === 'transformations' && (
+              <span className="text-sm text-gray-600">
+                {Array.isArray(transformations) ? transformations.filter(t => t.isActive === true).length : 0} active
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -415,8 +530,7 @@ const AdminCMS = () => {
         isOpen={showTransformationModal}
         onClose={handleModalClose}
         onSuccess={handleModalSuccess}
-        transformation={editingTransformation}
-        isEdit={!!editingTransformation}
+        editData={editingTransformation}
       />
 
       <AddVideoModal
@@ -424,8 +538,7 @@ const AdminCMS = () => {
         isOpen={showVideoModal}
         onClose={handleModalClose}
         onSuccess={handleModalSuccess}
-        video={editingVideo}
-        isEdit={videoModalMode === 'edit'}
+        editData={editingVideo}
       />
     </div>
   );

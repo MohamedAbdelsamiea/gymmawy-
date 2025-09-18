@@ -7,7 +7,7 @@ class OrderService {
   async getOrders(filters = {}) {
     try {
       const queryParams = new URLSearchParams(filters).toString();
-      const response = await fetch(`${API_BASE_URL}/orders?${queryParams}`, {
+      const response = await fetch(`${API_BASE_URL}/api/orders?${queryParams}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -27,7 +27,7 @@ class OrderService {
 
   async getOrder(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/orders/${id}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -47,7 +47,7 @@ class OrderService {
 
   async createOrder(orderData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders`, {
+      const response = await fetch(`${API_BASE_URL}/api/orders`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -69,7 +69,7 @@ class OrderService {
 
   async updateOrder(id, orderData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/orders/${id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -91,7 +91,7 @@ class OrderService {
 
   async cancelOrder(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${id}/cancel`, {
+      const response = await fetch(`${API_BASE_URL}/api/orders/${id}/cancel`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -111,7 +111,7 @@ class OrderService {
 
   async getOrderTracking(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${id}/tracking`, {
+      const response = await fetch(`${API_BASE_URL}/api/orders/${id}/tracking`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,

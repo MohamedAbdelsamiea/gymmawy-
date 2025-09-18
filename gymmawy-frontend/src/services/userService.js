@@ -6,7 +6,7 @@ const API_BASE_URL = config.API_BASE_URL;
 class UserService {
   async getProfile() {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/me`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/me`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -26,7 +26,7 @@ class UserService {
 
   async updateProfile(profileData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/me`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/me`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -36,19 +36,23 @@ class UserService {
       });
       
       if (!response.ok) {
-        throw new Error('Profile update failed');
+        const errorData = await response.json().catch(() => ({}));
+        const error = new Error(errorData.error?.message || 'Profile update failed');
+        error.response = { data: errorData };
+        throw error;
       }
       
       const data = await response.json();
       return data;
     } catch (error) {
-      throw new Error(`Profile update error: ${error.message}`);
+      // Re-throw the error to preserve the original error response
+      throw error;
     }
   }
 
   async changePassword(passwordData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/change-password`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/change-password`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -68,9 +72,31 @@ class UserService {
     }
   }
 
+  async changeEmail(newEmail) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/users/change-email`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authService.getToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: newEmail }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Email change request failed');
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw new Error(`Email change error: ${error.message}`);
+    }
+  }
+
   async deleteAccount() {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/account`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/account`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -90,7 +116,7 @@ class UserService {
 
   async getSubscriptions() {
     try {
-      const response = await fetch(`${API_BASE_URL}/subscriptions`, {
+      const response = await fetch(`${API_BASE_URL}/api/subscriptions`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -110,7 +136,7 @@ class UserService {
 
   async getOrders() {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders`, {
+      const response = await fetch(`${API_BASE_URL}/api/orders`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -125,6 +151,23 @@ class UserService {
       return data;
     } catch (error) {
       throw new Error(`Orders fetch error: ${error.message}`);
+    }
+  }
+
+  async getUserStats() {
+    try {
+      // For now, return default stats since backend doesn't have this endpoint
+      // TODO: Implement proper user stats endpoint in backend
+      return {
+        stats: {
+          loyaltyPoints: 0,
+          orders: { total: 0 },
+          spending: { total: 0 },
+          workoutsThisMonth: 0
+        }
+      };
+    } catch (error) {
+      throw new Error(`User stats fetch error: ${error.message}`);
     }
   }
 }

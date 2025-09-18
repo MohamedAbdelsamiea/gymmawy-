@@ -1,26 +1,14 @@
-import { config } from '../config';
-
-const API_BASE_URL = config.API_BASE_URL;
+import apiClient from './apiClient';
 
 class LeadService {
   async submitLead(leadData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/leads`, {
+      const response = await apiClient.request('/leads', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(leadData),
       });
       
-      const data = await response.json();
-      
-      if (!response.ok) {
-        const errorMessage = data.error?.message || data.message || 'Failed to submit lead';
-        throw new Error(errorMessage);
-      }
-      
-      return data;
+      return response;
     } catch (error) {
       throw new Error(`Lead submission error: ${error.message}`);
     }
@@ -30,27 +18,30 @@ class LeadService {
     try {
       const queryParams = new URLSearchParams();
       
-      if (filters.page) queryParams.append('page', filters.page);
-      if (filters.pageSize) queryParams.append('pageSize', filters.pageSize);
-      if (filters.q) queryParams.append('q', filters.q);
-      if (filters.status) queryParams.append('status', filters.status);
-      if (filters.sortBy) queryParams.append('sortBy', filters.sortBy);
-      if (filters.sortOrder) queryParams.append('sortOrder', filters.sortOrder);
+      if (filters.page) {
+queryParams.append('page', filters.page);
+}
+      if (filters.pageSize) {
+queryParams.append('pageSize', filters.pageSize);
+}
+      if (filters.q) {
+queryParams.append('q', filters.q);
+}
+      if (filters.status) {
+queryParams.append('status', filters.status);
+}
+      if (filters.sortBy) {
+queryParams.append('sortBy', filters.sortBy);
+}
+      if (filters.sortOrder) {
+queryParams.append('sortOrder', filters.sortOrder);
+}
       
-      const response = await fetch(`${API_BASE_URL}/admin/leads?${queryParams}`, {
+      const response = await apiClient.request(`/admin/leads?${queryParams}`, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          'Content-Type': 'application/json',
-        },
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch leads');
-      }
-      
-      const data = await response.json();
-      return data;
+      return response;
     } catch (error) {
       throw new Error(`Leads fetch error: ${error.message}`);
     }
@@ -58,21 +49,12 @@ class LeadService {
 
   async updateLeadStatus(leadId, status) {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/leads/${leadId}/status`, {
+      const response = await apiClient.request(`/admin/leads/${leadId}/status`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ status }),
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to update lead status');
-      }
-      
-      const data = await response.json();
-      return data;
+      return response;
     } catch (error) {
       throw new Error(`Lead status update error: ${error.message}`);
     }
@@ -80,17 +62,9 @@ class LeadService {
 
   async deleteLead(leadId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/leads/${leadId}`, {
+      await apiClient.request(`/admin/leads/${leadId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          'Content-Type': 'application/json',
-        },
       });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete lead');
-      }
       
       return true;
     } catch (error) {
@@ -100,16 +74,9 @@ class LeadService {
 
   async exportLeads() {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/leads/export`, {
+      const response = await apiClient.request('/admin/leads/export', {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
       });
-      
-      if (!response.ok) {
-        throw new Error('Failed to export leads');
-      }
       
       return response;
     } catch (error) {

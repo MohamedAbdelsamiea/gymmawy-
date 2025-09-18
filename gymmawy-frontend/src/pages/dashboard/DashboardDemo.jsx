@@ -15,10 +15,10 @@ const DashboardDemo = () => {
         '🛍️ Store & order management',
         '📝 Content management system',
         '🎁 Loyalty points administration',
-        '📈 Lead tracking & conversion'
+        '📈 Lead tracking & conversion',
       ],
       path: '/dashboard/admin',
-      color: 'from-purple-500 to-indigo-600'
+      color: 'from-purple-500 to-indigo-600',
     },
     {
       title: 'User Dashboard',
@@ -29,11 +29,11 @@ const DashboardDemo = () => {
         '🎁 Loyalty points & rewards',
         '📦 Order tracking with timeline',
         '💳 Subscription management',
-        '📊 Progress tracking'
+        '📊 Progress tracking',
       ],
       path: '/dashboard',
-      color: 'from-blue-500 to-cyan-600'
-    }
+      color: 'from-blue-500 to-cyan-600',
+    },
   ];
 
   return (

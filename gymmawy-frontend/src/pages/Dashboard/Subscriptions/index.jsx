@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
+import { config } from '../../../config';
 
 const Subscriptions = () => {
   const { user } = useAuth();
@@ -11,15 +12,15 @@ const Subscriptions = () => {
     loadSubscriptions();
   }, []);
 
-  const loadSubscriptions = async () => {
+  const loadSubscriptions = async() => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('http://localhost:3000/api/subscriptions', {
+      const response = await fetch(`${config.API_BASE_URL}/subscriptions`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        }
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        },
       });
 
       if (!response.ok) {

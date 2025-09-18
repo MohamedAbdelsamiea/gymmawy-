@@ -7,22 +7,22 @@ const Orders = () => {
       date: '2024-01-15',
       status: 'Completed',
       total: '$89.99',
-      items: ['Protein Powder', 'Shaker Bottle']
+      items: ['Protein Powder', 'Shaker Bottle'],
     },
     {
       id: '1235',
       date: '2024-01-10',
       status: 'Shipped',
       total: '$45.50',
-      items: ['Resistance Bands Set']
+      items: ['Resistance Bands Set'],
     },
     {
       id: '1236',
       date: '2024-01-05',
       status: 'Delivered',
       total: '$120.00',
-      items: ['Yoga Mat', 'Foam Roller']
-    }
+      items: ['Yoga Mat', 'Foam Roller'],
+    },
   ];
 
   return (

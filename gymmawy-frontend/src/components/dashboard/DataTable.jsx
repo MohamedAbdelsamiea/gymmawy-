@@ -8,8 +8,9 @@ const DataTable = ({
   searchable = true, 
   filterable = true, 
   exportable = true,
+  sortable = true,
   onExport,
-  className = '' 
+  className = '', 
 }) => {
   const { t } = useTranslation("dashboard");
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,23 +18,49 @@ const DataTable = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Debug logging
+  console.log('DataTable received data:', data);
+  console.log('DataTable received columns:', columns);
+
   // Filter data based on search term
-  const filteredData = data.filter(item =>
-    Object.values(item).some(value =>
-      String(value).toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+  const filteredData = data.filter(item => {
+    const matches = Object.values(item).some(value => {
+      if (typeof value === 'object' && value !== null) {
+        // Handle nested objects (like title: {en: "video", ar: "فيديو"})
+        return Object.values(value).some(nestedValue =>
+          String(nestedValue).toLowerCase().includes(searchTerm.toLowerCase()),
+        );
+      }
+      return String(value).toLowerCase().includes(searchTerm.toLowerCase());
+    });
+    return matches;
+  });
+
+  console.log('DataTable filtered data:', filteredData);
+  console.log('DataTable search term:', searchTerm);
 
   // Sort data with proper type handling
   const sortedData = [...filteredData].sort((a, b) => {
-    if (!sortConfig.key) return 0;
+    if (!sortConfig.key) {
+return 0;
+}
+    
+    // Check if the column has a custom sort function
+    const column = columns.find(col => col.key === sortConfig.key);
+    if (column && column.sortFunction) {
+      return column.sortFunction(a, b, sortConfig.direction);
+    }
     
     let aValue = a[sortConfig.key];
     let bValue = b[sortConfig.key];
     
     // Handle null/undefined values
-    if (aValue === null || aValue === undefined) aValue = '';
-    if (bValue === null || bValue === undefined) bValue = '';
+    if (aValue === null || aValue === undefined) {
+aValue = '';
+}
+    if (bValue === null || bValue === undefined) {
+bValue = '';
+}
     
     // Handle date sorting
     if (sortConfig.key === 'birthDate' || sortConfig.key === 'createdAt' || sortConfig.key === 'lastLoginAt' || sortConfig.key === 'updatedAt') {
@@ -42,12 +69,18 @@ const DataTable = ({
       const bDate = bValue ? new Date(bValue) : null;
       
       // If both are null, they're equal
-      if (!aDate && !bDate) return 0;
+      if (!aDate && !bDate) {
+return 0;
+}
       
       // If one is null, handle based on sort direction
       // For lastLoginAt, null means "Never" - put at the end for asc, beginning for desc
-      if (!aDate) return sortConfig.direction === 'asc' ? 1 : -1;
-      if (!bDate) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (!aDate) {
+return sortConfig.direction === 'asc' ? 1 : -1;
+}
+      if (!bDate) {
+return sortConfig.direction === 'asc' ? -1 : 1;
+}
       
       // Both dates exist, compare them
       if (aDate.getTime() < bDate.getTime()) {
@@ -78,7 +111,9 @@ const DataTable = ({
       const aBool = Boolean(aValue);
       const bBool = Boolean(bValue);
       
-      if (aBool === bBool) return 0;
+      if (aBool === bBool) {
+return 0;
+}
       if (aBool && !bBool) {
         return sortConfig.direction === 'asc' ? -1 : 1;
       }
@@ -109,7 +144,7 @@ const DataTable = ({
   const handleSort = (key) => {
     setSortConfig(prev => ({
       key,
-      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
     }));
   };
 
@@ -165,8 +200,8 @@ const DataTable = ({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => column.sortable && handleSort(column.key)}
+                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${sortable && column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''}`}
+                  onClick={() => sortable && column.sortable && handleSort(column.key)}
                 >
                   <div className="flex items-center">
                     {column.label}
@@ -193,7 +228,14 @@ const DataTable = ({
               <tr key={index} className="hover:bg-gray-50">
                 {columns.map((column) => (
                   <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {column.render ? column.render(row[column.key], row) : row[column.key]}
+                    {column.render ? column.render(row[column.key], row) : (() => {
+                      const value = row[column.key];
+                      // Handle bilingual objects
+                      if (typeof value === 'object' && value !== null && value.ar && value.en) {
+                        return value.en || value.ar || '';
+                      }
+                      return value;
+                    })()}
                   </td>
                 ))}
               </tr>

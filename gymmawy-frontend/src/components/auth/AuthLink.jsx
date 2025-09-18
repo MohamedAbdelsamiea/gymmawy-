@@ -5,7 +5,7 @@ const AuthLink = ({
   to, 
   children, 
   className = "",
-  variant = "default" 
+  variant = "default", 
 }) => {
   const baseClasses = `
     inline-flex items-center text-sm font-medium
@@ -16,7 +16,7 @@ const AuthLink = ({
   const variantClasses = {
     default: "text-gymmawy-primary hover:text-gymmawy-secondary",
     muted: "text-gray-600 hover:text-gray-800",
-    danger: "text-red-600 hover:text-red-800"
+    danger: "text-red-600 hover:text-red-800",
   };
 
   return (

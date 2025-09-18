@@ -41,7 +41,7 @@ const TrainingProgramsPage = () => {
     console.log('Programmes state:', { programmes, loading, error });
   }, [programmes, loading, error]);
 
-  const loadProgrammes = async () => {
+  const loadProgrammes = async() => {
     try {
       setLoading(true);
       setError(null);
@@ -224,24 +224,56 @@ const TrainingProgramsPage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {programmes.length > 0 ? programmes.map((prog, idx) => {
-                // Use the formatted price from backend
+              {programmes.length > 0 ? programmes
+                .map((prog, idx) => {
+                // Use geolocation-based currency selection
                 let formattedPrice;
-                if (prog.price && prog.price.amount !== undefined) {
-                  if (prog.price.amount === 0) {
+                let selectedPrice;
+                
+                // Select price based on geolocation
+                if (country === 'EG') {
+                  // Egypt - use EGP
+                  selectedPrice = prog.priceEGP;
+                } else if (country === 'SA') {
+                  // Saudi Arabia - use SAR
+                  selectedPrice = prog.priceSAR;
+                } else {
+                  // Default to SAR for other countries
+                  selectedPrice = prog.priceSAR;
+                }
+                
+                if (selectedPrice && selectedPrice.amount !== undefined) {
+                  if (selectedPrice.amount === 0) {
                     formattedPrice = i18n.language === 'ar' ? 'مجاني' : 'FREE';
                   } else {
-                    formattedPrice = `${prog.price.currencySymbol} ${prog.price.amount}`;
+                    // Use language-specific currency symbols
+                    let displayCurrencySymbol;
+                    if (i18n.language === 'ar') {
+                      // Arabic: EGP = جم, SAR = رس
+                      displayCurrencySymbol = selectedPrice.currency === 'SAR' ? 'رس' : 'جم';
+                    } else {
+                      // English: EGP = L.E, SAR = SAR
+                      displayCurrencySymbol = selectedPrice.currency === 'SAR' ? 'SAR' : 'L.E';
+                    }
+                    formattedPrice = `${displayCurrencySymbol} ${selectedPrice.amount}`;
                   }
                 } else {
                   formattedPrice = i18n.language === 'ar' ? 'السعر غير متوفر' : 'Price not available';
+                }
+                
+                // Handle bilingual name data
+                let programmeName;
+                if (typeof prog.name === 'object' && prog.name !== null) {
+                  programmeName = prog.name[i18n.language] || prog.name.en || prog.name.ar || 'Unnamed Programme';
+                } else {
+                  programmeName = prog.name || prog.title || 'Unnamed Programme';
                 }
                 
                 return (
                   <Programme
                     key={prog.id || idx}
                     image={prog.image || prog.imageUrl}
-                    name={prog.name || prog.title}
+                    name={programmeName}
                     price={formattedPrice}
                     programme={prog}
                     country={country}

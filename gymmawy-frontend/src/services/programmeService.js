@@ -7,7 +7,7 @@ class ProgrammeService {
   async getProgrammes(filters = {}) {
     try {
       const queryParams = new URLSearchParams(filters).toString();
-      const response = await fetch(`${API_BASE_URL}/programmes?${queryParams}`, {
+      const response = await fetch(`${API_BASE_URL}/api/programmes?${queryParams}`, {
         method: 'GET',
       });
       
@@ -24,7 +24,7 @@ class ProgrammeService {
 
   async getProgramme(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/programmes/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/programmes/${id}`, {
         method: 'GET',
       });
       
@@ -41,7 +41,7 @@ class ProgrammeService {
 
   async purchaseProgramme(id, country = 'EG', purchaseData = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/programmes/${id}/purchase`, {
+      const response = await fetch(`${API_BASE_URL}/api/programmes/${id}/purchase-with-payment`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -63,7 +63,7 @@ class ProgrammeService {
 
   async getUserProgrammes() {
     try {
-      const response = await fetch(`${API_BASE_URL}/programmes/user/my-programmes`, {
+      const response = await fetch(`${API_BASE_URL}/api/programmes/user/my-programmes`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -84,7 +84,7 @@ class ProgrammeService {
   // Admin methods
   async createProgramme(programmeData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/programmes`, {
+      const response = await fetch(`${API_BASE_URL}/api/programmes`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -106,7 +106,7 @@ class ProgrammeService {
 
   async updateProgramme(id, programmeData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/programmes/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/programmes/${id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -128,7 +128,7 @@ class ProgrammeService {
 
   async deleteProgramme(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/programmes/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/programmes/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -147,7 +147,7 @@ class ProgrammeService {
 
   async getProgrammeStats() {
     try {
-      const response = await fetch(`${API_BASE_URL}/programmes/stats/overview`, {
+      const response = await fetch(`${API_BASE_URL}/api/programmes/stats/overview`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,

@@ -19,9 +19,9 @@ const FloatingInput = ({ label, type = "text", name, value, onChange, error, req
         }`}
       />
       <label
-        className={`absolute ltr:left-0 rtl:right-0 top-2 text-lg md:text-xl transition-all
-                   peer-placeholder-shown:top-2 peer-placeholder-shown:text-[#190143] 
-                   peer-focus:top-[-0.75rem] peer-focus:text-xs peer-focus:text-[#190143] uppercase ${
+        className={`absolute ltr:left-0 rtl:right-0 transition-all duration-200 ease-in-out
+                   ${value ? 'top-[-0.75rem] text-xs' : 'top-2 text-lg md:text-xl'}
+                   peer-focus:top-[-0.75rem] peer-focus:text-xs uppercase ${
           error ? 'text-red-500' : 'text-[#190143]'
         }`}
       >
@@ -44,7 +44,7 @@ const ContactUs = () => {
     name: '',
     email: '',
     mobileNumber: '',
-    message: ''
+    message: '',
   });
 
   const [errors, setErrors] = useState({});
@@ -55,14 +55,14 @@ const ContactUs = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
-        [name]: ''
+        [name]: '',
       }));
     }
   };
@@ -98,7 +98,7 @@ const ContactUs = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -116,7 +116,7 @@ const ContactUs = () => {
         name: '',
         email: '',
         mobileNumber: '',
-        message: ''
+        message: '',
       });
     } catch (error) {
       setErrors({ submit: error.message });

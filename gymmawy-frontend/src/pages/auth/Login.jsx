@@ -4,6 +4,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthCard, FloatingInput, AuthButton, AuthLink } from '../../components/auth';
 import { isValidEmail } from '../../utils/validators';
+import authService from '../../services/authService';
 
 const Login = () => {
   const { t } = useTranslation("auth");
@@ -13,7 +14,7 @@ const Login = () => {
 
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
   });
 
   const [errors, setErrors] = useState({});
@@ -47,14 +48,14 @@ const Login = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
-        [name]: ''
+        [name]: '',
       }));
     }
   };
@@ -76,7 +77,7 @@ const Login = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -85,7 +86,7 @@ const Login = () => {
 
     const result = await login({
       email: formData.email,
-      password: formData.password
+      password: formData.password,
     });
     
     if (result.success) {
@@ -99,10 +100,11 @@ const Login = () => {
       }
     } else {
       setErrors({ 
-        general: result.error || t('login.errors.invalidCredentials') 
+        general: result.error || t('login.errors.invalidCredentials'), 
       });
     }
   };
+
 
   return (
     <AuthCard 
@@ -116,6 +118,7 @@ const Login = () => {
             <p className="text-red-600 text-sm">{errors.general}</p>
           </div>
         )}
+
 
         {/* Email Input */}
         <FloatingInput

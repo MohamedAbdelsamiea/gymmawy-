@@ -14,7 +14,7 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
     street: '',
     city: '',
     country: '',
-    postcode: ''
+    postcode: '',
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -24,13 +24,13 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
-        [name]: ''
+        [name]: '',
       }));
     }
   };
@@ -38,8 +38,12 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
+    if (!formData.firstName.trim()) {
+newErrors.firstName = 'First name is required';
+}
+    if (!formData.lastName.trim()) {
+newErrors.lastName = 'Last name is required';
+}
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -61,10 +65,12 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    if (!validateForm()) {
+return;
+}
 
     setLoading(true);
     try {
@@ -82,7 +88,7 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
         street: '',
         city: '',
         country: '',
-        postcode: ''
+        postcode: '',
       });
       onClose();
     } catch (error) {
@@ -92,7 +98,9 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+return null;
+}
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

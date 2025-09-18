@@ -12,10 +12,10 @@ class ImageUploadService {
   async uploadImage(file, module = 'general') {
     try {
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('file', file);
       formData.append('module', module);
 
-      const response = await fetch(`${this.baseURL}/images/upload`, {
+      const response = await fetch(`${this.baseURL}/api/uploads/payment-proof`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -67,7 +67,9 @@ class ImageUploadService {
 
   // Generate image URL for display
   getImageUrl(filename, module = 'general') {
-    if (!filename) return null;
+    if (!filename) {
+return null;
+}
     return `${this.baseURL}/images/images/${module}/${filename}`;
   }
 
@@ -103,14 +105,18 @@ class ImageUploadService {
 
   // Extract filename from URL
   extractFilenameFromUrl(url) {
-    if (!url) return null;
+    if (!url) {
+return null;
+}
     const parts = url.split('/');
     return parts[parts.length - 1];
   }
 
   // Check if URL is from our upload service
   isUploadedImage(url) {
-    if (!url) return false;
+    if (!url) {
+return false;
+}
     return url.includes('/images/images/') || url.includes('/uploads/images/');
   }
 }

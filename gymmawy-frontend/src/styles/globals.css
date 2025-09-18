@@ -73,6 +73,27 @@
   text-align: right !important;
 }
 
+/* Arabic input fields - ensure right alignment */
+input[dir="rtl"],
+textarea[dir="rtl"] {
+  text-align: right !important;
+  direction: rtl !important;
+}
+
+/* Arabic input fields in admin dashboard */
+.admin-dashboard input[dir="rtl"],
+.admin-dashboard textarea[dir="rtl"] {
+  text-align: right !important;
+  direction: rtl !important;
+}
+
+/* Arabic placeholder text alignment */
+input[dir="rtl"]::placeholder,
+textarea[dir="rtl"]::placeholder {
+  text-align: right !important;
+  direction: rtl !important;
+}
+
 /* Smooth Scrolling */
 html {
   scroll-behavior: smooth;

@@ -31,7 +31,7 @@ const ForgotPassword = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -45,7 +45,7 @@ const ForgotPassword = () => {
       setSuccess(true);
     } catch (error) {
       setErrors({ 
-        general: error.message || 'Failed to send reset email. Please try again.' 
+        general: error.message || 'Failed to send reset email. Please try again.', 
       });
     } finally {
       setLoading(false);

@@ -10,7 +10,7 @@ const AuthDemo = () => {
     { path: '/auth/register', label: 'Register Page', description: 'New user registration form' },
     { path: '/auth/forgot-password', label: 'Forgot Password', description: 'Password reset request' },
     { path: '/auth/reset-password?token=demo', label: 'Reset Password', description: 'New password setup' },
-    { path: '/auth/email-verification?email=demo@example.com', label: 'Email Verification', description: 'Email verification page' }
+    { path: '/auth/email-verification?email=demo@example.com', label: 'Email Verification', description: 'Email verification page' },
   ];
 
   return (

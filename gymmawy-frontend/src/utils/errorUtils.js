@@ -33,7 +33,7 @@ export function formatValidationErrors(validationErrors) {
   return validationErrors.map(error => ({
     field: error.field,
     message: error.message,
-    code: error.code
+    code: error.code,
   }));
 }
 

@@ -2,7 +2,6 @@ import React from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import { ProtectedRoute } from '../../components/auth';
 import Coupons from './Coupons';
-import Referrals from './Referrals';
 import Payments from './Payments';
 import CMS from './CMS';
 
@@ -53,12 +52,6 @@ const Admin = () => {
                 <span>Coupons</span>
               </Link>
               
-              <Link
-                to="/admin/referrals"
-                className="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-700 hover:text-white"
-              >
-                <span>Referrals</span>
-              </Link>
               
               <Link
                 to="/admin/payments"
@@ -91,7 +84,6 @@ const Admin = () => {
               <Route path="/orders" element={<OrdersManagement />} />
               <Route path="/products" element={<ProductsManagement />} />
               <Route path="/coupons" element={<Coupons />} />
-              <Route path="/referrals" element={<Referrals />} />
               <Route path="/payments" element={<Payments />} />
               <Route path="/cms" element={<CMS />} />
               <Route path="/analytics" element={<Analytics />} />

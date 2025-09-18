@@ -17,15 +17,21 @@ const AdminProducts = () => {
     fetchCategories();
   }, [searchTerm, filterCategory, filterStatus]);
 
-  const fetchProducts = async () => {
+  const fetchProducts = async() => {
     try {
       setLoading(true);
       setError(null);
       
       const params = {};
-      if (searchTerm) params.search = searchTerm;
-      if (filterCategory !== 'all') params.category = filterCategory;
-      if (filterStatus !== 'all') params.status = filterStatus;
+      if (searchTerm) {
+params.search = searchTerm;
+}
+      if (filterCategory !== 'all') {
+params.category = filterCategory;
+}
+      if (filterStatus !== 'all') {
+params.status = filterStatus;
+}
       
       const response = await adminApiService.getProducts(params);
       setProducts(Array.isArray(response.data) ? response.data : Array.isArray(response) ? response : []);
@@ -37,7 +43,7 @@ const AdminProducts = () => {
     }
   };
 
-  const fetchCategories = async () => {
+  const fetchCategories = async() => {
     try {
       const response = await adminApiService.getCategories();
       setCategories(Array.isArray(response.data) ? response.data : Array.isArray(response) ? response : []);
@@ -46,7 +52,7 @@ const AdminProducts = () => {
     }
   };
 
-  const handleDeleteProduct = async (productId) => {
+  const handleDeleteProduct = async(productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
         await adminApiService.deleteProduct(productId);
@@ -57,7 +63,7 @@ const AdminProducts = () => {
     }
   };
 
-  const handleExport = async () => {
+  const handleExport = async() => {
     try {
       const response = await adminApiService.getProducts({ export: true });
       console.log('Export data:', response);
@@ -73,7 +79,7 @@ const AdminProducts = () => {
       sortable: true,
       render: (value) => (
         <span className="font-medium text-gymmawy-primary">{value}</span>
-      )
+      ),
     },
     {
       key: 'name',
@@ -84,7 +90,7 @@ const AdminProducts = () => {
           <div className="font-medium text-gray-900">{value}</div>
           <div className="text-sm text-gray-500">SKU: {row.sku || 'N/A'}</div>
         </div>
-      )
+      ),
     },
     {
       key: 'category',
@@ -95,7 +101,7 @@ const AdminProducts = () => {
           <Tag className="h-3 w-3 mr-1" />
           {value?.name || 'Uncategorized'}
         </span>
-      )
+      ),
     },
     {
       key: 'price',
@@ -103,7 +109,7 @@ const AdminProducts = () => {
       sortable: true,
       render: (value) => (
         <span className="font-medium text-green-600">${value || '0.00'}</span>
-      )
+      ),
     },
     {
       key: 'stock',
@@ -117,19 +123,19 @@ const AdminProducts = () => {
         }`}>
           {value || 0}
         </span>
-      )
+      ),
     },
     {
       key: 'status',
       label: 'Status',
       sortable: true,
-      render: (value) => <StatusBadge status={value || 'active'} />
+      render: (value) => <StatusBadge status={value || 'active'} />,
     },
     {
       key: 'createdAt',
       label: 'Created',
       sortable: true,
-      render: (value) => new Date(value).toLocaleDateString()
+      render: (value) => new Date(value).toLocaleDateString(),
     },
     {
       key: 'actions',
@@ -165,8 +171,8 @@ const AdminProducts = () => {
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   if (loading) {
@@ -275,9 +281,9 @@ const AdminProducts = () => {
               { value: "all", label: "All Categories" },
               ...(Array.isArray(categories) ? categories.map(category => ({
                 value: category.id,
-                label: category.name
-              })) : [])
-            ]
+                label: category.name,
+              })) : []),
+            ],
           },
           {
             label: "Status",
@@ -287,9 +293,9 @@ const AdminProducts = () => {
               { value: "all", label: "All Status" },
               { value: "active", label: "Active" },
               { value: "inactive", label: "Inactive" },
-              { value: "out_of_stock", label: "Out of Stock" }
-            ]
-          }
+              { value: "out_of_stock", label: "Out of Stock" },
+            ],
+          },
         ]}
         onApplyFilters={fetchProducts}
         onExport={handleExport}

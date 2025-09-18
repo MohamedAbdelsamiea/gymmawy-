@@ -5,7 +5,7 @@ const ChartCard = ({
   subtitle, 
   children, 
   className = '',
-  actions 
+  actions, 
 }) => {
   return (
     <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 ${className}`}>

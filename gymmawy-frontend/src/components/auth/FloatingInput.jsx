@@ -36,7 +36,7 @@ const FloatingInput = ({
             peer w-full border-b-2 bg-transparent pt-2 pb-4 text-lg md:text-xl 
             focus:outline-none transition-colors duration-200
             ltr:text-left rtl:text-right
-            ${isPassword ? 'pr-12' : ''}
+            ${isPassword ? 'ltr:pr-12 rtl:pl-12' : ''}
             ${error 
               ? 'border-red-500 text-red-500' 
               : isFocused 
@@ -53,7 +53,7 @@ const FloatingInput = ({
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-0 top-1/2 transform -translate-y-1/2 p-2 text-gray-500 hover:text-gray-700 focus:outline-none focus:text-gymmawy-primary transition-colors"
+            className="absolute ltr:right-0 rtl:left-0 top-1/2 transform -translate-y-1/2 p-2 text-gray-500 hover:text-gray-700 focus:outline-none focus:text-gymmawy-primary transition-colors"
             tabIndex={-1}
           >
             {showPassword ? (

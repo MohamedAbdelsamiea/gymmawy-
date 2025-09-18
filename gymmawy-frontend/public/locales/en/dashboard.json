@@ -291,6 +291,7 @@
     "signOut": "Sign Out",
     "dashboard": "Dashboard",
     "administrator": "Administrator",
-    "member": "Member"
+    "member": "Member",
+    "backToWebsite": "Back to Website"
   }
 }

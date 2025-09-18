@@ -4,7 +4,6 @@ import {
   AdminOverview,
   AdminUsers,
   AdminProducts,
-  AdminCategories,
   AdminOrders,
   AdminSubscriptions,
   AdminProgrammes,
@@ -13,7 +12,6 @@ import {
   AdminCoupons,
   AdminCMS,
   AdminShipping,
-  AdminReferrals
 } from './admin';
 import { Profile } from './user';
 
@@ -23,7 +21,6 @@ const AdminDashboard = () => {
       <Route path="/" element={<AdminOverview />} />
       <Route path="/users" element={<AdminUsers />} />
       <Route path="/products" element={<AdminProducts />} />
-      <Route path="/categories" element={<AdminCategories />} />
       <Route path="/orders" element={<AdminOrders />} />
       <Route path="/subscriptions" element={<AdminSubscriptions />} />
       <Route path="/programmes" element={<AdminProgrammes />} />
@@ -32,7 +29,6 @@ const AdminDashboard = () => {
       <Route path="/coupons" element={<AdminCoupons />} />
       <Route path="/cms" element={<AdminCMS />} />
       <Route path="/shipping" element={<AdminShipping />} />
-      <Route path="/referrals" element={<AdminReferrals />} />
       <Route path="/profile" element={<Profile />} />
     </Routes>
   );

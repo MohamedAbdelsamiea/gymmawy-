@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Calendar, Users, Search } from 'lucide-react';
 import { DataTable, StatusBadge, TableWithFilters } from '../../../components/dashboard';
+import ToggleSwitch from '../../../components/common/ToggleSwitch';
 import adminApiService from '../../../services/adminApiService';
 import AddCouponModal from '../../../components/modals/AddCouponModal';
 
@@ -25,20 +26,20 @@ const AdminCoupons = () => {
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(coupon =>
-        coupon.code?.toLowerCase().includes(searchLower)
+        coupon.code?.toLowerCase().includes(searchLower),
       );
     }
 
     if (filterStatus !== 'all') {
       filtered = filtered.filter(coupon => 
-        filterStatus === 'active' ? coupon.isActive : !coupon.isActive
+        filterStatus === 'active' ? coupon.isActive : !coupon.isActive,
       );
     }
 
     setFilteredCoupons(filtered);
   }, [searchTerm, filterStatus, coupons]);
 
-  const fetchCoupons = async () => {
+  const fetchCoupons = async() => {
     try {
       setLoading(true);
       setError(null);
@@ -54,7 +55,7 @@ const AdminCoupons = () => {
   };
 
 
-  const handleDeleteCoupon = async (couponId) => {
+  const handleDeleteCoupon = async(couponId) => {
     if (window.confirm('Are you sure you want to delete this coupon?')) {
       try {
         await adminApiService.deleteCoupon(couponId);
@@ -85,6 +86,53 @@ const AdminCoupons = () => {
     handleModalClose();
   };
 
+  const handleToggleStatus = async (couponId, currentStatus) => {
+    try {
+      const newStatus = !currentStatus;
+      
+      // Optimistically update the local state first for immediate UI feedback
+      setCoupons(prevCoupons => 
+        prevCoupons.map(coupon => 
+          coupon.id === couponId 
+            ? { ...coupon, isActive: newStatus }
+            : coupon
+        )
+      );
+      
+      // Update the filtered coupons as well
+      setFilteredCoupons(prevFiltered => 
+        prevFiltered.map(coupon => 
+          coupon.id === couponId 
+            ? { ...coupon, isActive: newStatus }
+            : coupon
+        )
+      );
+      
+      // Then make the API call
+      await adminApiService.updateCoupon(couponId, { isActive: newStatus });
+    } catch (err) {
+      console.error('Error toggling coupon status:', err);
+      setError('Failed to update coupon status');
+      
+      // Revert the optimistic update on error
+      setCoupons(prevCoupons => 
+        prevCoupons.map(coupon => 
+          coupon.id === couponId 
+            ? { ...coupon, isActive: currentStatus }
+            : coupon
+        )
+      );
+      
+      setFilteredCoupons(prevFiltered => 
+        prevFiltered.map(coupon => 
+          coupon.id === couponId 
+            ? { ...coupon, isActive: currentStatus }
+            : coupon
+        )
+      );
+    }
+  };
+
   const columns = [
     {
       key: 'code',
@@ -94,7 +142,7 @@ const AdminCoupons = () => {
         <span className="font-mono font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
           {value}
         </span>
-      )
+      ),
     },
     {
       key: 'discountValue',
@@ -104,7 +152,7 @@ const AdminCoupons = () => {
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
           {value}%
         </span>
-      )
+      ),
     },
     {
       key: 'maxRedemptionsPerUser',
@@ -114,7 +162,17 @@ const AdminCoupons = () => {
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
           {value === 0 ? 'UNLIMITED' : value}
         </span>
-      )
+      ),
+    },
+    {
+      key: 'maxRedemptions',
+      label: 'Max Total',
+      sortable: true,
+      render: (value) => (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+          {value === 0 || value === null ? 'UNLIMITED' : value}
+        </span>
+      ),
     },
     {
       key: 'usage',
@@ -127,7 +185,7 @@ const AdminCoupons = () => {
             {row.totalRedemptions || 0}
           </span>
         </div>
-      )
+      ),
     },
     {
       key: 'createdAt',
@@ -140,32 +198,41 @@ const AdminCoupons = () => {
             {new Date(value).toLocaleDateString()}
           </div>
         </div>
-      )
+      ),
     },
     {
       key: 'expirationDate',
       label: 'Expires',
       sortable: true,
-      render: (value) => (
-        <div className="flex items-center">
-          <Calendar className="h-4 w-4 mr-1 text-gray-400" />
-          <div className="text-sm">
-            {new Date(value).toLocaleDateString()}
+      render: (value) => {
+        const expirationDate = new Date(value);
+        const isExpired = expirationDate < new Date();
+        
+        return (
+          <div className="flex items-center">
+            <Calendar className="h-4 w-4 mr-1 text-gray-400" />
+            <div className="text-sm">
+              {expirationDate.toLocaleDateString()}
+              {isExpired && (
+                <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 rounded-full">
+                  EXPIRED
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      )
+        );
+      },
     },
     {
       key: 'isActive',
       label: 'Status',
       sortable: true,
-      render: (value) => (
-        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-          value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-        }`}>
-          {value ? 'Active' : 'Inactive'}
-        </span>
-      )
+      render: (value, row) => (
+        <ToggleSwitch
+          checked={value}
+          onChange={() => handleToggleStatus(row.id, value)}
+        />
+      ),
     },
     {
       key: 'actions',
@@ -187,8 +254,8 @@ const AdminCoupons = () => {
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   if (loading) {
@@ -266,9 +333,9 @@ const AdminCoupons = () => {
             options: [
               { value: "all", label: "All Status" },
               { value: "active", label: "Active" },
-              { value: "inactive", label: "Inactive" }
-            ]
-          }
+              { value: "inactive", label: "Inactive" },
+            ],
+          },
         ]}
         onApplyFilters={fetchCoupons}
         onExport={() => {}}

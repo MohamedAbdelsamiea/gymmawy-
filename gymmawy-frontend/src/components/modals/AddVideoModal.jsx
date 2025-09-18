@@ -1,344 +1,320 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Video as VideoIcon, Play } from 'lucide-react';
+import { X, Upload, Play } from 'lucide-react';
+import AdminImageUpload from '../common/AdminImageUpload';
+import AdminVideoUpload from '../common/AdminVideoUpload';
 import adminApiService from '../../services/adminApiService';
-import ImageUpload from '../common/ImageUpload';
-import VideoUpload from '../common/VideoUpload';
 
-const AddVideoModal = ({ isOpen, onClose, onSuccess, video = null, isEdit = false }) => {
-  
+const AddVideoModal = ({ isOpen, onClose, onSuccess, editData = null }) => {
   const [formData, setFormData] = useState({
     title: { en: '', ar: '' },
     videoUrl: '',
+    thumbnailAr: '',
     thumbnailEn: '',
-    thumbnailAr: ''
   });
-  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [uploadedFiles, setUploadedFiles] = useState({
+    video: null,
+    thumbnailAr: null,
+    thumbnailEn: null,
+  });
+
+  const isEdit = !!editData;
 
   useEffect(() => {
     if (isOpen) {
-      // Always reset form data first
-      setFormData({
-        title: { en: '', ar: '' },
-        videoUrl: '',
-        thumbnailEn: '',
-        thumbnailAr: ''
-      });
-      setErrors({});
-      
-      // Then populate with video data if editing
-      if (video && isEdit) {
+      if (isEdit && editData) {
         setFormData({
-          title: video.title || { en: '', ar: '' },
-          videoUrl: video.videoUrl || '',
-          thumbnailEn: video.thumbnailEn || '',
-          thumbnailAr: video.thumbnailAr || ''
+          title: editData.title || { en: '', ar: '' },
+          videoUrl: editData.videoUrl || '',
+          thumbnailAr: editData.thumbnailAr || '',
+          thumbnailEn: editData.thumbnailEn || '',
+        });
+      } else {
+        setFormData({
+          title: { en: '', ar: '' },
+          videoUrl: '',
+          thumbnailAr: '',
+          thumbnailEn: '',
         });
       }
-    }
-  }, [isOpen, video, isEdit]);
-
-  // Additional effect to force reset when video becomes null
-  useEffect(() => {
-    if (isOpen && !video && !isEdit) {
-      setFormData({
-        title: { en: '', ar: '' },
-        videoUrl: '',
-        thumbnailEn: '',
-        thumbnailAr: ''
-      });
+      setError(null);
       setErrors({});
     }
-  }, [isOpen, video, isEdit]);
-
-  // Force reset when modal opens in create mode
-  useEffect(() => {
-    if (isOpen && !isEdit) {
-      setFormData({
-        title: { en: '', ar: '' },
-        videoUrl: '',
-        thumbnailEn: '',
-        thumbnailAr: ''
-      });
-      setErrors({});
-    }
-  }, [isOpen, isEdit]);
-
-  // Additional effect to force reset when isEdit becomes false
-  useEffect(() => {
-    if (isOpen && !isEdit && !video) {
-      setFormData({
-        title: { en: '', ar: '' },
-        videoUrl: '',
-        thumbnailEn: '',
-        thumbnailAr: ''
-      });
-      setErrors({});
-    }
-  }, [isOpen, isEdit, video]);
+  }, [isOpen, isEdit, editData]);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value,
     }));
     
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
-        [name]: ''
+        [name]: '',
       }));
     }
   };
 
-  const handleTitleChange = (field, value) => {
+  const handleBilingualInputChange = (field, language, value) => {
     setFormData(prev => ({
       ...prev,
-      title: {
-        ...prev.title,
-        [field]: value
-      }
+      [field]: {
+        ...prev[field],
+        [language]: value,
+      },
     }));
     
     // Clear error when user starts typing
-    if (errors.title) {
+    if (errors[field]) {
       setErrors(prev => ({
         ...prev,
-        title: ''
+        [field]: '',
       }));
     }
   };
 
+  const cleanupUploadedFile = async(fileId) => {
+    if (!fileId) {
+return;
+}
+    
+    try {
+      await adminApiService.deleteImage(fileId);
+      console.log('Successfully deleted uploaded file:', fileId);
+    } catch (err) {
+      console.error('Failed to delete uploaded file:', err);
+      // Don't throw error - just log it, as the file might already be deleted
+    }
+  };
+
+  const cleanupAllUploadedFiles = async() => {
+    const cleanupPromises = Object.values(uploadedFiles)
+      .filter(file => file && file.id)
+      .map(file => cleanupUploadedFile(file.id));
+    
+    await Promise.all(cleanupPromises);
+  };
 
   const validateForm = () => {
     const newErrors = {};
 
-
-    if (!formData.title.en.trim()) {
-      newErrors.title = 'English title is required';
+    if (!formData.title.en?.trim()) {
+      newErrors.titleEn = 'English title is required';
     }
 
-    if (!formData.title.ar.trim()) {
-      newErrors.title = 'Arabic title is required';
+    if (!formData.title.ar?.trim()) {
+      newErrors.titleAr = 'Arabic title is required';
     }
 
     if (!formData.videoUrl.trim()) {
-      newErrors.videoUrl = 'Video URL is required';
-    }
-
-    if (!formData.thumbnailEn.trim()) {
-      newErrors.thumbnailEn = 'English thumbnail is required';
-    }
-
-    if (!formData.thumbnailAr.trim()) {
-      newErrors.thumbnailAr = 'Arabic thumbnail is required';
+      newErrors.videoUrl = 'Video file is required';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
-    setLoading(true);
-    try {
-      const submitData = {
-        title: formData.title,
-        videoUrl: formData.videoUrl,
-        thumbnailEn: formData.thumbnailEn,
-        thumbnailAr: formData.thumbnailAr
-      };
 
-      if (isEdit && video) {
-        await adminApiService.updateVideo(video.id, submitData);
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (isEdit) {
+        await adminApiService.updateVideo(editData.id, formData);
       } else {
-        await adminApiService.createVideo(submitData);
+        await adminApiService.createVideo(formData);
       }
+
       onSuccess();
       onClose();
-    } catch (error) {
-      console.error('Error saving video:', error);
+    } catch (err) {
+      setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!video || !isEdit) return;
-    
-    if (window.confirm('Are you sure you want to delete this video? This action cannot be undone.')) {
-      setLoading(true);
-      try {
-        await adminApiService.deleteVideo(video.id);
-        onSuccess();
-        onClose();
-      } catch (error) {
-        console.error('Error deleting video:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
+  const handleClose = async() => {
+    // Clean up any uploaded files that weren't saved
+    await cleanupAllUploadedFiles();
+    onClose();
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+return null;
+}
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">
             {isEdit ? 'Edit Video' : 'Add New Video'}
           </h2>
           <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            onClick={handleClose}
+            className="text-gray-400 hover:text-gray-600"
           >
             <X className="h-6 w-6" />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Title - English */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-800">{error}</p>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Bilingual Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Title (English) *
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Title *
             </label>
-            <input
-              type="text"
-              value={formData.title.en}
-              onChange={(e) => handleTitleChange('en', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent ${
-                errors.title ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder="Enter video title in English"
-            />
-            {errors.title && (
-              <p className="mt-1 text-sm text-red-600">{errors.title}</p>
-            )}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">English Title</label>
+                <input
+                  type="text"
+                  value={formData.title?.en ?? ''}
+                  onChange={(e) => handleBilingualInputChange('title', 'en', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    errors.titleEn ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter English title"
+                />
+                {errors.titleEn && (
+                  <p className="mt-1 text-sm text-red-600">{errors.titleEn}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Arabic Title</label>
+                <input
+                  type="text"
+                  value={formData.title?.ar ?? ''}
+                  onChange={(e) => handleBilingualInputChange('title', 'ar', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    errors.titleAr ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="أدخل العنوان بالعربية"
+                  dir="rtl"
+                />
+                {errors.titleAr && (
+                  <p className="mt-1 text-sm text-red-600">{errors.titleAr}</p>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Title - Arabic */}
+          {/* Video File Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Title (Arabic) *
+              Video File *
             </label>
-            <input
-              type="text"
-              value={formData.title.ar}
-              onChange={(e) => handleTitleChange('ar', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent ${
-                errors.title ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder="أدخل عنوان الفيديو بالعربية"
-              dir="rtl"
-            />
-            {errors.title && (
-              <p className="mt-1 text-sm text-red-600">{errors.title}</p>
-            )}
-          </div>
-
-          {/* Video Upload */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Video *
-            </label>
-            <VideoUpload
-              value={formData.videoUrl}
-              onChange={(url) => setFormData(prev => ({ ...prev, videoUrl: url }))}
-              module="videos"
-              required={true}
-              className={errors.videoUrl ? 'border-red-300' : ''}
+            <AdminVideoUpload
+              onVideoUpload={(videoData) => {
+                // Clean up previous video if exists
+                if (uploadedFiles.video) {
+                  cleanupUploadedFile(uploadedFiles.video.id);
+                }
+                setFormData(prev => ({ ...prev, videoUrl: videoData.url }));
+                setUploadedFiles(prev => ({ ...prev, video: videoData }));
+              }}
+              onVideoRemove={async() => {
+                if (uploadedFiles.video) {
+                  await cleanupUploadedFile(uploadedFiles.video.id);
+                }
+                setFormData(prev => ({ ...prev, videoUrl: '' }));
+                setUploadedFiles(prev => ({ ...prev, video: null }));
+              }}
+              initialVideo={formData.videoUrl ? { url: formData.videoUrl } : null}
+              className="w-full"
+              maxSize={100 * 1024 * 1024} // 100MB
             />
             {errors.videoUrl && (
               <p className="mt-1 text-sm text-red-600">{errors.videoUrl}</p>
             )}
           </div>
 
-          {/* Thumbnail - English */}
+          {/* Arabic Thumbnail Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Thumbnail (English) *
+              Arabic Thumbnail
             </label>
-            <ImageUpload
-              value={formData.thumbnailEn}
-              onChange={(url) => {
-                setFormData(prev => ({
-                  ...prev,
-                  thumbnailEn: url
-                }));
+            <AdminImageUpload
+              onImageUpload={(imageData) => {
+                // Clean up previous thumbnail if exists
+                if (uploadedFiles.thumbnailAr) {
+                  cleanupUploadedFile(uploadedFiles.thumbnailAr.id);
+                }
+                setFormData(prev => ({ ...prev, thumbnailAr: imageData.url }));
+                setUploadedFiles(prev => ({ ...prev, thumbnailAr: imageData }));
               }}
-              module="videos"
-              required={true}
-              className={errors.thumbnailEn ? 'border-red-300' : ''}
+              onImageRemove={async() => {
+                if (uploadedFiles.thumbnailAr) {
+                  await cleanupUploadedFile(uploadedFiles.thumbnailAr.id);
+                }
+                setFormData(prev => ({ ...prev, thumbnailAr: '' }));
+                setUploadedFiles(prev => ({ ...prev, thumbnailAr: null }));
+              }}
+              initialImage={formData.thumbnailAr ? { url: formData.thumbnailAr } : null}
+              className="w-full"
             />
-            {errors.thumbnailEn && (
-              <p className="mt-1 text-sm text-red-600">{errors.thumbnailEn}</p>
-            )}
           </div>
 
-          {/* Thumbnail - Arabic */}
+          {/* English Thumbnail Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Thumbnail (Arabic) *
+              English Thumbnail
             </label>
-            <ImageUpload
-              value={formData.thumbnailAr}
-              onChange={(url) => {
-                setFormData(prev => ({
-                  ...prev,
-                  thumbnailAr: url
-                }));
+            <AdminImageUpload
+              onImageUpload={(imageData) => {
+                // Clean up previous thumbnail if exists
+                if (uploadedFiles.thumbnailEn) {
+                  cleanupUploadedFile(uploadedFiles.thumbnailEn.id);
+                }
+                setFormData(prev => ({ ...prev, thumbnailEn: imageData.url }));
+                setUploadedFiles(prev => ({ ...prev, thumbnailEn: imageData }));
               }}
-              module="videos"
-              required={true}
-              className={errors.thumbnailAr ? 'border-red-300' : ''}
+              onImageRemove={async() => {
+                if (uploadedFiles.thumbnailEn) {
+                  await cleanupUploadedFile(uploadedFiles.thumbnailEn.id);
+                }
+                setFormData(prev => ({ ...prev, thumbnailEn: '' }));
+                setUploadedFiles(prev => ({ ...prev, thumbnailEn: null }));
+              }}
+              initialImage={formData.thumbnailEn ? { url: formData.thumbnailEn } : null}
+              className="w-full"
             />
-            {errors.thumbnailAr && (
-              <p className="mt-1 text-sm text-red-600">{errors.thumbnailAr}</p>
-            )}
           </div>
 
-
-
-          {/* Actions */}
-          <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-            <div>
-              {isEdit && (
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  disabled={loading}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
-                >
-                  Delete Video
-                </button>
-              )}
-            </div>
-            <div className="flex space-x-3">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={loading}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary disabled:opacity-50 transition-colors"
-              >
-                {loading ? 'Saving...' : (isEdit ? 'Update' : 'Create')}
-              </button>
-            </div>
+          {/* Buttons */}
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? 'Saving...' : (isEdit ? 'Update Video' : 'Create Video')}
+            </button>
           </div>
         </form>
       </div>

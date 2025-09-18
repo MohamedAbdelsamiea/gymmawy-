@@ -4,7 +4,7 @@ export const formatDate = (date, options = {}) => {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-    ...options
+    ...options,
   };
 
   try {
@@ -84,7 +84,7 @@ export const formatShortDate = (date) => {
     return dateObj.toLocaleDateString('en-US', {
       month: '2-digit',
       day: '2-digit',
-      year: 'numeric'
+      year: 'numeric',
     });
   } catch (error) {
     return 'Invalid Date';
@@ -101,7 +101,7 @@ export const formatTime = (date) => {
     return dateObj.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: true
+      hour12: true,
     });
   } catch (error) {
     return 'Invalid Time';

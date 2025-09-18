@@ -26,10 +26,13 @@ DATABASE_URL="postgresql://gymmawy_user:password@localhost:5431/gymmawy?schema=p
 # Server Configuration
 NODE_ENV="development"
 PORT=3000
+APP_URL="http://localhost:3000"
 
 # JWT Configuration
-JWT_SECRET="gymmawy-super-secret-jwt-key-2024-development"
-JWT_EXPIRES_IN="7d"
+JWT_ACCESS_SECRET="gymmawy-access-secret-2024-development"
+JWT_REFRESH_SECRET="gymmawy-refresh-secret-2024-development"
+ACCESS_TOKEN_TTL="15m"
+REFRESH_TOKEN_TTL="30d"
 JWT_ISSUER="gymmawy"
 
 # CORS Configuration
@@ -74,6 +77,10 @@ PAYMENT_GATEWAY_SECRET=""
 # Frontend URL (for production)
 FRONTEND_URL="http://localhost:5173"
 
+# External Service URLs
+TRACKING_BASE_URL="https://tracking.gymmawy.com"
+LABELS_BASE_URL="https://labels.gymmawy.com"
+
 # Admin Configuration
 ADMIN_EMAIL="admin@gymmawy.com"
 ADMIN_PASSWORD="admin123"
@@ -117,6 +124,7 @@ DATABASE_URL="postgresql://gymmawy_user:password@localhost:5431/gymmawy?schema=p
 # Server Configuration
 NODE_ENV="development"
 PORT=3000
+APP_URL="http://localhost:3000"
 
 # JWT Configuration
 JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
@@ -164,6 +172,10 @@ PAYMENT_GATEWAY_SECRET=""
 
 # Frontend URL (for production)
 FRONTEND_URL="http://localhost:5173"
+
+# External Service URLs
+TRACKING_BASE_URL="https://tracking.gymmawy.com"
+LABELS_BASE_URL="https://labels.gymmawy.com"
 
 # Admin Configuration
 ADMIN_EMAIL="admin@gymmawy.com"

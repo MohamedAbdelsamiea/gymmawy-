@@ -22,44 +22,44 @@ const OrderTracking = () => {
           date: '2024-01-20',
           time: '10:30 AM',
           location: 'Online Store',
-          completed: true
+          completed: true,
         },
         {
           status: 'Processing',
           date: '2024-01-20',
           time: '2:15 PM',
           location: 'Warehouse',
-          completed: true
+          completed: true,
         },
         {
           status: 'Shipped',
           date: '2024-01-21',
           time: '9:45 AM',
           location: 'Cairo Distribution Center',
-          completed: true
+          completed: true,
         },
         {
           status: 'In Transit',
           date: '2024-01-22',
           time: '11:20 AM',
           location: 'Alexandria Hub',
-          completed: false
+          completed: false,
         },
         {
           status: 'Out for Delivery',
           date: '2024-01-25',
           time: '8:00 AM',
           location: 'Local Delivery',
-          completed: false
+          completed: false,
         },
         {
           status: 'Delivered',
           date: '2024-01-25',
           time: '2:30 PM',
           location: 'Your Address',
-          completed: false
-        }
-      ]
+          completed: false,
+        },
+      ],
     },
     {
       id: 'ORD002',
@@ -77,45 +77,45 @@ const OrderTracking = () => {
           date: '2024-01-15',
           time: '3:20 PM',
           location: 'Online Store',
-          completed: true
+          completed: true,
         },
         {
           status: 'Processing',
           date: '2024-01-15',
           time: '5:45 PM',
           location: 'Warehouse',
-          completed: true
+          completed: true,
         },
         {
           status: 'Shipped',
           date: '2024-01-16',
           time: '10:30 AM',
           location: 'Cairo Distribution Center',
-          completed: true
+          completed: true,
         },
         {
           status: 'In Transit',
           date: '2024-01-17',
           time: '2:15 PM',
           location: 'Alexandria Hub',
-          completed: true
+          completed: true,
         },
         {
           status: 'Out for Delivery',
           date: '2024-01-20',
           time: '9:00 AM',
           location: 'Local Delivery',
-          completed: true
+          completed: true,
         },
         {
           status: 'Delivered',
           date: '2024-01-20',
           time: '1:45 PM',
           location: 'Your Address',
-          completed: true
-        }
-      ]
-    }
+          completed: true,
+        },
+      ],
+    },
   ]);
 
   const selectedOrder = orders.find(order => order.id === activeOrder);

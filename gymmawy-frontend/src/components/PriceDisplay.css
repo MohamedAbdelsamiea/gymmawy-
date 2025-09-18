@@ -1,0 +1,184 @@
+/* Price Display Styles */
+.price-display {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.price-current {
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.price-original {
+  font-size: 0.875em;
+  color: #6b7280;
+  text-decoration: line-through;
+  line-height: 1.2;
+}
+
+.price-discount {
+  font-size: 0.75em;
+  color: #dc2626;
+  background: #fef2f2;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.price-currency-code {
+  font-size: 0.75em;
+  color: #6b7280;
+  margin-left: 4px;
+  font-weight: 400;
+}
+
+.price-conversion-note {
+  font-size: 0.75em;
+  color: #6b7280;
+  font-style: italic;
+  line-height: 1.2;
+}
+
+/* Price Range Styles */
+.price-range {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.price-min,
+.price-max {
+  font-weight: 600;
+}
+
+.price-separator {
+  color: #6b7280;
+  font-weight: 400;
+}
+
+/* Subscription Price Styles */
+.subscription-price {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.price-amount {
+  font-weight: 600;
+}
+
+.price-period {
+  font-size: 0.875em;
+  color: #6b7280;
+  font-weight: 400;
+}
+
+/* Size variants */
+.price-display.small,
+.price-range.small,
+.subscription-price.small {
+  font-size: 14px;
+}
+
+.price-display.medium,
+.price-range.medium,
+.subscription-price.medium {
+  font-size: 16px;
+}
+
+.price-display.large,
+.price-range.large,
+.subscription-price.large {
+  font-size: 20px;
+}
+
+.price-display.xlarge,
+.price-range.xlarge,
+.subscription-price.xlarge {
+  font-size: 24px;
+}
+
+/* Special styling for large prices */
+.price-display.large .price-current,
+.price-range.large,
+.subscription-price.large {
+  font-weight: 700;
+}
+
+.price-display.xlarge .price-current,
+.price-range.xlarge,
+.subscription-price.xlarge {
+  font-weight: 800;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .price-current {
+    color: #f9fafb;
+  }
+
+  .price-original {
+    color: #9ca3af;
+  }
+
+  .price-discount {
+    color: #fca5a5;
+    background: #7f1d1d;
+  }
+
+  .price-currency-code {
+    color: #9ca3af;
+  }
+
+  .price-conversion-note {
+    color: #9ca3af;
+  }
+
+  .price-range {
+    color: #f9fafb;
+  }
+
+  .price-separator {
+    color: #9ca3af;
+  }
+
+  .subscription-price {
+    color: #f9fafb;
+  }
+
+  .price-period {
+    color: #9ca3af;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .price-display,
+  .price-range,
+  .subscription-price {
+    font-size: 14px;
+  }
+
+  .price-display.large,
+  .price-range.large,
+  .subscription-price.large {
+    font-size: 18px;
+  }
+
+  .price-display.xlarge,
+  .price-range.xlarge,
+  .subscription-price.xlarge {
+    font-size: 20px;
+  }
+}

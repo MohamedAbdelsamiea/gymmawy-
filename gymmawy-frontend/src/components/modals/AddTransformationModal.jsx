@@ -1,189 +1,175 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Image as ImageIcon } from 'lucide-react';
-import ImageUpload from '../common/ImageUpload';
+import { X, Upload, Image } from 'lucide-react';
+import AdminImageUpload from '../common/AdminImageUpload';
 import adminApiService from '../../services/adminApiService';
 
-const AddTransformationModal = ({ isOpen, onClose, onSuccess, transformation = null, isEdit = false }) => {
+const AddTransformationModal = ({ isOpen, onClose, onSuccess, editData = null }) => {
   const [formData, setFormData] = useState({
     title: { en: '', ar: '' },
-    imageUrl: ''
+    imageUrl: '',
+    isActive: true,
   });
-  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [errors, setErrors] = useState({});
+
+  const isEdit = !!editData;
 
   useEffect(() => {
     if (isOpen) {
-      if (transformation && isEdit) {
+      if (isEdit && editData) {
         setFormData({
-          title: transformation.title || { en: '', ar: '' },
-          imageUrl: transformation.imageUrl || ''
+          title: editData.title || { en: '', ar: '' },
+          imageUrl: editData.imageUrl || '',
+          isActive: editData.isActive !== undefined ? editData.isActive : true,
         });
       } else {
         setFormData({
           title: { en: '', ar: '' },
-          imageUrl: ''
+          imageUrl: '',
+          isActive: true,
         });
       }
+      setError(null);
       setErrors({});
     }
-  }, [isOpen, transformation, isEdit]);
+  }, [isOpen, isEdit, editData]);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value,
     }));
     
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
-        [name]: ''
+        [name]: '',
       }));
     }
   };
 
-  const handleTitleChange = (field, value) => {
+  const handleBilingualInputChange = (field, language, value) => {
     setFormData(prev => ({
       ...prev,
-      title: {
-        ...prev.title,
-        [field]: value
-      }
+      [field]: {
+        ...prev[field],
+        [language]: value,
+      },
     }));
-    
-    // Clear error when user starts typing
-    if (errors.title) {
-      setErrors(prev => ({
-        ...prev,
-        title: ''
-      }));
-    }
   };
 
   const validateForm = () => {
     const newErrors = {};
 
     if (!formData.title.en.trim()) {
-      newErrors.title = 'English title is required';
+      newErrors.titleEn = 'English title is required';
     }
 
     if (!formData.title.ar.trim()) {
-      newErrors.title = 'Arabic title is required';
+      newErrors.titleAr = 'Arabic title is required';
     }
 
     if (!formData.imageUrl.trim()) {
-      newErrors.imageUrl = 'Image is required';
+      newErrors.imageUrl = 'Transformation image is required';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
 
-    setLoading(true);
     try {
-      const submitData = {
-        title: formData.title,
-        imageUrl: formData.imageUrl
-      };
+      setLoading(true);
+      setError(null);
 
-      if (isEdit && transformation) {
-        await adminApiService.updateTransformation(transformation.id, submitData);
+      if (isEdit) {
+        await adminApiService.updateTransformation(editData.id, formData);
       } else {
-        await adminApiService.createTransformation(submitData);
+        await adminApiService.createTransformation(formData);
       }
 
       onSuccess();
       onClose();
-    } catch (error) {
-      console.error('Error saving transformation:', error);
+    } catch (err) {
+      setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!transformation || !isEdit) return;
-    
-    if (window.confirm('Are you sure you want to delete this transformation? This action cannot be undone.')) {
-      setLoading(true);
-      try {
-        await adminApiService.deleteTransformation(transformation.id);
-        onSuccess();
-        onClose();
-      } catch (error) {
-        console.error('Error deleting transformation:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  if (!isOpen) return null;
+  if (!isOpen) {
+return null;
+}
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">
             {isEdit ? 'Edit Transformation' : 'Add New Transformation'}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 hover:text-gray-600"
           >
             <X className="h-6 w-6" />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Title - English */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Title (English) *
-            </label>
-            <input
-              type="text"
-              value={formData.title.en}
-              onChange={(e) => handleTitleChange('en', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent ${
-                errors.title ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder="Enter transformation title in English"
-            />
-            {errors.title && (
-              <p className="mt-1 text-sm text-red-600">{errors.title}</p>
-            )}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-800">{error}</p>
           </div>
+        )}
 
-          {/* Title - Arabic */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Title (Arabic) *
-            </label>
-            <input
-              type="text"
-              value={formData.title.ar}
-              onChange={(e) => handleTitleChange('ar', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent ${
-                errors.title ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder="أدخل عنوان التحول بالعربية"
-              dir="rtl"
-            />
-            {errors.title && (
-              <p className="mt-1 text-sm text-red-600">{errors.title}</p>
-            )}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Title Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Title (English) *
+              </label>
+              <input
+                type="text"
+                value={formData.title.en}
+                onChange={(e) => handleBilingualInputChange('title', 'en', e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  errors.titleEn ? 'border-red-300' : 'border-gray-300'
+                }`}
+                placeholder="Enter transformation title in English"
+              />
+              {errors.titleEn && (
+                <p className="mt-1 text-sm text-red-600">{errors.titleEn}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Title (Arabic) *
+              </label>
+              <input
+                type="text"
+                value={formData.title.ar}
+                onChange={(e) => handleBilingualInputChange('title', 'ar', e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  errors.titleAr ? 'border-red-300' : 'border-gray-300'
+                }`}
+                placeholder="أدخل عنوان التحول بالعربية"
+                dir="rtl"
+              />
+              {errors.titleAr && (
+                <p className="mt-1 text-sm text-red-600">{errors.titleAr}</p>
+              )}
+            </div>
           </div>
 
           {/* Image Upload */}
@@ -191,51 +177,50 @@ const AddTransformationModal = ({ isOpen, onClose, onSuccess, transformation = n
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Transformation Image *
             </label>
-            <ImageUpload
-              value={formData.imageUrl}
-              onChange={(url) => setFormData(prev => ({ ...prev, imageUrl: url }))}
-              module="transformations"
-              required={true}
-              className={errors.imageUrl ? 'border-red-300' : ''}
+            <AdminImageUpload
+              initialImage={formData.imageUrl ? { url: formData.imageUrl } : null}
+              onImageUpload={(uploadedImage) => setFormData(prev => ({ ...prev, imageUrl: uploadedImage.url }))}
+              onImageRemove={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
+              maxSize={5 * 1024 * 1024}
+              showPreview={true}
+              showDetails={true}
             />
             {errors.imageUrl && (
               <p className="mt-1 text-sm text-red-600">{errors.imageUrl}</p>
             )}
           </div>
 
+          {/* Status */}
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="isActive"
+              name="isActive"
+              checked={formData.isActive}
+              onChange={handleInputChange}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700">
+              Active (Published)
+            </label>
+          </div>
 
-
-          {/* Actions */}
-          <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-            <div>
-              {isEdit && (
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  disabled={loading}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
-                >
-                  Delete Transformation
-                </button>
-              )}
-            </div>
-            <div className="flex space-x-3">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={loading}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary disabled:opacity-50 transition-colors"
-              >
-                {loading ? 'Saving...' : (isEdit ? 'Update' : 'Create')}
-              </button>
-            </div>
+          {/* Buttons */}
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? 'Saving...' : (isEdit ? 'Update Transformation' : 'Create Transformation')}
+            </button>
           </div>
         </form>
       </div>

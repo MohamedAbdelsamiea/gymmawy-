@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { translations } from '../../i18n/translations';
 import transformationService from '../../services/transformationService';
+import { config } from '../../config';
 
 const TransformationsPage = () => {
   const { language } = useLanguage();
@@ -14,13 +15,13 @@ const TransformationsPage = () => {
     loadTransformations();
   }, [language]);
 
-  const loadTransformations = async () => {
+  const loadTransformations = async() => {
     try {
       setLoading(true);
       setError(null);
       const response = await transformationService.getTransformations({
         isActive: true,
-        language: language
+        language: language,
       });
       setTransformations(response.transformations || []);
     } catch (err) {
@@ -98,24 +99,18 @@ const TransformationsPage = () => {
               <div key={transformation.id} className="bg-white rounded-lg shadow-lg overflow-hidden">
                 <div className="aspect-w-16 aspect-h-9">
                   <img
-                    src={transformation.beforeImage || transformation.image}
-                    alt={transformation.title}
+                    src={transformation.imageUrl ? (transformation.imageUrl.startsWith('http') ? transformation.imageUrl : `${config.API_BASE_URL}${transformation.imageUrl}`) : ''}
+                    alt="Transformation"
                     className="w-full h-64 object-cover"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
                   />
                 </div>
                 <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    {transformation.title}
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    {transformation.description}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">
-                      {transformation.duration || '12 weeks'}
-                    </span>
+                  <div className="flex items-center justify-center">
                     <span className="text-sm font-medium text-gymmawy-primary">
-                      {transformation.program || 'Custom Program'}
+                      Transformation Result
                     </span>
                   </div>
                 </div>

@@ -14,7 +14,7 @@ const StoreManagement = () => {
       stock: 45,
       status: 'Active',
       createdAt: '2024-01-15',
-      sales: 156
+      sales: 156,
     },
     {
       id: 'PROD002',
@@ -24,7 +24,7 @@ const StoreManagement = () => {
       stock: 23,
       status: 'Active',
       createdAt: '2024-01-10',
-      sales: 89
+      sales: 89,
     },
     {
       id: 'PROD003',
@@ -34,8 +34,8 @@ const StoreManagement = () => {
       stock: 0,
       status: 'Out of Stock',
       createdAt: '2024-01-05',
-      sales: 234
-    }
+      sales: 234,
+    },
   ]);
 
   const [orders] = useState([
@@ -47,7 +47,7 @@ const StoreManagement = () => {
       total: '$119.97',
       status: 'Processing',
       orderDate: '2024-01-20',
-      shippingAddress: 'Cairo, Egypt'
+      shippingAddress: 'Cairo, Egypt',
     },
     {
       id: 'ORD002',
@@ -57,7 +57,7 @@ const StoreManagement = () => {
       total: '$49.99',
       status: 'Shipped',
       orderDate: '2024-01-19',
-      shippingAddress: 'Alexandria, Egypt'
+      shippingAddress: 'Alexandria, Egypt',
     },
     {
       id: 'ORD003',
@@ -67,8 +67,8 @@ const StoreManagement = () => {
       total: '$69.98',
       status: 'Delivered',
       orderDate: '2024-01-18',
-      shippingAddress: 'Giza, Egypt'
-    }
+      shippingAddress: 'Giza, Egypt',
+    },
   ]);
 
   const productColumns = [
@@ -78,17 +78,29 @@ const StoreManagement = () => {
       sortable: true,
       render: (value) => (
         <span className="font-medium text-gymmawy-primary">{value}</span>
-      )
+      ),
     },
     {
       key: 'name',
       label: 'Product Name',
-      sortable: true
+      sortable: true,
+      render: (value) => {
+        if (typeof value === 'object' && value !== null) {
+          return value.en || value.ar || 'Unnamed';
+        }
+        return value || 'Unnamed';
+      },
     },
     {
       key: 'category',
       label: 'Category',
-      sortable: true
+      sortable: true,
+      render: (value) => {
+        if (typeof value === 'object' && value !== null) {
+          return value.name || value.en || value.ar || 'Uncategorized';
+        }
+        return value || 'Uncategorized';
+      },
     },
     {
       key: 'price',
@@ -96,7 +108,7 @@ const StoreManagement = () => {
       sortable: true,
       render: (value) => (
         <span className="font-medium text-green-600">{value}</span>
-      )
+      ),
     },
     {
       key: 'stock',
@@ -106,18 +118,19 @@ const StoreManagement = () => {
         <span className={`font-medium ${value === 0 ? 'text-red-600' : 'text-gray-900'}`}>
           {value}
         </span>
-      )
+      ),
     },
     {
       key: 'status',
       label: 'Status',
       sortable: true,
-      render: (value) => <StatusBadge status={value} />
+      render: (value) => <StatusBadge status={value} />,
     },
     {
       key: 'sales',
       label: 'Sales',
-      sortable: true
+      sortable: true,
+      render: (value) => value || 0,
     },
     {
       key: 'actions',
@@ -134,8 +147,8 @@ const StoreManagement = () => {
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   const orderColumns = [
@@ -145,22 +158,25 @@ const StoreManagement = () => {
       sortable: true,
       render: (value) => (
         <span className="font-medium text-gymmawy-primary">{value}</span>
-      )
+      ),
     },
     {
       key: 'customer',
       label: 'Customer',
-      sortable: true
+      sortable: true,
+      render: (value) => value || 'N/A',
     },
     {
       key: 'email',
       label: 'Email',
-      sortable: true
+      sortable: true,
+      render: (value) => value || 'N/A',
     },
     {
       key: 'items',
       label: 'Items',
-      sortable: true
+      sortable: true,
+      render: (value) => value || 0,
     },
     {
       key: 'total',
@@ -168,18 +184,19 @@ const StoreManagement = () => {
       sortable: true,
       render: (value) => (
         <span className="font-medium text-green-600">{value}</span>
-      )
+      ),
     },
     {
       key: 'status',
       label: 'Status',
       sortable: true,
-      render: (value) => <StatusBadge status={value} />
+      render: (value) => <StatusBadge status={value} />,
     },
     {
       key: 'orderDate',
       label: 'Order Date',
-      sortable: true
+      sortable: true,
+      render: (value) => value ? new Date(value).toLocaleDateString() : 'N/A',
     },
     {
       key: 'actions',
@@ -193,8 +210,8 @@ const StoreManagement = () => {
             <Edit className="h-4 w-4" />
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   const handleExport = (data) => {
