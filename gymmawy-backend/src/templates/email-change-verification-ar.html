@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تأكيد بريدك الإلكتروني - جيماوي</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #1F1F1F;
+            background-color: #F8F9FA;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #3F0071 0%, #8B5CF6 100%);
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="50" cy="10" r="0.5" fill="rgba(255,255,255,0.05)"/><circle cx="10" cy="60" r="0.5" fill="rgba(255,255,255,0.05)"/><circle cx="90" cy="40" r="0.5" fill="rgba(255,255,255,0.05)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
+            opacity: 0.3;
+        }
+        
+        .logo {
+            position: relative;
+            z-index: 1;
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+        
+        .logo-fallback {
+            font-size: 32px;
+            font-weight: bold;
+            color: #3F0071;
+        }
+        
+        .header h1 {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .greeting {
+            font-size: 18px;
+            color: #1F1F1F;
+            margin-bottom: 20px;
+        }
+        
+        .message {
+            font-size: 16px;
+            color: #4A5568;
+            margin-bottom: 30px;
+            line-height: 1.7;
+        }
+        
+        .cta-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #3F0071 0%, #8B5CF6 100%);
+            color: #ffffff;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(63, 0, 113, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .cta-button:hover::before {
+            left: 100%;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(63, 0, 113, 0.4);
+        }
+        
+        .alternative-link {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #F8F9FA;
+            border-radius: 8px;
+            border-right: 4px solid #8B5CF6;
+        }
+        
+        .alternative-link p {
+            font-size: 14px;
+            color: #6B7280;
+            margin-bottom: 10px;
+        }
+        
+        .alternative-link a {
+            color: #3F0071;
+            text-decoration: none;
+            font-weight: 500;
+            word-break: break-all;
+        }
+        
+        .security-note {
+            background-color: #FEF3E7;
+            border: 1px solid #F59E0B;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .security-note h3 {
+            color: #92400E;
+            font-size: 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .security-note p {
+            color: #92400E;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .footer {
+            background-color: #1F1F1F;
+            color: #9CA3AF;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .footer h3 {
+            color: #ffffff;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        
+        .footer p {
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        
+        .footer-bottom {
+            border-top: 1px solid #374151;
+            padding-top: 20px;
+            font-size: 12px;
+            color: #6B7280;
+        }
+        
+        .expiry-notice {
+            background-color: #F3F4F6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .expiry-notice p {
+            color: #6B7280;
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        @media (max-width: 600px) {
+            .email-container {
+                margin: 0;
+                border-radius: 0;
+            }
+            
+            .header, .content, .footer {
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .cta-button {
+                padding: 14px 28px;
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <img src="http://localhost:5173/assets/common/logo.webp" alt="Gymmawy Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                <div class="logo-fallback" style="display: none;">ج</div>
+            </div>
+            <h1>مرحباً بك في جيماوي!</h1>
+            <p>رحلتك الرياضية تبدأ من هنا</p>
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            <div class="greeting">
+                مرحباً {{firstName}}،
+            </div>
+            
+            <div class="message">
+                تم طلب تغيير عنوان بريدك الإلكتروني إلى {{newEmail}}. لإكمال هذا التغيير، يرجى تأكيد العنوان الجديد بالضغط على الزر أدناه.
+            </div>
+            
+            <div class="cta-container">
+                <a href="{{verificationLink}}" class="cta-button">
+                    تأكيد البريد الإلكتروني
+                </a>
+            </div>
+            
+            <div class="expiry-notice">
+                <p>ستنتهي صلاحية رابط التأكيد هذا خلال 24 ساعة لأسباب أمنية.</p>
+            </div>
+            
+            <div class="alternative-link">
+                <p>إذا لم يعمل الزر، يمكنك نسخ ولصق هذا الرابط في متصفحك:</p>
+                <a href="{{verificationLink}}">{{verificationLink}}</a>
+            </div>
+            
+            <div class="security-note">
+                <h3>🔒 تنبيه أمني</h3>
+                <p>إذا لم تقم بإنشاء حساب في جيماوي، يرجى تجاهل هذا البريد الإلكتروني. لن يتم تفعيل حسابك بدون تأكيد البريد الإلكتروني.</p>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <h3>مرحباً بك في جيماوي</h3>
+            <p>رحلتك الرياضية تبدأ معنا. نحن هنا لمساعدتك في تحقيق أهدافك الصحية واللياقة البدنية.</p>
+            
+            <div class="footer-bottom">
+                <p>تم إرسال هذا البريد الإلكتروني إلى {{newEmail}}. إذا كان لديك أي أسئلة، تواصل معنا على support@gymmawy.com</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

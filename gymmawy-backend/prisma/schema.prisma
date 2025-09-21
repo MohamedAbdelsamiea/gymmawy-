@@ -1,0 +1,681 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String                 @id @default(uuid())
+  role                UserRole               @default(MEMBER)
+  email               String                 @unique
+  passwordHash        String
+  firstName           String?
+  lastName            String?
+  mobileNumber        String                 @unique
+  birthDate           DateTime?
+  loyaltyPoints       Int                    @default(0)
+  building            String?
+  street              String?
+  city                String?
+  country             String?
+  postcode            String?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  deletedAt           DateTime?
+  lastLoginAt         DateTime?
+  failedLoginAttempts Int                    @default(0)
+  lockedUntil         DateTime?
+  auditLogs           AuditLog[]
+  cart                Cart?
+  loyaltyTransactions LoyaltyTransaction[]
+  orders              Order[]
+  payments            Payment[]
+  programmePurchases  ProgrammePurchase[]
+  referrals           Referral[]
+  referralRewards     ReferralReward[]
+  referralUsages      ReferralUsage[]
+  refreshTokens       RefreshToken[]
+  subscriptions       Subscription[]
+  redeemedCoupons     UserCouponRedemption[]
+  tokens              VerificationToken[]
+
+  @@index([role])
+  @@index([createdAt])
+  @@index([lastLoginAt])
+  @@index([deletedAt])
+}
+
+model PendingUserVerification {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  passwordHash      String
+  firstName         String?
+  lastName          String?
+  mobileNumber      String?
+  birthDate         DateTime?
+  building          String?
+  street            String?
+  city              String?
+  country           String?
+  postcode          String?
+  verificationToken String    @unique
+  expiresAt         DateTime
+  createdAt         DateTime  @default(now())
+
+  @@index([email])
+  @@index([verificationToken])
+  @@index([expiresAt])
+}
+
+model VerificationToken {
+  id         String    @id @default(uuid())
+  userId     String
+  type       TokenType
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  tokenHash  String    @unique
+  consumedAt DateTime?
+  newEmail   String?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([type])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  revoked   Boolean   @default(false)
+  ipAddress String?
+  userAgent String?
+  revokedAt DateTime?
+  tokenHash String    @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revoked])
+}
+
+model Product {
+  id                    String         @id @default(uuid())
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  name                  Json
+  description           Json?
+  deletedAt             DateTime?
+  discountPercentage    Int            @default(0)
+  loyaltyPointsAwarded  Int            @default(0)
+  loyaltyPointsRequired Int            @default(0)
+  stock                 Int            @default(0)
+  isActive              Boolean        @default(true)
+  cartItems             CartItem[]
+  orderItems            OrderItem[]
+  images                ProductImage[] @relation("ProductImages")
+
+  @@index([createdAt])
+  @@index([discountPercentage])
+  @@index([deletedAt])
+  @@index([isActive])
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String
+  url       String
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation("ProductImages", fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([isPrimary])
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+
+  @@index([createdAt])
+}
+
+model CartItem {
+  id        String  @id @default(uuid())
+  cartId    String
+  quantity  Int     @default(1)
+  productId String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+  @@index([productId])
+}
+
+model Order {
+  id               String      @id @default(uuid())
+  userId           String
+  status           OrderStatus @default(PENDING)
+  couponId         String?
+  shippingBuilding String?
+  shippingStreet   String?
+  shippingCity     String?
+  shippingCountry  String?
+  shippingPostcode String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  trackingNumber   String?
+  orderNumber      String      @unique
+  couponDiscount   Decimal?    @db.Decimal(10, 2)
+  deletedAt        DateTime?
+  price            Decimal?    @db.Decimal(10, 2)
+  currency         Currency
+  coupon           Coupon?     @relation(fields: [couponId], references: [id])
+  user             User        @relation(fields: [userId], references: [id])
+  items            OrderItem[]
+  shipping         Shipping[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([trackingNumber])
+  @@index([deletedAt])
+  @@index([couponId])
+}
+
+model OrderItem {
+  id                 String         @id @default(uuid())
+  orderId            String
+  quantity           Int            @default(1)
+  discountPercentage Int            @default(0)
+  productId          String
+  totalPrice         Decimal        @db.Decimal(10, 2)
+  order              Order          @relation(fields: [orderId], references: [id])
+  product            Product        @relation(fields: [productId], references: [id])
+  shippingItems      ShippingItem[]
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model SubscriptionPlan {
+  id                           String                    @id @default(uuid())
+  discountPercentage           Int                       @default(0)
+  subscriptionPeriodDays       Int
+  giftPeriodDays               Int                       @default(0)
+  loyaltyPointsAwarded         Int?                      @default(0)
+  loyaltyPointsRequired        Int?
+  createdAt                    DateTime                  @default(now())
+  updatedAt                    DateTime                  @updatedAt
+  imageUrl                     String?
+  name                         Json
+  description                  Json?
+  deletedAt                    DateTime?
+  medicalLoyaltyPointsAwarded  Int?                      @default(0)
+  medicalLoyaltyPointsRequired Int?
+  crown                        Json?
+  isActive                     Boolean                   @default(true)
+  crownColor                   String?
+  order                        Int?                      @default(1)
+  subscriptions                Subscription[]
+  benefits                     SubscriptionPlanBenefit[]
+
+  @@index([createdAt])
+  @@index([discountPercentage])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model Benefit {
+  id          String                    @id @default(uuid())
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  description Json
+  deletedAt   DateTime?
+  plans       SubscriptionPlanBenefit[]
+
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+model SubscriptionPlanBenefit {
+  subscriptionPlanId String
+  benefitId          String
+  order              Int?             @default(1)
+  benefit            Benefit          @relation(fields: [benefitId], references: [id], onDelete: Cascade)
+  subscriptionPlan   SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id], onDelete: Cascade)
+
+  @@id([subscriptionPlanId, benefitId])
+}
+
+model Subscription {
+  id                 String             @id @default(uuid())
+  userId             String
+  subscriptionPlanId String
+  startDate          DateTime?
+  endDate            DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  cancelledAt        DateTime?
+  status             SubscriptionStatus @default(PENDING)
+  discountPercentage Int                @default(0)
+  paymentMethod      PaymentMethod?
+  price              Decimal?           @db.Decimal(10, 2)
+  subscriptionNumber String             @unique
+  couponDiscount     Int?
+  couponId           String?
+  isMedical          Boolean            @default(false)
+  currency           Currency?
+  coupon             Coupon?            @relation(fields: [couponId], references: [id])
+  subscriptionPlan   SubscriptionPlan   @relation(fields: [subscriptionPlanId], references: [id])
+  user               User               @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([couponId])
+}
+
+model LoyaltyTransaction {
+  id        String                   @id @default(uuid())
+  userId    String
+  points    Int
+  createdAt DateTime                 @default(now())
+  source    LoyaltyTransactionSource
+  sourceId  String?
+  type      LoyaltyTransactionType
+  user      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([points])
+  @@index([type])
+  @@index([source])
+  @@index([sourceId])
+  @@index([userId, createdAt])
+}
+
+model Lead {
+  id           String     @id @default(uuid())
+  name         String?
+  email        String?
+  mobileNumber String?
+  message      String?
+  status       LeadStatus @default(NEW)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([email])
+  @@index([status, createdAt])
+}
+
+model Payment {
+  id               String           @id @default(uuid())
+  amount           Decimal          @db.Decimal(10, 2)
+  status           PaymentStatus    @default(PENDING)
+  method           PaymentMethod
+  gatewayId        String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  userId           String?
+  metadata         Json?
+  customerInfo     Json?
+  processedAt      DateTime?
+  transactionId    String?
+  paymentReference String           @unique
+  paymentableId    String?
+  paymentProofUrl  String?
+  currency         Currency
+  paymentableType  PurchasableType?
+  user             User?            @relation(fields: [userId], references: [id])
+
+  @@index([gatewayId])
+  @@index([status])
+  @@index([method])
+  @@index([createdAt])
+  @@index([userId])
+  @@index([paymentableId])
+  @@index([paymentableType])
+}
+
+model Coupon {
+  id                    String                 @id @default(uuid())
+  code                  String                 @unique
+  expirationDate        DateTime
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  isActive              Boolean                @default(true)
+  deletedAt             DateTime?
+  discountPercentage    Int
+  maxRedemptionsPerUser Int?
+  totalRedemptions      Int                    @default(0)
+  maxRedemptions        Int?
+  orders                Order[]
+  programmePurchases    ProgrammePurchase[]
+  subscriptions         Subscription[]
+  redeemedBy            UserCouponRedemption[]
+
+  @@index([code])
+  @@index([isActive])
+  @@index([expirationDate])
+  @@index([deletedAt])
+}
+
+model UserCouponRedemption {
+  id         String   @id @default(uuid())
+  userId     String
+  couponId   String
+  redeemedAt DateTime @default(now())
+  coupon     Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, couponId])
+  @@index([userId])
+  @@index([couponId])
+  @@index([redeemedAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+  actionType String
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([actionType])
+  @@index([createdAt])
+}
+
+model Transformation {
+  id        String    @id @default(uuid())
+  title     Json
+  imageUrl  String?
+  order     Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  isActive  Boolean   @default(true)
+
+  @@index([createdAt])
+  @@index([order])
+  @@index([deletedAt])
+}
+
+model Video {
+  id          String    @id @default(uuid())
+  title       Json
+  videoUrl    String
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  thumbnailAr String?
+  thumbnailEn String?
+  deletedAt   DateTime?
+  isActive    Boolean   @default(true)
+
+  @@index([createdAt])
+  @@index([order])
+  @@index([deletedAt])
+}
+
+model Programme {
+  id                    String              @id @default(uuid())
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  imageUrl              String?
+  name                  Json
+  discountPercentage    Int                 @default(0)
+  loyaltyPointsAwarded  Int?
+  loyaltyPointsRequired Int?
+  deletedAt             DateTime?
+  isActive              Boolean             @default(true)
+  order                 Int?                @default(1)
+  priceAED              Decimal?            @db.Decimal(10, 2)
+  priceEGP              Decimal?            @db.Decimal(10, 2)
+  priceSAR              Decimal?            @db.Decimal(10, 2)
+  priceUSD              Decimal?            @db.Decimal(10, 2)
+  purchases             ProgrammePurchase[]
+
+  @@index([createdAt])
+  @@index([discountPercentage])
+  @@index([deletedAt])
+  @@index([isActive])
+}
+
+model ProgrammePurchase {
+  id                 String                  @id @default(uuid())
+  userId             String
+  programmeId        String
+  price              Decimal                 @db.Decimal(10, 2)
+  purchasedAt        DateTime                @default(now())
+  discountPercentage Int                     @default(0)
+  purchaseNumber     String                  @unique
+  status             ProgrammePurchaseStatus @default(PENDING)
+  couponDiscount     Decimal?                @db.Decimal(10, 2)
+  couponId           String?
+  currency           Currency
+  cancelledAt        DateTime?
+  coupon             Coupon?                 @relation(fields: [couponId], references: [id])
+  programme          Programme               @relation(fields: [programmeId], references: [id])
+  user               User                    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([purchasedAt])
+  @@index([couponId])
+}
+
+model Referral {
+  id           String           @id @default(uuid())
+  code         String           @unique
+  userId       String
+  isActive     Boolean          @default(true)
+  expiresAt    DateTime
+  maxUses      Int              @default(1000)
+  currentUses  Int              @default(0)
+  totalRewards Decimal          @default(0) @db.Decimal(10, 2)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  user         User             @relation(fields: [userId], references: [id])
+  rewards      ReferralReward[]
+  usages       ReferralUsage[]
+}
+
+model ReferralUsage {
+  id             String   @id @default(uuid())
+  referralId     String
+  referredUserId String
+  discountAmount Decimal  @default(0.00) @db.Decimal(10, 2)
+  usedAt         DateTime @default(now())
+  isProcessed    Boolean  @default(false)
+  referral       Referral @relation(fields: [referralId], references: [id])
+  referredUser   User     @relation(fields: [referredUserId], references: [id])
+}
+
+model ReferralReward {
+  id         String               @id @default(uuid())
+  referralId String
+  userId     String
+  amount     Decimal              @db.Decimal(10, 2)
+  type       ReferralRewardType
+  status     ReferralRewardStatus @default(PENDING)
+  earnedAt   DateTime             @default(now())
+  redeemedAt DateTime?
+  points     Int?
+  referral   Referral             @relation(fields: [referralId], references: [id])
+  user       User                 @relation(fields: [userId], references: [id])
+}
+
+model Shipping {
+  id                String         @id @default(uuid())
+  orderId           String
+  trackingNumber    String         @unique
+  status            ShippingStatus @default(PENDING)
+  senderInfo        Json
+  recipientInfo     Json
+  labelUrl          String?
+  estimatedDelivery DateTime?
+  actualDelivery    DateTime?
+  metadata          Json?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  order             Order          @relation(fields: [orderId], references: [id])
+  items             ShippingItem[]
+
+  @@index([orderId])
+  @@index([trackingNumber])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ShippingItem {
+  id          String    @id @default(uuid())
+  shippingId  String
+  orderItemId String
+  quantity    Int       @default(1)
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  shipping    Shipping  @relation(fields: [shippingId], references: [id], onDelete: Cascade)
+
+  @@unique([shippingId, orderItemId])
+  @@index([shippingId])
+  @@index([orderItemId])
+}
+
+model Price {
+  id               String           @id
+  amount           Decimal          @db.Decimal(10, 2)
+  currency         Currency
+  purchasableId    String
+  purchasableType  PurchasableType
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime
+
+  @@index([currency])
+  @@index([purchasableId, purchasableType])
+  @@index([purchasableType])
+}
+
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+enum Currency {
+  EGP
+  SAR
+  AED
+  USD
+}
+
+enum PurchasableType {
+  PRODUCT
+  PROGRAMME
+  PROGRAMME_PURCHASE
+  MEDICAL_SUBSCRIPTION
+  SUBSCRIPTION
+  ORDER
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+  PENDING_VERIFICATION
+}
+
+enum PaymentMethod {
+  INSTA_PAY
+  VODAFONE_CASH
+  TABBY
+  TAMARA
+  CARD
+}
+
+enum TokenType {
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+  EMAIL_CHANGE
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+enum ProgrammePurchaseStatus {
+  PENDING
+  COMPLETE
+  CANCELLED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+}
+
+enum ReferralRewardType {
+  LOYALTY_POINTS
+  DISCOUNT
+}
+
+enum ReferralRewardStatus {
+  PENDING
+  APPROVED
+  REDEEMED
+  EXPIRED
+}
+
+enum ShippingStatus {
+  PENDING
+  LABEL_CREATED
+  PICKED_UP
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  FAILED_DELIVERY
+  RETURNED
+}
+
+enum LoyaltyTransactionType {
+  EARNED
+  REDEEMED
+  REVOKED
+}
+
+enum LoyaltyTransactionSource {
+  ORDER_ITEM
+  PROGRAMME_PURCHASE
+  SUBSCRIPTION
+  REFERRAL
+}
+
+enum SubscriptionPriceType {
+  NORMAL
+  MEDICAL
+}
