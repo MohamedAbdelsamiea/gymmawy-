@@ -354,25 +354,65 @@ export const serveUploadedFiles = (req, res, next) => {
   const { fileName } = req.params;
   const { category, isPaymentProof } = req.query;
   
-  // Determine directory based on category
-  let uploadDir;
-  if (isPaymentProof === 'true') {
-    uploadDir = 'uploads/payment-proofs';
-  } else {
-    uploadDir = `uploads/content/${category || 'products'}`;
-  }
+  let filePath;
   
-  const filePath = path.join(uploadDir, fileName);
+  // Handle catch-all route (e.g., /api/uploads/content/images/filename.webp)
+  if (req.route && req.route.path === '*') {
+    // Use the full path from the request
+    const fullPath = req.path;
+    // Remove /api/uploads prefix to get the relative path
+    const relativePath = fullPath.replace(/^\/api\/uploads/, '');
+    const cleanPath = relativePath.startsWith('/') ? relativePath.slice(1) : relativePath;
+    filePath = path.join(process.cwd(), cleanPath);
+  }
+  // Handle full path format (e.g., /uploads/content/images/filename.webp)
+  else if (fileName && fileName.includes('/')) {
+    // Remove leading slash if present and use the full path
+    const cleanPath = fileName.startsWith('/') ? fileName.slice(1) : fileName;
+    filePath = path.join(process.cwd(), cleanPath);
+  } else {
+    // Handle legacy format with category parameter
+    let uploadDir;
+    if (isPaymentProof === 'true') {
+      uploadDir = 'uploads/payment-proofs';
+    } else {
+      uploadDir = `uploads/content/${category || 'products'}`;
+    }
+    filePath = path.join(uploadDir, fileName);
+  }
   
   // Check if file exists
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: { message: 'File not found' } });
   }
   
+  // Determine content type based on file extension
+  const ext = path.extname(filePath).toLowerCase();
+  let contentType = 'application/octet-stream';
+  if (ext === '.webp') contentType = 'image/webp';
+  else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+  else if (ext === '.png') contentType = 'image/png';
+  else if (ext === '.gif') contentType = 'image/gif';
+  
   // Set proper headers for image serving
-  res.setHeader('Content-Type', 'image/webp');
+  res.setHeader('Content-Type', contentType);
   res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year cache
-  res.setHeader('ETag', `"${fileName}"`);
+  res.setHeader('ETag', `"${path.basename(filePath)}"`);
+  
+  // Set CORS headers for static files
+  const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
+    "http://localhost:3000", 
+    "http://localhost:3001", 
+    "http://localhost:5173"
+  ];
+  const origin = req.headers.origin;
+  
+  if (allowedOrigins.includes("*") || (origin && allowedOrigins.includes(origin))) {
+    res.header('Access-Control-Allow-Origin', origin || allowedOrigins[0]);
+  }
+  
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.header('Cross-Origin-Embedder-Policy', 'unsafe-none');
   
   // Send file
   res.sendFile(path.resolve(filePath));

@@ -51,6 +51,9 @@ router.get('/admin/:fileName', requireAuth, requireAdmin, serveUploadedFiles);
 // Admin payment proof viewer
 router.get('/payment-proof/:filename', requireAuth, requireAdmin, servePaymentProof);
 
+// Catch-all route for full paths (e.g., /api/uploads/content/images/filename.webp)
+router.get('*', serveUploadedFiles);
+
 // Generic routes (must be last)
 router.get('/:id', requireAuth, getUpload);
 router.delete('/:id', requireAuth, deleteUploadController);
