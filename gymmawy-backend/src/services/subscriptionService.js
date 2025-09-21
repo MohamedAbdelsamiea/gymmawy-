@@ -17,20 +17,6 @@ const prisma = getPrismaClient();
  */
 export async function expireExpiredSubscriptions() {
   try {
-    // Check if Subscription table exists before trying to access it
-    const tableExists = await prisma.$queryRaw`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'Subscription'
-      );
-    `;
-    
-    if (!tableExists[0]?.exists) {
-      console.log('Subscription table does not exist, skipping expiration check');
-      return { count: 0 };
-    }
-
     const result = await prisma.subscription.updateMany({
       where: {
         status: 'ACTIVE',
@@ -65,20 +51,6 @@ export async function checkExpiringSubscriptions() {
     // First expire any that are already past due
     await expireExpiredSubscriptions();
     
-    // Check if Subscription table exists before checking notifications
-    const tableExists = await prisma.$queryRaw`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'Subscription'
-      );
-    `;
-    
-    if (!tableExists[0]?.exists) {
-      console.log('Subscription table does not exist, skipping notification check');
-      return [];
-    }
-    
     // Then check for expiring ones and send notifications
     const notifications = await notificationService.checkExpiringSubscriptions();
     
@@ -89,8 +61,7 @@ export async function checkExpiringSubscriptions() {
     return notifications;
   } catch (error) {
     console.error('[SUBSCRIPTION] Error checking expiring subscriptions:', error);
-    // Don't throw error, just return empty array to prevent app crash
-    return [];
+    throw error;
   }
 }
 
