@@ -57,7 +57,7 @@ const Coupons = () => {
       sortable: true,
       render: (value, row) => (
         <span className="text-gray-600">
-          {value} / {row.maxRedemptions === 0 ? '∞' : row.maxRedemptions}
+          {value} / {row.maxRedemptions === null || row.maxRedemptions === 0 ? '∞' : row.maxRedemptions}
         </span>
       ),
     },

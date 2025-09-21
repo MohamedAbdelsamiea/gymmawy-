@@ -144,49 +144,63 @@ const AddSubscriptionModal = ({ isOpen, onClose, onSuccess, editData = null, isE
     if (isOpen) {
       // Reset benefits initialization flag when modal opens
       setBenefitsInitialized(false);
-      if (isEdit && editData) {
+      if (isEdit && editData && editData.id) {
         // Populate form with edit data
         setFormData({
-          name: { en: editData.name?.en ?? '', ar: editData.name?.ar ?? '' },
-          description: { en: editData.description?.en ?? '', ar: editData.description?.ar ?? '' },
-          imageUrl: editData.imageUrl ?? '',
-          discountPercentage: editData.discountPercentage ?? 0,
-          subscriptionPeriodDays: editData.subscriptionPeriodDays ?? 30,
-          giftPeriodDays: editData.giftPeriodDays ?? 0,
-          loyaltyPointsAwarded: editData.loyaltyPointsAwarded ?? '',
-          loyaltyPointsRequired: editData.loyaltyPointsRequired ?? '',
-          medicalLoyaltyPointsAwarded: editData.medicalLoyaltyPointsAwarded ?? '',
-          medicalLoyaltyPointsRequired: editData.medicalLoyaltyPointsRequired ?? '',
-          crown: editData.crown ?? { en: '', ar: '' },
+          name: { en: editData.name?.en || '', ar: editData.name?.ar || '' },
+          description: { en: editData.description?.en || '', ar: editData.description?.ar || '' },
+          imageUrl: editData.imageUrl || '',
+          discountPercentage: editData.discountPercentage || 0,
+          subscriptionPeriodDays: editData.subscriptionPeriodDays || 30,
+          giftPeriodDays: editData.giftPeriodDays || 0,
+          loyaltyPointsAwarded: editData.loyaltyPointsAwarded || '',
+          loyaltyPointsRequired: editData.loyaltyPointsRequired || '',
+          medicalLoyaltyPointsAwarded: editData.medicalLoyaltyPointsAwarded || '',
+          medicalLoyaltyPointsRequired: editData.medicalLoyaltyPointsRequired || '',
+          crown: editData.crown || { en: '', ar: '' },
         });
         
-        // Extract pricing from editData.prices array
+        // Extract pricing from editData.Price array (admin API format)
         const subscriptionPrices = {};
         const medicalPrices = {};
         
-        if (editData.prices && Array.isArray(editData.prices)) {
-          editData.prices.forEach(price => {
-            if (price.type === 'NORMAL') {
+        if (editData.Price && Array.isArray(editData.Price)) {
+          editData.Price.forEach(price => {
+            // Extract type from price ID (format: planId-currency-type)
+            const type = price.id.endsWith('-NORMAL') ? 'NORMAL' : 'MEDICAL';
+            if (type === 'NORMAL') {
               subscriptionPrices[price.currency] = price.amount.toString();
-            } else if (price.type === 'MEDICAL') {
+            } else if (type === 'MEDICAL') {
               // Allow medical prices to have decimal values
               medicalPrices[price.currency] = parseFloat(price.amount).toString();
             }
           });
+        } else if (editData.allPrices) {
+          // Fallback to allPrices object if Price array is not available
+          if (editData.allPrices.regular) {
+            Object.entries(editData.allPrices.regular).forEach(([currency, amount]) => {
+              subscriptionPrices[currency] = amount.toString();
+            });
+          }
+          if (editData.allPrices.medical) {
+            Object.entries(editData.allPrices.medical).forEach(([currency, amount]) => {
+              medicalPrices[currency] = amount.toString();
+            });
+          }
         }
         
         setPricing({
           subscription: {
-            EGP: subscriptionPrices.EGP ?? '',
-            SAR: subscriptionPrices.SAR ?? '',
-            AED: subscriptionPrices.AED ?? '',
-            USD: subscriptionPrices.USD ?? ''
+            EGP: subscriptionPrices.EGP || '',
+            SAR: subscriptionPrices.SAR || '',
+            AED: subscriptionPrices.AED || '',
+            USD: subscriptionPrices.USD || ''
           },
           medical: {
-            EGP: medicalPrices.EGP ?? '',
-            SAR: medicalPrices.SAR ?? '',
-            AED: medicalPrices.AED ?? '',
-            USD: medicalPrices.USD ?? ''
+            EGP: medicalPrices.EGP || '',
+            SAR: medicalPrices.SAR || '',
+            AED: medicalPrices.AED || '',
+            USD: medicalPrices.USD || ''
           }
         });
         
@@ -950,7 +964,7 @@ return null;
                     </label>
                     <input
                       type="number"
-                      value={medicalFactor ?? ''}
+                      value={medicalFactor || '50'}
                       onChange={(e) => setMedicalFactor(e.target.value)}
                       min="0"
                       max="1000"
@@ -1632,32 +1646,12 @@ return null;
                       </div>
                     ) : (
                       // Display mode
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-900">
-                            {(benefit?.benefit?.description?.en || benefit?.description?.en) || 'No English description'}
-                          </div>
-                          <div className="text-sm text-gray-600" dir="rtl">
-                            {(benefit?.benefit?.description?.ar || benefit?.description?.ar) || 'لا يوجد وصف بالعربية'}
-                          </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900">
+                          {(benefit?.benefit?.description?.en || benefit?.description?.en) || 'No English description'}
                         </div>
-                        <div className="flex gap-2 ml-2">
-                          <button
-                            type="button"
-                            onClick={() => startEditBenefit(benefit, 'plan-only')}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="Create a new benefit for this plan only - Other plans will keep the original benefit"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteBenefit(benefitId, 'plan-only')}
-                            className="text-red-600 hover:text-red-800"
-                            title="Remove this benefit - This will only remove it from this plan, other plans will keep it"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                        <div className="text-sm text-gray-600" dir="rtl">
+                          {(benefit?.benefit?.description?.ar || benefit?.description?.ar) || 'لا يوجد وصف بالعربية'}
                         </div>
                       </div>
                         )}

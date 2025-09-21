@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Menu, X, Globe, User, LogOut, ShoppingBag, Gift, Home } from "lucide-react";
+import { Menu, X, Globe, User, LogOut, ShoppingBag, Gift, Home, ShoppingCart } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import logo from "/assets/common/logo.webp"; // import your logo directly
 
@@ -11,6 +11,7 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [navItems, setNavItems] = useState([]);
+  const [cartItems, setCartItems] = useState([]); // Cart state
   const location = useLocation();
   const navigate = useNavigate();
   const profileDropdownRef = useRef(null);
@@ -252,6 +253,20 @@ element.scrollIntoView({ behavior: "smooth" });
             </button>
           )}
           
+            {/* Cart Button */}
+            <button
+              onClick={() => navigate('/cart')}
+              className={`relative flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'} hover:text-white transition-colors duration-300 font-medium whitespace-nowrap`}
+            >
+              <ShoppingCart size={20} />
+              <span>{t('cart')}</span>
+              {cartItems.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {cartItems.length}
+                </span>
+              )}
+            </button>
+            
             {/* Language Toggle */}
             <button
               onClick={toggleLanguage}
@@ -357,6 +372,23 @@ element.scrollIntoView({ behavior: "smooth" });
                 </button>
               </div>
             )}
+            
+            {/* Mobile Cart Button */}
+            <button
+              onClick={() => {
+                navigate('/cart');
+                setIsMenuOpen(false);
+              }}
+              className={`relative flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'} hover:text-white transition-colors duration-300 font-medium ${i18n.language === 'ar' ? 'text-right' : 'text-left'}`}
+            >
+              <ShoppingCart size={20} />
+              <span>{t('cart')}</span>
+              {cartItems.length > 0 && (
+                <span className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ml-2">
+                  {cartItems.length}
+                </span>
+              )}
+            </button>
             
             <button
               onClick={toggleLanguage}

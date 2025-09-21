@@ -100,8 +100,8 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
       const submitData = {
         ...formData,
         discountValue: parseFloat(formData.discountValue),
-        maxRedemptionsPerUser: formData.maxRedemptionsPerUser ? parseInt(formData.maxRedemptionsPerUser) : 0,
-        maxRedemptions: formData.maxRedemptions ? parseInt(formData.maxRedemptions) : 0,
+        maxRedemptionsPerUser: formData.maxRedemptionsPerUser ? (parseInt(formData.maxRedemptionsPerUser) === 0 ? null : parseInt(formData.maxRedemptionsPerUser)) : null,
+        maxRedemptions: formData.maxRedemptions ? (parseInt(formData.maxRedemptions) === 0 ? null : parseInt(formData.maxRedemptions)) : null,
         expirationDate: new Date(formData.expirationDate).toISOString(),
       };
 

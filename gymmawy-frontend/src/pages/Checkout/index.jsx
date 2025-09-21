@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useCurrency } from '../../hooks/useCurrency';
 import { config } from '../../config';
 import checkoutService from '../../services/checkoutService';
 import imageUploadService from '../../services/imageUploadService';
@@ -23,6 +24,7 @@ const Checkout = () => {
   const { t, i18n } = useTranslation(['checkout', 'common']);
   const { user, isAuthenticated } = useAuth();
   const { showError, showSuccess } = useToast();
+  const { currency: detectedCurrency, isLoading: currencyLoading } = useCurrency();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -40,7 +42,17 @@ return fallback;
   };
   
   // Get plan data from location state
-  const { plan, type } = location.state || {};
+  const { plan, type, currency: passedCurrency } = location.state || {};
+  
+  // Use passed currency or fallback to detected currency
+  const currency = passedCurrency || detectedCurrency || 'USD';
+  
+  // Debug: Log the currency being used
+  // console.log('🔍 Checkout - Currency from home page:', passedCurrency);
+  // console.log('🔍 Checkout - Detected currency:', detectedCurrency);
+  // console.log('🔍 Checkout - Final currency:', currency);
+  // console.log('🔍 Checkout - Type:', type);
+  // console.log('🔍 Checkout - Plan benefits:', plan?.benefits);
   
   // Redirect if not authenticated
   useEffect(() => {
@@ -240,12 +252,13 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
 
   const durationData = getDurationData();
   
-  // Debug: Log duration data (can be removed in production)
-  // console.log('=== DURATION DEBUG ===');
-  // console.log('Duration data:', durationData);
-  // console.log('Subscription days:', durationData.subscriptionDays);
-  // console.log('Gift days:', durationData.giftDays);
-  // console.log('====================');
+  // Debug: Log duration data
+  console.log('=== DURATION DEBUG ===');
+  console.log('Duration data:', durationData);
+  console.log('Subscription days:', durationData.subscriptionDays);
+  console.log('Gift days:', durationData.giftDays);
+  console.log('Plan data:', plan);
+  console.log('====================');
 
   // Helper function to convert Prisma Decimal to number
   const convertDecimalToNumber = (decimalField) => {
@@ -304,121 +317,178 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
     return 0;
   };
 
-  // Get normal price (static)
+  // Get normal price (using new allPrices format)
   const getNormalPrice = () => {
     if (!plan) {
-return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
-}
+      return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
+    }
     
-    // console.log('=== NORMAL PRICE DEBUG ===');
-    // console.log('plan.price:', plan.price);
-    // console.log('plan.priceEGP:', plan.priceEGP);
-    // console.log('plan.priceSAR:', plan.priceSAR);
+    // Use new allPrices format
+    if (plan.allPrices?.regular) {
+      // Use the currency passed from home page, fallback to EGP if not available
+      const currencies = Object.keys(plan.allPrices.regular);
+      const defaultCurrency = currencies.includes(currency) ? currency : 
+                             currencies.includes('EGP') ? 'EGP' : 
+                             currencies[0] || 'EGP';
+      const amount = plan.allPrices.regular[defaultCurrency] || 0;
+      
+      console.log('🔍 Checkout - Normal price debug:', {
+        passedCurrency: currency,
+        availableCurrencies: currencies,
+        selectedCurrency: defaultCurrency,
+        amount: amount
+      });
+      
+      // Get currency symbol
+      let currencySymbol = 'L.E';
+      switch (defaultCurrency) {
+        case 'USD':
+          currencySymbol = '$';
+          break;
+        case 'SAR':
+          currencySymbol = 'ر.س';
+          break;
+        case 'AED':
+          currencySymbol = 'د.إ';
+          break;
+        case 'EGP':
+        default:
+          currencySymbol = 'L.E';
+          break;
+      }
+      
+      return {
+        amount: amount,
+        currency: defaultCurrency,
+        currencySymbol: currencySymbol,
+      };
+    }
     
+    // Fallback to individual price fields (for programmes)
+    if (plan.priceEGP !== undefined || plan.priceUSD !== undefined || plan.priceSAR !== undefined || plan.priceAED !== undefined) {
+      let selectedPrice = 0;
+      let selectedCurrency = 'EGP';
+      
+      // Select price based on detected currency
+      switch (currency) {
+        case 'EGP':
+          selectedPrice = convertDecimalToNumber(plan.priceEGP) || 0;
+          selectedCurrency = 'EGP';
+          break;
+        case 'SAR':
+          selectedPrice = convertDecimalToNumber(plan.priceSAR) || 0;
+          selectedCurrency = 'SAR';
+          break;
+        case 'AED':
+          selectedPrice = convertDecimalToNumber(plan.priceAED) || 0;
+          selectedCurrency = 'AED';
+          break;
+        case 'USD':
+          selectedPrice = convertDecimalToNumber(plan.priceUSD) || 0;
+          selectedCurrency = 'USD';
+          break;
+        default:
+          // Fallback to EGP if currency not found
+          selectedPrice = convertDecimalToNumber(plan.priceEGP) || 0;
+          selectedCurrency = 'EGP';
+          break;
+      }
+      
+      // Get currency symbol
+      let currencySymbol = 'L.E';
+      switch (selectedCurrency) {
+        case 'USD':
+          currencySymbol = '$';
+          break;
+        case 'SAR':
+          currencySymbol = 'ر.س';
+          break;
+        case 'AED':
+          currencySymbol = 'د.إ';
+          break;
+        case 'EGP':
+        default:
+          currencySymbol = 'L.E';
+          break;
+      }
+      
+      console.log('🔍 Checkout - Individual price fields debug:', {
+        currency: currency,
+        selectedCurrency: selectedCurrency,
+        selectedPrice: selectedPrice,
+        currencySymbol: currencySymbol
+      });
+      
+      return {
+        amount: selectedPrice,
+        currency: selectedCurrency,
+        currencySymbol: currencySymbol,
+      };
+    }
+    
+    // Fallback to old format if allPrices is not available
     if (plan.price?.amount !== undefined && plan.price?.amount !== null && plan.price?.amount > 0) {
-      // console.log('Using plan.price:', plan.price);
       return plan.price;
     }
     
-    // Handle new price structure with objects (from backend)
-    if (plan.priceEGP && typeof plan.priceEGP === 'object') {
-      return {
-        amount: plan.priceEGP.amount || 0,
-        currency: plan.priceEGP.currency || 'EGP',
-        currencySymbol: plan.priceEGP.currencySymbol || 'L.E',
-      };
+    // Handle string prices
+    if (typeof plan.price === 'string') {
+      if (plan.price === 'FREE' || plan.price === 'مجاني') {
+        return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
+      }
+      return parsePriceFromStatic(plan.price);
     }
     
-    if (plan.priceSAR && typeof plan.priceSAR === 'object') {
-      return {
-        amount: plan.priceSAR.amount || 0,
-        currency: plan.priceSAR.currency || 'SAR',
-        currencySymbol: plan.priceSAR.currencySymbol || 'ر.س',
-      };
-    }
-    
-    const priceField = plan.priceEGP || plan.priceSAR;
-    // console.log('Selected priceField:', priceField);
-    
-    if (priceField) {
-      const amount = convertDecimalToNumber(priceField);
-      // console.log('Converted amount:', amount);
-      return {
-        amount: amount,
-        currency: 'EGP',
-        currencySymbol: 'L.E',
-      };
-    }
-    
-    // console.log('Returning fallback price');
     return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
   };
 
-  // Get medical price (static)
+  // Get medical price (using new allPrices format)
   const getMedicalPrice = () => {
     if (!plan) {
-return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
-}
+      return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
+    }
     
-    // console.log('=== MEDICAL PRICE DEBUG ===');
-    // console.log('plan.medicalPrice:', plan.medicalPrice);
-    // console.log('plan.medicalEGP:', plan.medicalEGP);
-    // console.log('plan.medicalSAR:', plan.medicalSAR);
+    // Use new allPrices format
+    if (plan.allPrices?.medical) {
+      // Use the currency passed from home page, fallback to EGP if not available
+      const currencies = Object.keys(plan.allPrices.medical);
+      const defaultCurrency = currencies.includes(currency) ? currency : 
+                             currencies.includes('EGP') ? 'EGP' : 
+                             currencies[0] || 'EGP';
+      const amount = plan.allPrices.medical[defaultCurrency] || 0;
+      
+      // Get currency symbol
+      let currencySymbol = 'L.E';
+      switch (defaultCurrency) {
+        case 'USD':
+          currencySymbol = '$';
+          break;
+        case 'SAR':
+          currencySymbol = 'ر.س';
+          break;
+        case 'AED':
+          currencySymbol = 'د.إ';
+          break;
+        case 'EGP':
+        default:
+          currencySymbol = 'L.E';
+          break;
+      }
+      
+      return {
+        amount: amount,
+        currency: defaultCurrency,
+        currencySymbol: currencySymbol,
+      };
+    }
     
+    // Fallback to old format if allPrices is not available
     if (plan.medicalPrice?.amount !== undefined && plan.medicalPrice?.amount !== null && plan.medicalPrice?.amount > 0) {
-      // console.log('Using plan.medicalPrice:', plan.medicalPrice);
       return plan.medicalPrice;
     }
     
-    // Handle new price structure with objects (from backend)
-    if (plan.medicalEGP && typeof plan.medicalEGP === 'object') {
-      return {
-        amount: plan.medicalEGP.amount || 0,
-        currency: plan.medicalEGP.currency || 'EGP',
-        currencySymbol: plan.medicalEGP.currencySymbol || 'L.E',
-      };
-    }
-    
-    if (plan.medicalSAR && typeof plan.medicalSAR === 'object') {
-      return {
-        amount: plan.medicalSAR.amount || 0,
-        currency: plan.medicalSAR.currency || 'SAR',
-        currencySymbol: plan.medicalSAR.currencySymbol || 'ر.س',
-      };
-    }
-    
     // Fallback to regular prices
-    if (plan.priceEGP && typeof plan.priceEGP === 'object') {
-      return {
-        amount: plan.priceEGP.amount || 0,
-        currency: plan.priceEGP.currency || 'EGP',
-        currencySymbol: plan.priceEGP.currencySymbol || 'L.E',
-      };
-    }
-    
-    if (plan.priceSAR && typeof plan.priceSAR === 'object') {
-      return {
-        amount: plan.priceSAR.amount || 0,
-        currency: plan.priceSAR.currency || 'SAR',
-        currencySymbol: plan.priceSAR.currencySymbol || 'ر.س',
-      };
-    }
-    
-    const priceField = plan.medicalEGP || plan.medicalSAR || plan.priceEGP || plan.priceSAR;
-    // console.log('Selected medical priceField:', priceField);
-    
-    if (priceField) {
-      const amount = convertDecimalToNumber(priceField);
-      // console.log('Converted medical amount:', amount);
-      return {
-        amount: amount,
-        currency: 'EGP',
-        currencySymbol: 'L.E',
-      };
-    }
-    
-    // console.log('Returning fallback medical price');
-    return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
+    return getNormalPrice();
   };
 
   // Calculate pricing based on selected duration
@@ -442,8 +512,8 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
   // Get programme price
   const getProgrammePrice = () => {
     if (!plan) {
-return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
-}
+      return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
+    }
     
     // Handle structured price object (new format from backend)
     if (plan.price && typeof plan.price === 'object') {
@@ -454,12 +524,45 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       };
     }
     
-    // Handle new price structure with objects (from backend)
-    if (plan.priceEGP && typeof plan.priceEGP === 'object') {
+    // Handle new price structure with objects (from backend) - prioritize by detected currency
+    if (currency === 'USD' && plan.priceUSD && typeof plan.priceUSD === 'object') {
+      return {
+        amount: plan.priceUSD.amount || 0,
+        currency: plan.priceUSD.currency || 'USD',
+        currencySymbol: plan.priceUSD.currencySymbol || '$',
+      };
+    }
+    
+    if (currency === 'SAR' && plan.priceSAR && typeof plan.priceSAR === 'object') {
+      return {
+        amount: plan.priceSAR.amount || 0,
+        currency: plan.priceSAR.currency || 'SAR',
+        currencySymbol: plan.priceSAR.currencySymbol || 'ر.س',
+      };
+    }
+    
+    if (currency === 'AED' && plan.priceAED && typeof plan.priceAED === 'object') {
+      return {
+        amount: plan.priceAED.amount || 0,
+        currency: plan.priceAED.currency || 'AED',
+        currencySymbol: plan.priceAED.currencySymbol || 'د.إ',
+      };
+    }
+    
+    if (currency === 'EGP' && plan.priceEGP && typeof plan.priceEGP === 'object') {
       return {
         amount: plan.priceEGP.amount || 0,
         currency: plan.priceEGP.currency || 'EGP',
         currencySymbol: plan.priceEGP.currencySymbol || 'L.E',
+      };
+    }
+    
+    // Fallback to any available price object
+    if (plan.priceUSD && typeof plan.priceUSD === 'object') {
+      return {
+        amount: plan.priceUSD.amount || 0,
+        currency: plan.priceUSD.currency || 'USD',
+        currencySymbol: plan.priceUSD.currencySymbol || '$',
       };
     }
     
@@ -479,44 +582,88 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       };
     }
     
-    if (plan.priceUSD && typeof plan.priceUSD === 'object') {
+    if (plan.priceEGP && typeof plan.priceEGP === 'object') {
       return {
-        amount: plan.priceUSD.amount || 0,
-        currency: plan.priceUSD.currency || 'USD',
-        currencySymbol: plan.priceUSD.currencySymbol || '$',
+        amount: plan.priceEGP.amount || 0,
+        currency: plan.priceEGP.currency || 'EGP',
+        currencySymbol: plan.priceEGP.currencySymbol || 'L.E',
       };
     }
     
-    // Handle raw price fields (legacy format)
-    if (plan.priceEGP !== undefined) {
-      const amount = convertDecimalToNumber(plan.priceEGP);
-      return { amount, currency: 'EGP', currencySymbol: 'L.E' };
+    // Handle raw price fields (legacy format) - use detected currency
+    let selectedPrice = 0;
+    let selectedCurrency = 'EGP';
+    let currencySymbol = 'L.E';
+    
+    // Select price based on detected currency
+    switch (currency) {
+      case 'EGP':
+        if (plan.priceEGP !== undefined) {
+          selectedPrice = convertDecimalToNumber(plan.priceEGP);
+          selectedCurrency = 'EGP';
+          currencySymbol = 'L.E';
+        }
+        break;
+      case 'SAR':
+        if (plan.priceSAR !== undefined) {
+          selectedPrice = convertDecimalToNumber(plan.priceSAR);
+          selectedCurrency = 'SAR';
+          currencySymbol = 'ر.س';
+        }
+        break;
+      case 'AED':
+        if (plan.priceAED !== undefined) {
+          selectedPrice = convertDecimalToNumber(plan.priceAED);
+          selectedCurrency = 'AED';
+          currencySymbol = 'د.إ';
+        }
+        break;
+      case 'USD':
+        if (plan.priceUSD !== undefined) {
+          selectedPrice = convertDecimalToNumber(plan.priceUSD);
+          selectedCurrency = 'USD';
+          currencySymbol = '$';
+        }
+        break;
+      default:
+        // Fallback to EGP if currency not found
+        if (plan.priceEGP !== undefined) {
+          selectedPrice = convertDecimalToNumber(plan.priceEGP);
+          selectedCurrency = 'EGP';
+          currencySymbol = 'L.E';
+        }
+        break;
     }
     
-    if (plan.priceSAR !== undefined) {
-      const amount = convertDecimalToNumber(plan.priceSAR);
-      return { amount, currency: 'SAR', currencySymbol: 'S.R' };
-    }
-    
-    if (plan.priceAED !== undefined) {
-      const amount = convertDecimalToNumber(plan.priceAED);
-      return { amount, currency: 'AED', currencySymbol: 'د.إ' };
-    }
-    
-    if (plan.priceUSD !== undefined) {
-      const amount = convertDecimalToNumber(plan.priceUSD);
-      return { amount, currency: 'USD', currencySymbol: '$' };
-    }
-    
-    // Handle string price
-    if (typeof plan.price === 'string') {
-      if (plan.price === 'FREE' || plan.price === 'مجاني') {
-        return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
+    // If no price found for the selected currency, try other currencies as fallback
+    if (selectedPrice === 0) {
+      if (plan.priceEGP !== undefined) {
+        selectedPrice = convertDecimalToNumber(plan.priceEGP);
+        selectedCurrency = 'EGP';
+        currencySymbol = 'L.E';
+      } else if (plan.priceSAR !== undefined) {
+        selectedPrice = convertDecimalToNumber(plan.priceSAR);
+        selectedCurrency = 'SAR';
+        currencySymbol = 'ر.س';
+      } else if (plan.priceAED !== undefined) {
+        selectedPrice = convertDecimalToNumber(plan.priceAED);
+        selectedCurrency = 'AED';
+        currencySymbol = 'د.إ';
+      } else if (plan.priceUSD !== undefined) {
+        selectedPrice = convertDecimalToNumber(plan.priceUSD);
+        selectedCurrency = 'USD';
+        currencySymbol = '$';
       }
-      return parsePriceFromStatic(plan.price);
     }
     
-    return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
+    console.log('🔍 Checkout - Programme price debug:', {
+      currency: currency,
+      selectedCurrency: selectedCurrency,
+      selectedPrice: selectedPrice,
+      currencySymbol: currencySymbol
+    });
+    
+    return { amount: selectedPrice, currency: selectedCurrency, currencySymbol: currencySymbol };
   };
 
   const currentPrice = getPrice();
@@ -534,13 +681,20 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
     let planDiscount = 0;
     let couponDiscountAmount = 0;
     
+    // Get the original price before any discounts
+    const originalPrice = plan?.priceUSD?.originalAmount || 
+                         plan?.priceEGP?.originalAmount || 
+                         plan?.priceSAR?.originalAmount || 
+                         plan?.priceAED?.originalAmount || 
+                         currentPrice?.amount || 0;
+    
     // Check for plan-level discount percentage (subscriptions and programmes)
     if (plan?.discountPercentage && plan.discountPercentage > 0) {
-      planDiscount = (currentPrice?.amount || 0) * (plan.discountPercentage / 100);
+      planDiscount = originalPrice * (plan.discountPercentage / 100);
     }
     
     // Calculate price after plan discount
-    const priceAfterPlanDiscount = (currentPrice?.amount || 0) - planDiscount;
+    const priceAfterPlanDiscount = originalPrice - planDiscount;
     
     // Check for coupon discount (if coupon is valid) - apply on price AFTER plan discount
     if (couponValid && couponCode.trim()) {
@@ -559,7 +713,15 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
   };
   
   const discount = getDiscount();
-  const subtotal = typeof currentPrice?.amount === 'number' ? currentPrice.amount : parseFloat(currentPrice?.amount) || 0;
+  
+  // Get the original price before any discounts
+  const originalPrice = plan?.priceUSD?.originalAmount || 
+                       plan?.priceEGP?.originalAmount || 
+                       plan?.priceSAR?.originalAmount || 
+                       plan?.priceAED?.originalAmount || 
+                       currentPrice?.amount || 0;
+  
+  const subtotal = originalPrice;
   const total = subtotal - discount.totalDiscount;
   
   // Debug: Log discount calculation
@@ -690,7 +852,7 @@ return;
         const totalDiscountPercentage = subtotal > 0 ? (totalDiscountAmount / subtotal) * 100 : 0;
         const finalAmount = total; // This is the discounted amount
         
-        // Create subscription with minimal data - let backend calculate prices
+        // Create subscription with pricing data
         const subscriptionData = {
           planId: plan.id,
           paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONE_CASH' : 
@@ -699,6 +861,12 @@ return;
           // Additional subscription details
           isMedical: isMedical,
           currency: currentPrice?.currency || 'EGP',
+          // Required pricing fields
+          price: finalAmount, // This is the final amount after discounts
+          originalPrice: subtotal, // Original price before discounts
+          discount: totalDiscountAmount, // Total discount amount
+          planDiscountPercentage: plan?.discountPercentage || 0,
+          totalDiscountAmount: totalDiscountAmount,
           // Duration information
           subscriptionPeriodDays: durationData.subscriptionDays,
           giftPeriodDays: durationData.giftDays,
@@ -707,6 +875,7 @@ return;
           planDescription: typeof plan.description === 'object' ? plan.description?.en || plan.description?.ar || '' : plan.description,
           // Coupon information
           couponId: couponValid && couponData ? couponData.id : null,
+          couponDiscount: couponValid && couponData ? couponDiscount : 0,
         };
 
         // Only include paymentProof if it has a value
@@ -714,6 +883,14 @@ return;
           subscriptionData.paymentProof = paymentProofUrl;
         }
 
+        // Debug: Log subscription data being sent
+        console.log('🔍 Subscription data being sent:', subscriptionData);
+        console.log('🔍 Price values:', {
+          finalAmount,
+          subtotal,
+          totalDiscountAmount,
+          planDiscountPercentage: plan?.discountPercentage || 0
+        });
 
         const result = await checkoutService.createSubscription(subscriptionData);
         // console.log('Subscription created:', result);
@@ -881,7 +1058,7 @@ return;
                             )}
                           </span>
                             <span className="text-sm font-medium text-gray-900">
-                              {getNormalPrice()?.amount > 0 ? `${getNormalPrice()?.amount}${i18n.language === 'ar' ? '\u00A0' : ' '}${i18n.language === 'ar' ? 'جم' : (getNormalPrice()?.currencySymbol || 'L.E')}` : t('checkout.free')}
+                              {getNormalPrice()?.amount > 0 ? `${getNormalPrice()?.amount}${i18n.language === 'ar' ? '\u00A0' : ' '}${getNormalPrice()?.currencySymbol || 'L.E'}` : t('checkout.free')}
                             </span>
                         </div>
                       </div>
@@ -909,7 +1086,7 @@ return;
                             )}
                           </span>
                             <span className="text-sm font-medium text-gray-900">
-                              {getMedicalPrice()?.amount > 0 ? `${getMedicalPrice()?.amount}${i18n.language === 'ar' ? '\u00A0' : ' '}${i18n.language === 'ar' ? 'جم' : (getMedicalPrice()?.currencySymbol || 'L.E')}` : t('checkout.free')}
+                              {getMedicalPrice()?.amount > 0 ? `${getMedicalPrice()?.amount}${i18n.language === 'ar' ? '\u00A0' : ' '}${getMedicalPrice()?.currencySymbol || 'L.E'}` : t('checkout.free')}
                             </span>
                         </div>
                       </div>
@@ -959,7 +1136,7 @@ return;
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-gray-700">{i18n.language === 'ar' ? 'السعر الأصلي' : 'Original Price'}</span>
                         <span className="text-sm font-medium text-gray-900">
-                          {currentPrice?.amount || 0} {currentPrice?.currencySymbol || 'L.E'}
+                          {plan?.priceUSD?.originalAmount || plan?.priceEGP?.originalAmount || plan?.priceSAR?.originalAmount || plan?.priceAED?.originalAmount || currentPrice?.amount || 0} {currentPrice?.currencySymbol || 'L.E'}
                         </span>
                       </div>
                       
@@ -975,7 +1152,7 @@ return;
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-gray-700">{i18n.language === 'ar' ? 'السعر النهائي' : 'Final Price'}</span>
                         <span className="text-lg font-semibold text-gymmawy-primary">
-                          {total > 0 ? total.toFixed(2) : (currentPrice?.amount || 0).toFixed(2)} {currentPrice?.currencySymbol || 'L.E'}
+                          {(currentPrice?.amount || 0).toFixed(2)} {currentPrice?.currencySymbol || 'L.E'}
                         </span>
                       </div>
                     </div>
@@ -1088,7 +1265,7 @@ return;
                           className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
                         />
                         <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
-                          <img src="/assets/common/payments/insta-pay.png" alt="InstaPay" className={`h-8 w-8 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                          <img src="/assets/common/payments/insta-pay.png" alt="InstaPay" className={`h-8 w-auto object-contain ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
                           <span className="text-sm font-medium text-gray-900">{t('checkout.instaPay')}</span>
                         </div>
                       </label>
@@ -1126,7 +1303,7 @@ return;
                           className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
                         />
                         <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
-                          <img src="/assets/common/payments/tabby.png" alt="Tabby" className={`h-8 w-8 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                          <img src="/assets/common/payments/tabby.png" alt="Tabby" className={`h-8 w-auto object-contain ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
                           <span className="text-sm font-medium text-gray-900">{t('checkout.tabby')}</span>
                         </div>
                       </label>
@@ -1141,7 +1318,7 @@ return;
                           className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
                         />
                         <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
-                          <img src="/assets/common/payments/tamara.png" alt="Tamara" className={`h-8 w-8 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                          <img src="/assets/common/payments/tamara.png" alt="Tamara" className={`h-8 w-auto object-contain ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
                           <span className="text-sm font-medium text-gray-900">{t('checkout.tamara')}</span>
                         </div>
                       </label>
@@ -1375,11 +1552,11 @@ return;
                   <ul className="text-sm text-gray-600 space-y-1">
                     {plan.benefits?.map((benefit, index) => {
                       const benefitDescription = typeof benefit === 'string' ? benefit : 
-                        (benefit.benefit?.description ? 
-                          (typeof benefit.benefit.description === 'string' ? benefit.benefit.description : 
+                        (benefit.description ? 
+                          (typeof benefit.description === 'string' ? benefit.description : 
                             (i18n.language === 'ar' ? 
-                              (benefit.benefit.description?.ar || benefit.benefit.description?.en || '') :
-                              (benefit.benefit.description?.en || benefit.benefit.description?.ar || ''))) : '');
+                              (benefit.description?.ar || benefit.description?.en || '') :
+                              (benefit.description?.en || benefit.description?.ar || ''))) : '');
                       return (
                         <li key={index} className="flex items-start">
                           <CheckCircle className={`h-4 w-4 text-green-500 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'} mt-0.5 flex-shrink-0`} />
@@ -1394,7 +1571,7 @@ return;
                 <div className="border-t border-gray-200 pt-4 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">{t('checkout.subtotal')}</span>
-                    <span className="font-medium">{Number(subtotal).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{i18n.language === 'ar' ? 'جم' : (currentPrice?.currencySymbol || 'L.E')}</span>
+                    <span className="font-medium">{Number(subtotal).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{currentPrice?.currencySymbol || 'L.E'}</span>
                   </div>
                   
                   {discount.totalDiscount > 0 ? (
@@ -1403,7 +1580,7 @@ return;
                       {(plan?.discountPercentage > 0) && (
                     <div className="flex justify-between text-sm text-green-600">
                           <span>{t('checkout.planDiscount')} ({plan.discountPercentage}%):</span>
-                          <span>-{Number(discount.planDiscount).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{i18n.language === 'ar' ? 'جم' : (currentPrice?.currencySymbol || 'L.E')}</span>
+                          <span>-{Number(discount.planDiscount).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{currentPrice?.currencySymbol || 'L.E'}</span>
                     </div>
                   )}
                       
@@ -1419,14 +1596,14 @@ return;
                       {/* Total discount */}
                       <div className="flex justify-between text-sm font-medium text-green-600 border-t border-green-200 pt-1">
                         <span>{t('checkout.totalDiscount')}</span>
-                        <span>-{Number(discount.totalDiscount).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{i18n.language === 'ar' ? 'جم' : (currentPrice?.currencySymbol || 'L.E')}</span>
+                        <span>-{Number(discount.totalDiscount).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{currentPrice?.currencySymbol || 'L.E'}</span>
                       </div>
                     </div>
                   ) : null}
                   
                   <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2">
                     <span>{t('checkout.total')}</span>
-                    <span>{Number(total).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{i18n.language === 'ar' ? 'جم' : (currentPrice?.currencySymbol || 'L.E')}</span>
+                    <span>{Number(total).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{currentPrice?.currencySymbol || 'L.E'}</span>
                   </div>
                 </div>
               </div>

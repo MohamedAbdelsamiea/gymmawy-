@@ -24,7 +24,8 @@ class ProductService {
   async getProducts(filters = {}) {
     try {
       const queryParams = new URLSearchParams(filters).toString();
-      const response = await fetch(`${API_BASE_URL}/products?${queryParams}`, {
+      const url = `${API_BASE_URL}/products?${queryParams}`;
+      const response = await fetch(url, {
         method: 'GET',
       });
       

@@ -91,6 +91,7 @@ const HomePage = () => {
         console.log('First plan subscriptionPeriodDays:', response.items?.[0]?.subscriptionPeriodDays);
         console.log('First plan giftPeriodDays:', response.items?.[0]?.giftPeriodDays);
         console.log('Currency from API:', response.currency);
+        console.log('Setting plansCurrency to:', response.currency || 'EGP');
         console.log('=====================================');
         setSubscriptionPlans(response.items || []);
         setPlansCurrency(response.currency || 'EGP');
@@ -218,6 +219,10 @@ return '';
 
   // Handle subscription plan selection
   const handleChoosePlan = (plan) => {
+    console.log('🔍 Home - handleChoosePlan called');
+    console.log('🔍 Home - plansCurrency:', plansCurrency);
+    console.log('🔍 Home - plan:', plan);
+    
     if (!isAuthenticated) {
       navigate('/auth/login', { 
         state: { from: '/checkout', plan, type: 'subscription' }, 
@@ -231,12 +236,7 @@ return '';
           id: plan.id,
           name: plan.name,
           description: plan.description,
-          price: plan.price,
-          medicalPrice: plan.medicalPrice,
-          priceEGP: plan.priceEGP,
-          priceSAR: plan.priceSAR,
-          medicalEGP: plan.medicalEGP,
-          medicalSAR: plan.medicalSAR,
+          allPrices: plan.allPrices,
           subscriptionPeriodDays: plan.subscriptionPeriodDays,
           giftPeriodDays: plan.giftPeriodDays,
           discountPercentage: plan.discountPercentage,
@@ -244,6 +244,7 @@ return '';
           image: plan.image,
         },
         type: 'subscription',
+        currency: plansCurrency, // Pass the detected currency
       },
     });
   };
@@ -657,38 +658,55 @@ return '';
                 let originalPrice = 0;
                 let medicalPrice = 0;
                 
-                if (plan.price && plan.price.amount) {
-                  originalPrice = parseFloat(plan.price.amount) || 0;
-                } else if (plan.priceEGP) {
-                  // Handle priceEGP as Prisma Decimal object
-                  if (typeof plan.priceEGP === 'object' && plan.priceEGP.d && Array.isArray(plan.priceEGP.d)) {
-                    // Prisma Decimal format: {s: 1, e: 3, d: [1999]}
-                    const digits = plan.priceEGP.d.join('');
-                    const exponent = plan.priceEGP.e || 0;
-                    const sign = plan.priceEGP.s || 1;
-                    originalPrice = parseFloat(digits) / Math.pow(10, digits.length - exponent - 1) * sign;
-                  } else if (typeof plan.priceEGP === 'object' && plan.priceEGP.toString) {
-                    originalPrice = parseFloat(plan.priceEGP.toString()) || 0;
-                  } else {
-                    originalPrice = parseFloat(plan.priceEGP) || 0;
+                // Use the new allPrices format
+                if (plan.allPrices) {
+                  if (selectedOption === 'regular' && plan.allPrices.regular) {
+                    originalPrice = plan.allPrices.regular[plansCurrency] || 0;
+                  } else if (selectedOption === 'medical' && plan.allPrices.medical) {
+                    originalPrice = plan.allPrices.medical[plansCurrency] || 0;
                   }
-                } else if (plan.price) {
-                  originalPrice = parseFloat(plan.price) || 0;
+                  
+                  // Set medical price for display
+                  if (plan.allPrices.medical) {
+                    medicalPrice = plan.allPrices.medical[plansCurrency] || 0;
+                  }
                 }
                 
-                // Get medical price if available
-                if (plan.medicalPrice && plan.medicalPrice.amount) {
-                  medicalPrice = parseFloat(plan.medicalPrice.amount) || 0;
-                } else if (plan.medicalEGP) {
-                  if (typeof plan.medicalEGP === 'object' && plan.medicalEGP.d && Array.isArray(plan.medicalEGP.d)) {
-                    const digits = plan.medicalEGP.d.join('');
-                    const exponent = plan.medicalEGP.e || 0;
-                    const sign = plan.medicalEGP.s || 1;
-                    medicalPrice = parseFloat(digits) / Math.pow(10, digits.length - exponent - 1) * sign;
-                  } else if (typeof plan.medicalEGP === 'object' && plan.medicalEGP.toString) {
-                    medicalPrice = parseFloat(plan.medicalEGP.toString()) || 0;
-                  } else {
-                    medicalPrice = parseFloat(plan.medicalEGP) || 0;
+                // Fallback to old format if allPrices is not available
+                if (!plan.allPrices) {
+                  if (plan.price && plan.price.amount) {
+                    originalPrice = parseFloat(plan.price.amount) || 0;
+                  } else if (plan.priceEGP) {
+                    // Handle priceEGP as Prisma Decimal object
+                    if (typeof plan.priceEGP === 'object' && plan.priceEGP.d && Array.isArray(plan.priceEGP.d)) {
+                      // Prisma Decimal format: {s: 1, e: 3, d: [1999]}
+                      const digits = plan.priceEGP.d.join('');
+                      const exponent = plan.priceEGP.e || 0;
+                      const sign = plan.priceEGP.s || 1;
+                      originalPrice = parseFloat(digits) / Math.pow(10, digits.length - exponent - 1) * sign;
+                    } else if (typeof plan.priceEGP === 'object' && plan.priceEGP.toString) {
+                      originalPrice = parseFloat(plan.priceEGP.toString()) || 0;
+                    } else {
+                      originalPrice = parseFloat(plan.priceEGP) || 0;
+                    }
+                  } else if (plan.price) {
+                    originalPrice = parseFloat(plan.price) || 0;
+                  }
+                  
+                  // Get medical price if available
+                  if (plan.medicalPrice && plan.medicalPrice.amount) {
+                    medicalPrice = parseFloat(plan.medicalPrice.amount) || 0;
+                  } else if (plan.medicalEGP) {
+                    if (typeof plan.medicalEGP === 'object' && plan.medicalEGP.d && Array.isArray(plan.medicalEGP.d)) {
+                      const digits = plan.medicalEGP.d.join('');
+                      const exponent = plan.medicalEGP.e || 0;
+                      const sign = plan.medicalEGP.s || 1;
+                      medicalPrice = parseFloat(digits) / Math.pow(10, digits.length - exponent - 1) * sign;
+                    } else if (typeof plan.medicalEGP === 'object' && plan.medicalEGP.toString) {
+                      medicalPrice = parseFloat(plan.medicalEGP.toString()) || 0;
+                    } else {
+                      medicalPrice = parseFloat(plan.medicalEGP) || 0;
+                    }
                   }
                 }
                 
@@ -699,7 +717,7 @@ return '';
                 
                 // Get currency symbol from API response or use default
                 let currencySymbol;
-                const planCurrency = plan.price?.currency || plansCurrency || 'EGP';
+                const planCurrency = plansCurrency || 'EGP';
                 
                 if (i18n.language === 'ar') {
                   // Arabic currency symbols
@@ -709,6 +727,9 @@ return '';
                       break;
                     case 'SAR':
                       currencySymbol = 'رس';
+                      break;
+                    case 'AED':
+                      currencySymbol = 'د.إ';
                       break;
                     case 'EGP':
                     default:
@@ -723,6 +744,9 @@ return '';
                       break;
                     case 'SAR':
                       currencySymbol = 'S.R';
+                      break;
+                    case 'AED':
+                      currencySymbol = 'AED';
                       break;
                     case 'EGP':
                     default:
@@ -766,7 +790,16 @@ return '';
                 )}
 
                 {/* Card content */}
-                <div className="p-6 flex flex-col flex-1 text-left items-start text-[#190143]">
+                <div className="p-6 flex flex-col flex-1 text-left items-start text-[#190143] relative">
+                  {/* Discount Badge - positioned opposite to the icon */}
+                  {hasDiscount && currentPrice > 0 && (
+                    <div className={`absolute top-6 ${i18n.language === 'ar' ? 'left-6' : 'right-6'} z-10`}>
+                      <span className="bg-red-100 text-red-800 text-sm font-bold px-3 py-1.5 rounded-full">
+                        {plan.discountPercentage || 0}% {t('off')}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Plan Image */}
                   <div className="w-14 h-14 mb-4">
                     {plan.imageUrl ? (
@@ -792,21 +825,18 @@ return '';
                   </h3>
                   
                   {/* Price with discount display */}
-                  <div className="mb-2 mt-1">
+                  <div className="mb-4 mt-2">
                     {hasDiscount && currentPrice > 0 ? (
-                      <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
-                        <span className="text-2xl font-medium text-gray-500 line-through">
+                      <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-6' : 'space-x-6'}`}>
+                        <span className="text-3xl font-bold text-gray-500 line-through">
                           {currentPrice.toFixed(0)} {currencySymbol}
                         </span>
                         <span className="text-3xl font-bold text-red-600">
                           {discountedPrice.toFixed(0)} {currencySymbol}
                         </span>
-                        <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded">
-                          -{plan.discountPercentage || 0}%
-                        </span>
                       </div>
                     ) : (
-                      <span className="text-3xl font-medium">
+                      <span className="text-3xl font-bold">
                         {currentPrice > 0 ? `${currentPrice.toFixed(0)} ${currencySymbol}` : 'Price not available'}
                       </span>
                     )}

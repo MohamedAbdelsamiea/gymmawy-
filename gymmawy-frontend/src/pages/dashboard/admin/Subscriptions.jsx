@@ -744,37 +744,36 @@ params.plan = filterPlan;
       label: 'Price',
       sortable: true,
       render: (value, row) => {
-        const originalPrice = row.subscriptionPlan?.priceEGP || row.subscriptionPlan?.priceSAR || row.price;
-        const discount = row.discount || 0;
-        const discountedPrice = originalPrice && discount > 0 ? originalPrice * (1 - discount / 100) : originalPrice;
+        // Use the actual stored price from the subscription (which includes all discounts)
+        const finalPrice = row.price;
+        const planDiscount = row.discountPercentage || 0;
+        const couponDiscount = row.couponDiscount || 0;
+        
+        // Calculate original price from metadata if available, otherwise estimate
+        const originalPrice = row.payment?.metadata?.originalPrice || 
+                             (finalPrice && planDiscount > 0 ? finalPrice / (1 - planDiscount / 100) : finalPrice);
         
         return (
           <div className="text-sm">
-            {discount > 0 ? (
+            {planDiscount > 0 || couponDiscount > 0 ? (
               <div>
                 <div className="font-medium text-green-600">
-                  {discountedPrice ? `${discountedPrice.toFixed(2)} ${row.currency || 'EGP'}` : 'N/A'}
+                  {Number(finalPrice).toFixed(2)} {row.currency || 'EGP'}
                 </div>
                 <div className="text-xs text-gray-500 line-through">
                   {originalPrice ? `${originalPrice} ${row.currency || 'EGP'}` : ''}
                 </div>
                 <div className="text-xs text-red-600 font-medium">
-                  -{discount}% off
+                  {planDiscount > 0 && couponDiscount > 0 ? 
+                    `-${planDiscount}% plan, -${Number(couponDiscount / originalPrice * 100).toFixed(1)}% coupon` :
+                    planDiscount > 0 ? `-${planDiscount}% off` :
+                    couponDiscount > 0 ? `-${Number(couponDiscount / originalPrice * 100).toFixed(1)}% coupon` : ''
+                  }
                 </div>
               </div>
             ) : (
-              <div>
-                <div className="font-medium text-green-600">
-                  {row.price ? `${row.price} ${row.currency || 'EGP'}` : 'N/A'}
-                </div>
-                {row.currency && (
-                  <div className="text-xs text-gray-500">
-                    {row.currency === 'EGP' ? 'Egyptian Pound' : 
-                     row.currency === 'SAR' ? 'Saudi Riyal' :
-                     row.currency === 'AED' ? 'UAE Dirham' :
-                     row.currency === 'USD' ? 'US Dollar' : row.currency}
-                  </div>
-                )}
+              <div className="font-medium text-green-600">
+                {Number(finalPrice).toFixed(2)} {row.currency || 'EGP'}
               </div>
             )}
           </div>
@@ -1781,8 +1780,8 @@ return null;
                   <p className="text-gray-900">{selectedPlan.name?.en || 'N/A'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Plan Name (Arabic)</label>
-                  <p className="text-gray-900" dir="rtl">{selectedPlan.name?.ar || 'N/A'}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Plan Name</label>
+                  <p className="text-gray-900">{selectedPlan.name?.en || selectedPlan.name || 'N/A'}</p>
                 </div>
               </div>
 
@@ -1792,8 +1791,8 @@ return null;
                   <p className="text-gray-900">{selectedPlan.description?.en || 'No description'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description (Arabic)</label>
-                  <p className="text-gray-900" dir="rtl">{selectedPlan.description?.ar || 'لا يوجد وصف'}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <p className="text-gray-900">{selectedPlan.description?.en || selectedPlan.description || 'No description'}</p>
                 </div>
               </div>
 
@@ -1888,9 +1887,11 @@ return 'None';
                       const enDescription = benefit.description?.en || 
                                           benefit.benefit?.description?.en || 
                                           'No English description';
-                      const arDescription = benefit.description?.ar || 
-                                          benefit.benefit?.description?.ar || 
-                                          'لا يوجد وصف بالعربية';
+                      const description = benefit.description?.en || 
+                                         benefit.benefit?.description?.en || 
+                                         benefit.description || 
+                                         benefit.benefit?.description || 
+                                         'No description';
                       
                       return (
                         <div key={index} className="bg-gray-50 p-3 rounded-lg">

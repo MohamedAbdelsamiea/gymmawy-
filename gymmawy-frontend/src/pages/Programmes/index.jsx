@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import Programme from "../../components/common/Programme";
 import { useAsset } from "../../hooks/useAsset";
-import { useLocation } from "../../hooks/useLocation";
+import { useCurrency } from "../../hooks/useCurrency";
 import programmeService from "../../services/programmeService";
 
 const TrainingProgramsPage = () => {
   const { t, i18n } = useTranslation("programmes"); // use the namespace
-  const { country, currency, currencySymbol } = useLocation();
+  const { currency, isLoading: currencyLoading } = useCurrency();
   const [programmes, setProgrammes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -226,34 +226,70 @@ const TrainingProgramsPage = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {programmes.length > 0 ? programmes
                 .map((prog, idx) => {
-                // Use geolocation-based currency selection
+                // Use detected currency for price selection
                 let formattedPrice;
                 let selectedPrice;
                 
-                // Select price based on geolocation
-                if (country === 'EG') {
-                  // Egypt - use EGP
-                  selectedPrice = prog.priceEGP;
-                } else if (country === 'SA') {
-                  // Saudi Arabia - use SAR
-                  selectedPrice = prog.priceSAR;
-                } else {
-                  // Default to SAR for other countries
-                  selectedPrice = prog.priceSAR;
+                // Select price based on detected currency
+                switch (currency) {
+                  case 'EGP':
+                    selectedPrice = prog.priceEGP;
+                    break;
+                  case 'SAR':
+                    selectedPrice = prog.priceSAR;
+                    break;
+                  case 'AED':
+                    selectedPrice = prog.priceAED;
+                    break;
+                  case 'USD':
+                    selectedPrice = prog.priceUSD;
+                    break;
+                  default:
+                    // Default to EGP if currency not detected
+                    selectedPrice = prog.priceEGP;
+                    break;
                 }
                 
                 if (selectedPrice && selectedPrice.amount !== undefined) {
                   if (selectedPrice.amount === 0) {
                     formattedPrice = i18n.language === 'ar' ? 'مجاني' : 'FREE';
                   } else {
-                    // Use language-specific currency symbols
+                    // Use language-specific currency symbols based on detected currency
                     let displayCurrencySymbol;
                     if (i18n.language === 'ar') {
-                      // Arabic: EGP = جم, SAR = رس
-                      displayCurrencySymbol = selectedPrice.currency === 'SAR' ? 'رس' : 'جم';
+                      // Arabic currency symbols
+                      switch (currency) {
+                        case 'USD':
+                          displayCurrencySymbol = '$';
+                          break;
+                        case 'SAR':
+                          displayCurrencySymbol = 'رس';
+                          break;
+                        case 'AED':
+                          displayCurrencySymbol = 'د.إ';
+                          break;
+                        case 'EGP':
+                        default:
+                          displayCurrencySymbol = 'جم';
+                          break;
+                      }
                     } else {
-                      // English: EGP = L.E, SAR = SAR
-                      displayCurrencySymbol = selectedPrice.currency === 'SAR' ? 'SAR' : 'L.E';
+                      // English currency symbols
+                      switch (currency) {
+                        case 'USD':
+                          displayCurrencySymbol = '$';
+                          break;
+                        case 'SAR':
+                          displayCurrencySymbol = 'S.R';
+                          break;
+                        case 'AED':
+                          displayCurrencySymbol = 'د.إ';
+                          break;
+                        case 'EGP':
+                        default:
+                          displayCurrencySymbol = 'L.E';
+                          break;
+                      }
                     }
                     formattedPrice = `${displayCurrencySymbol} ${selectedPrice.amount}`;
                   }
@@ -276,8 +312,6 @@ const TrainingProgramsPage = () => {
                     name={programmeName}
                     price={formattedPrice}
                     programme={prog}
-                    country={country}
-                    currency={currency}
                   />
                 );
               }) : (

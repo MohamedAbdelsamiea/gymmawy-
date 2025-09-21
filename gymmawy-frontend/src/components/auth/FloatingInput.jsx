@@ -26,7 +26,7 @@ const FloatingInput = ({
       <div className="relative">
         <input
           type={inputType}
-          value={value || ""}
+          value={value ?? ""}
           onChange={onChange}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}

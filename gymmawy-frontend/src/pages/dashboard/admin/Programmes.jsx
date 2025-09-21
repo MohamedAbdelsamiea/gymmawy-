@@ -608,7 +608,13 @@ const AdminProgrammes = () => {
       sortable: false,
       render: (value, row) => {
         const discount = row.discountPercentage || 0;
-        const prices = row.prices || [];
+        
+        // Convert individual price fields to prices array format
+        const prices = [];
+        if (row.priceEGP) prices.push({ currency: 'EGP', amount: row.priceEGP });
+        if (row.priceSAR) prices.push({ currency: 'SAR', amount: row.priceSAR });
+        if (row.priceAED) prices.push({ currency: 'AED', amount: row.priceAED });
+        if (row.priceUSD) prices.push({ currency: 'USD', amount: row.priceUSD });
         
         // Create a map of currency to price
         const priceMap = {};
@@ -676,7 +682,7 @@ const AdminProgrammes = () => {
           <div className="text-sm">
             {pointsAwarded > 0 && (
               <div className="flex items-center space-x-1">
-                <span className="text-green-600 font-medium">+{pointsAwarded}</span>
+                <span className="text-green-600 font-medium">{pointsAwarded}</span>
                 <span className="text-xs text-gray-500">awarded</span>
               </div>
             )}
@@ -850,12 +856,12 @@ const AdminProgrammes = () => {
           return (
             <div className="text-sm text-center">
               {/* Coupon code as purple badge */}
-              <div className="mb-1">
+              <div className="mb-2">
                 <span className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
                   {row.coupon.code}
                 </span>
               </div>
-              {/* Centered percentage */}
+              {/* Centered percentage with more spacing */}
               <div className="text-xs text-gray-500">
                 {row.coupon?.discountPercentage || 0}% off
               </div>

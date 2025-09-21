@@ -205,7 +205,12 @@ params.role = filterRole;
       sortable: true,
       render: (value) => (
         <div className="text-center">
-          <div className="font-medium text-green-600">{value || 0}</div>
+          <div className="font-medium text-green-600">
+            {value || 0}
+          </div>
+          <div className="text-xs text-gray-500">
+            points
+          </div>
         </div>
       ),
     },

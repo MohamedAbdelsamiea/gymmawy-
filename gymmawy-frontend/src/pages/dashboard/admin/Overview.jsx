@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { 
   Users, 
   ShoppingBag, 
@@ -17,7 +16,6 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import adminApiService from '../../../services/adminApiService';
 
 const AdminOverview = () => {
-  const { t } = useTranslation("dashboard");
   const [stats, setStats] = useState(null);
   const [trendData, setTrendData] = useState([]);
   const [monthlyTrends, setMonthlyTrends] = useState([]);
@@ -505,7 +503,7 @@ const AdminOverview = () => {
 
       {/* Recent Activity */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('admin.overview.recentActivity')}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
         <div className="space-y-4">
           {recentActivity && recentActivity.length > 0 ? recentActivity.map((activity) => (
             <div key={activity.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">

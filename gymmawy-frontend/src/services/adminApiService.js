@@ -66,30 +66,30 @@ class AdminApiService {
 
   // ==================== PRODUCTS ====================
   async getProducts(params = {}) {
-    // Mock data since GET /products endpoint doesn't exist yet
-    return { products: [] };
+    const queryString = new URLSearchParams(params).toString();
+    return this.apiCall(`/admin/products${queryString ? `?${queryString}` : ''}`);
   }
 
   async getProductById(id) {
-    return this.apiCall(`/products/${id}`);
+    return this.apiCall(`/admin/products/${id}`);
   }
 
   async createProduct(productData) {
-    return this.apiCall('/products', {
+    return this.apiCall('/admin/products', {
       method: 'POST',
       body: JSON.stringify(productData)
     });
   }
 
   async updateProduct(id, productData) {
-    return this.apiCall(`/products/${id}`, {
+    return this.apiCall(`/admin/products/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(productData)
     });
   }
 
   async deleteProduct(id) {
-    return this.apiCall(`/products/${id}`, {
+    return this.apiCall(`/admin/products/${id}`, {
       method: 'DELETE'
     });
   }
