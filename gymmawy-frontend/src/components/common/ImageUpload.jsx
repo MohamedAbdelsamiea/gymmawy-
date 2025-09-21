@@ -89,7 +89,7 @@ const ImageUpload = ({
   const handleRemove = async() => {
     if (preview?.id) {
       try {
-        await apiClient.delete(`/api/uploads/${preview.id}`);
+        await apiClient.delete(`/uploads/${preview.id}`);
         console.log('Image removed from server');
       } catch (err) {
         console.error('Error removing image from server:', err);

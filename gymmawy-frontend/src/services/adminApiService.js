@@ -323,58 +323,58 @@ class AdminApiService {
   // ==================== CMS ====================
   async getTransformations(params = {}) {
     const queryString = new URLSearchParams(params).toString();
-    return this.apiCall(`/api/cms/transformations${queryString ? `?${queryString}` : ''}`);
+    return this.apiCall(`/cms/transformations${queryString ? `?${queryString}` : ''}`);
   }
 
   async getTransformationById(id) {
-    return this.apiCall(`/api/cms/transformations/${id}`);
+    return this.apiCall(`/cms/transformations/${id}`);
   }
 
   async createTransformation(transformationData) {
-    return this.apiCall('/api/cms/transformations', {
+    return this.apiCall('/cms/transformations', {
       method: 'POST',
       body: JSON.stringify(transformationData)
     });
   }
 
   async updateTransformation(id, transformationData) {
-    return this.apiCall(`/api/cms/transformations/${id}`, {
+    return this.apiCall(`/cms/transformations/${id}`, {
       method: 'PUT',
       body: JSON.stringify(transformationData)
     });
   }
 
   async deleteTransformation(id) {
-    return this.apiCall(`/api/cms/transformations/${id}`, {
+    return this.apiCall(`/cms/transformations/${id}`, {
       method: 'DELETE'
     });
   }
 
   async getVideos(params = {}) {
     const queryString = new URLSearchParams(params).toString();
-    return this.apiCall(`/api/cms/videos${queryString ? `?${queryString}` : ''}`);
+    return this.apiCall(`/cms/videos${queryString ? `?${queryString}` : ''}`);
   }
 
   async getVideoById(id) {
-    return this.apiCall(`/api/cms/videos/${id}`);
+    return this.apiCall(`/cms/videos/${id}`);
   }
 
   async createVideo(videoData) {
-    return this.apiCall('/api/cms/videos', {
+    return this.apiCall('/cms/videos', {
       method: 'POST',
       body: JSON.stringify(videoData)
     });
   }
 
   async updateVideo(id, videoData) {
-    return this.apiCall(`/api/cms/videos/${id}`, {
+    return this.apiCall(`/cms/videos/${id}`, {
       method: 'PUT',
       body: JSON.stringify(videoData)
     });
   }
 
   async deleteVideo(id) {
-    return this.apiCall(`/api/cms/videos/${id}`, {
+    return this.apiCall(`/cms/videos/${id}`, {
       method: 'DELETE'
     });
   }
@@ -642,23 +642,23 @@ class AdminApiService {
 
   async getPendingPayments(params = {}) {
     const queryString = new URLSearchParams(params).toString();
-    return this.apiCall(`/api/payments/admin/pending${queryString ? `?${queryString}` : ''}`);
+    return this.apiCall(`/payments/admin/pending${queryString ? `?${queryString}` : ''}`);
   }
 
   async approvePayment(paymentId) {
-    return this.apiCall(`/api/payments/admin/${paymentId}/approve`, {
+    return this.apiCall(`/payments/admin/${paymentId}/approve`, {
       method: 'POST'
     });
   }
 
   async rejectPayment(paymentId) {
-    return this.apiCall(`/api/payments/admin/${paymentId}/reject`, {
+    return this.apiCall(`/payments/admin/${paymentId}/reject`, {
       method: 'POST'
     });
   }
 
   async getPaymentById(paymentId) {
-    return this.apiCall(`/api/payments/${paymentId}`);
+    return this.apiCall(`/payments/${paymentId}`);
   }
 
   // ==================== ORDER ACTIVATION ====================
