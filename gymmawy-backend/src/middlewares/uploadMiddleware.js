@@ -356,14 +356,15 @@ export const serveUploadedFiles = (req, res, next) => {
   
   let filePath;
   
-  // Handle catch-all route (e.g., /api/uploads/content/images/filename.webp)
-  if (req.route && req.route.path === '*') {
-    // Use the full path from the request
-    const fullPath = req.path;
-    // Remove /api/uploads prefix to get the relative path
-    const relativePath = fullPath.replace(/^\/api\/uploads/, '');
-    const cleanPath = relativePath.startsWith('/') ? relativePath.slice(1) : relativePath;
-    filePath = path.join(process.cwd(), cleanPath);
+  // Handle specific content routes (e.g., /api/uploads/content/images/filename.webp)
+  if (req.route && req.route.path.includes('/content/')) {
+    // Extract the category from the route path
+    const routePath = req.route.path;
+    const categoryMatch = routePath.match(/\/content\/([^\/]+)/);
+    const routeCategory = categoryMatch ? categoryMatch[1] : 'products';
+    
+    // Construct the file path
+    filePath = path.join(process.cwd(), 'uploads', 'content', routeCategory, fileName);
   }
   // Handle full path format (e.g., /uploads/content/images/filename.webp)
   else if (fileName && fileName.includes('/')) {
