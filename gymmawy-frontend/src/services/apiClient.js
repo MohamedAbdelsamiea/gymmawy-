@@ -76,8 +76,8 @@ class ApiClient {
 
   // Make API request with automatic token refresh
   async request(endpoint, options = {}) {
-    // Ensure endpoint starts with /api/ if it doesn't already
-    const apiEndpoint = endpoint.startsWith('/api/') ? endpoint : `/api${endpoint}`;
+    // Ensure endpoint starts with / if it doesn't already
+    const apiEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${this.baseURL}${apiEndpoint}`;
     const isFormData = options.body instanceof FormData;
     const config = {

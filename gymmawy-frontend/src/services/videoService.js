@@ -6,7 +6,7 @@ class VideoService {
   async getVideos(filters = {}) {
     try {
       const queryParams = new URLSearchParams(filters).toString();
-      const url = `${API_BASE_URL}/api/cms/videos?${queryParams}`;
+      const url = `${API_BASE_URL}/cms/videos?${queryParams}`;
       console.log('🎥 Fetching videos from:', url);
       
       const response = await fetch(url, {
@@ -33,7 +33,7 @@ class VideoService {
 
   async getVideo(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/cms/videos/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/cms/videos/${id}`, {
         method: 'GET',
       });
       
