@@ -2,6 +2,7 @@ import { getPrismaClient } from "../../config/db.js";
 import { generateSubscriptionNumber, generateUniqueId } from "../../utils/idGenerator.js";
 import * as notificationService from "../notifications/notification.service.js";
 import * as couponService from "../coupons/coupon.service.js";
+import * as couponRedemptionService from "../coupons/couponRedemption.service.js";
 import { Decimal } from "decimal.js";
 
 const prisma = getPrismaClient();
@@ -248,10 +249,25 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
     }
   );
 
-  // Calculate subscription dates using plan data
+  // Calculate subscription dates using provided data or plan data
   const start = new Date();
-  const totalDays = (subscriptionPeriodDays || plan.subscriptionPeriodDays) + (giftPeriodDays || plan.giftPeriodDays);
+  
+  // Use provided values if available, otherwise fall back to plan values
+  const finalSubscriptionDays = subscriptionPeriodDays !== undefined ? subscriptionPeriodDays : plan.subscriptionPeriodDays;
+  const finalGiftDays = giftPeriodDays !== undefined ? giftPeriodDays : plan.giftPeriodDays;
+  
+  const totalDays = finalSubscriptionDays + finalGiftDays;
   const end = new Date(start.getTime() + totalDays * 24 * 60 * 60 * 1000);
+  
+  console.log('Subscription period calculation:', {
+    providedSubscriptionDays: subscriptionPeriodDays,
+    providedGiftDays: giftPeriodDays,
+    planSubscriptionDays: plan.subscriptionPeriodDays,
+    planGiftDays: plan.giftPeriodDays,
+    finalSubscriptionDays,
+    finalGiftDays,
+    totalDays
+  });
 
   // Create subscription and redeem coupon in a transaction to prevent race conditions
   const subscription = await prisma.$transaction(async (tx) => {
@@ -270,26 +286,25 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
         paymentMethod: paymentMethod || null,
         discountPercentage: planDiscountPercentage, // Use server-calculated plan discount
         couponId: couponId || null,
-        couponDiscount: couponDiscountPercentage // Store coupon discount percentage instead of amount
+        couponDiscount: couponDiscountPercentage, // Store coupon discount percentage instead of amount
+        subscriptionPeriodDays: finalSubscriptionDays, // Store the actual subscription period used
+        giftPeriodDays: finalGiftDays // Store the actual gift period used
       }
     });
 
     // Redeem coupon if couponId is provided (within the same transaction)
     if (couponId) {
-      const coupon = await tx.coupon.findUnique({ where: { id: couponId } });
-      if (coupon) {
-        // Create user redemption record
-        await tx.userCouponRedemption.create({ 
-          data: { userId, couponId: coupon.id } 
-        });
-        
-        // Increment total redemptions
-        await tx.coupon.update({ 
-          where: { id: coupon.id }, 
-          data: { totalRedemptions: { increment: 1 } } 
-        });
-        
+      try {
+        await couponRedemptionService.redeemCoupon(
+          userId, 
+          couponId, 
+          'SUBSCRIPTION', 
+          newSubscription.id
+        );
         console.log('Coupon redeemed successfully for subscription:', newSubscription.id);
+      } catch (error) {
+        console.error('Failed to redeem coupon for subscription:', error.message);
+        throw error;
       }
     }
 
@@ -393,6 +408,23 @@ export async function cancelSubscription(userId, id) {
   const sub = await prisma.subscription.findFirst({ where: { id, userId } });
   if (!sub) return null;
   if (sub.status !== "ACTIVE") return sub;
+  
+  // Cancel coupon redemption if subscription had a coupon
+  if (sub.couponId) {
+    try {
+      await couponRedemptionService.cancelCouponRedemption(
+        userId,
+        sub.couponId,
+        'SUBSCRIPTION',
+        id
+      );
+      console.log('Coupon redemption cancelled for subscription:', id);
+    } catch (error) {
+      console.error('Failed to cancel coupon redemption for subscription:', error.message);
+      // Don't throw error here, just log it - we still want to cancel the subscription
+    }
+  }
+  
   return prisma.subscription.update({ where: { id }, data: { status: "CANCELLED", cancelledAt: new Date() } });
 }
 
@@ -418,10 +450,25 @@ export async function approveSubscription(id) {
     throw e;
   }
 
-  // Calculate start and end dates when approved using plan data
+  // Calculate start and end dates when approved using stored subscription data or plan data
   const startDate = new Date();
-  const totalDays = subscription.subscriptionPlan.subscriptionPeriodDays + subscription.subscriptionPlan.giftPeriodDays;
+  
+  // Use stored subscription period data if available, otherwise fall back to plan data
+  const finalSubscriptionDays = subscription.subscriptionPeriodDays !== null ? subscription.subscriptionPeriodDays : subscription.subscriptionPlan.subscriptionPeriodDays;
+  const finalGiftDays = subscription.giftPeriodDays !== null ? subscription.giftPeriodDays : subscription.subscriptionPlan.giftPeriodDays;
+  
+  const totalDays = finalSubscriptionDays + finalGiftDays;
   const endDate = new Date(startDate.getTime() + totalDays * 24 * 60 * 60 * 1000);
+  
+  console.log('Subscription approval period calculation:', {
+    storedSubscriptionDays: subscription.subscriptionPeriodDays,
+    storedGiftDays: subscription.giftPeriodDays,
+    planSubscriptionDays: subscription.subscriptionPlan.subscriptionPeriodDays,
+    planGiftDays: subscription.subscriptionPlan.giftPeriodDays,
+    finalSubscriptionDays,
+    finalGiftDays,
+    totalDays
+  });
 
   const updatedSubscription = await prisma.subscription.update({
     where: { id },
@@ -546,5 +593,117 @@ export async function expireSubscriptions() {
       subscriptionNumber: sub.subscriptionNumber
     }))
   };
+}
+
+export async function adminUpdateSubscriptionStatus(id, status) {
+  // Get the current subscription with all related data
+  const currentSubscription = await prisma.subscription.findUnique({
+    where: { id },
+    include: {
+      user: true,
+      subscriptionPlan: true,
+      coupon: true
+    }
+  });
+
+  if (!currentSubscription) {
+    const e = new Error("Subscription not found");
+    e.status = 404;
+    e.expose = true;
+    throw e;
+  }
+
+  const previousStatus = currentSubscription.status;
+
+  // Use transaction to ensure data consistency
+  return await prisma.$transaction(async (tx) => {
+    // Update the subscription status
+    const updatedSubscription = await tx.subscription.update({
+      where: { id },
+      data: { 
+        status,
+        ...(status === 'CANCELLED' && { cancelledAt: new Date() }),
+        ...(status === 'ACTIVE' && !currentSubscription.startDate && { startDate: new Date() })
+      }
+    });
+
+    // Handle status changes that affect loyalty points and coupons
+    if (previousStatus !== status) {
+      // If changing from ACTIVE to CANCELLED/EXPIRED, reverse loyalty points
+      if (previousStatus === 'ACTIVE' && (status === 'CANCELLED' || status === 'EXPIRED')) {
+        if (currentSubscription.subscriptionPlan.loyaltyPointsAwarded > 0) {
+          await tx.user.update({
+            where: { id: currentSubscription.userId },
+            data: {
+              loyaltyPoints: {
+                decrement: currentSubscription.subscriptionPlan.loyaltyPointsAwarded
+              }
+            }
+          });
+
+          await tx.loyaltyTransaction.create({
+            data: {
+              userId: currentSubscription.userId,
+              points: currentSubscription.subscriptionPlan.loyaltyPointsAwarded,
+              type: 'SPENT',
+              source: 'SUBSCRIPTION',
+              sourceId: currentSubscription.id
+            }
+          });
+
+          console.log(`Reversed ${currentSubscription.subscriptionPlan.loyaltyPointsAwarded} loyalty points for subscription status change from ${previousStatus} to ${status}`);
+        }
+
+        // Remove coupon usage if subscription had a coupon
+        if (currentSubscription.couponId) {
+          try {
+            const { removeCouponUsage } = await import('../coupons/couponUsage.service.js');
+            await removeCouponUsage(currentSubscription.userId, currentSubscription.couponId, 'SUBSCRIPTION', currentSubscription.id);
+            console.log('Coupon usage removed for subscription status change:', currentSubscription.id);
+          } catch (error) {
+            console.error('Failed to remove coupon usage for subscription status change:', error);
+          }
+        }
+      }
+      // If changing from CANCELLED/EXPIRED to ACTIVE, award loyalty points
+      else if ((previousStatus === 'CANCELLED' || previousStatus === 'EXPIRED') && status === 'ACTIVE') {
+        if (currentSubscription.subscriptionPlan.loyaltyPointsAwarded > 0) {
+          await tx.user.update({
+            where: { id: currentSubscription.userId },
+            data: {
+              loyaltyPoints: {
+                increment: currentSubscription.subscriptionPlan.loyaltyPointsAwarded
+              }
+            }
+          });
+
+          await tx.loyaltyTransaction.create({
+            data: {
+              userId: currentSubscription.userId,
+              points: currentSubscription.subscriptionPlan.loyaltyPointsAwarded,
+              type: 'EARNED',
+              source: 'SUBSCRIPTION',
+              sourceId: currentSubscription.id
+            }
+          });
+
+          console.log(`Awarded ${currentSubscription.subscriptionPlan.loyaltyPointsAwarded} loyalty points for subscription status change from ${previousStatus} to ${status}`);
+        }
+
+        // Apply coupon usage if subscription had a coupon
+        if (currentSubscription.couponId) {
+          try {
+            const { applyCouponUsage } = await import('../coupons/couponUsage.service.js');
+            await applyCouponUsage(currentSubscription.userId, currentSubscription.couponId, 'SUBSCRIPTION', currentSubscription.id);
+            console.log('Coupon usage applied for subscription status change:', currentSubscription.id);
+          } catch (error) {
+            console.error('Failed to apply coupon usage for subscription status change:', error);
+          }
+        }
+      }
+    }
+
+    return updatedSubscription;
+  });
 }
 

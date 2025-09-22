@@ -313,14 +313,14 @@ return <span className="text-gray-400">Never</span>;
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Users Management</h1>
-          <p className="text-gray-600 mt-1">View all platform users and their information</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Users Management</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">View all platform users and their information</p>
         </div>
         <button
           onClick={() => setShowAddAdminModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary transition-colors"
+          className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary transition-colors text-sm sm:text-base w-full sm:w-auto"
         >
           <UserPlus className="h-4 w-4" />
           Add Admin

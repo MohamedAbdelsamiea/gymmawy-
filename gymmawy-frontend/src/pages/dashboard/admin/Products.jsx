@@ -1,11 +1,167 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Eye, Package, Tag, Search, Filter, Download, CheckCircle, XCircle, PlusCircle, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Package, Tag, Search, Filter, Download, CheckCircle, XCircle, PlusCircle, X, GripVertical } from 'lucide-react';
 import { DataTable, StatusBadge, TableWithFilters } from '../../../components/dashboard';
 import ToggleSwitch from '../../../components/common/ToggleSwitch';
 import AddProductModal from '../../../components/dashboard/AddProductModal';
 import EditProductModal from '../../../components/dashboard/EditProductModal';
 import adminApiService from '../../../services/adminApiService';
 import productService from '../../../services/productService';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// Sortable Row Component
+const SortableRow = ({ product, onEdit, onDelete, onToggleStatus, onAddStock }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: product.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <tr ref={setNodeRef} style={style} className="hover:bg-gray-50">
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center space-x-3">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab hover:cursor-grabbing p-1 hover:bg-gray-200 rounded"
+          >
+            <GripVertical className="h-4 w-4 text-gray-400" />
+          </div>
+          <div className="flex-shrink-0">
+            {product.images?.[0] ? (
+              <img
+                src={product.images[0].url.startsWith('http') ? product.images[0].url : `http://localhost:3000${product.images[0].url}`}
+                alt="Product"
+                className="w-12 h-12 object-cover rounded-lg border border-gray-200"
+              />
+            ) : (
+              <div className="w-12 h-12 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                <Package className="h-4 w-4" />
+              </div>
+            )}
+          </div>
+          <div className="font-medium text-gray-900">
+            {typeof product.name === 'object' ? (product.name?.en || product.name?.ar || 'Unnamed Product') : product.name || 'Unnamed Product'}
+          </div>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        <div className="text-sm space-y-1">
+          {product.prices?.map((price, index) => {
+            const discount = product.discountPercentage || 0;
+            const amount = Number(price.amount);
+            const discountedAmount = discount > 0 ? amount * (1 - discount / 100) : amount;
+            
+            return (
+              <div key={index} className="flex items-center justify-between">
+                <span className="text-gray-600">{price.currency}:</span>
+                <div className="text-right">
+                  {discount > 0 ? (
+                    <div>
+                      <div className="font-medium text-green-600">{Number(discountedAmount).toFixed(2)}</div>
+                      <div className="text-xs text-gray-500 line-through">{Number(amount).toFixed(2)}</div>
+                    </div>
+                  ) : (
+                    <div className="font-medium text-green-600">{Number(amount).toFixed(2)}</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span className={`font-medium ${
+          product.stock === 0 ? 'text-red-600' : 
+          product.stock < 10 ? 'text-yellow-600' : 
+          'text-green-600'
+        }`}>
+          {product.stock || 0}
+        </span>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+          product.discountPercentage > 0 
+            ? 'bg-red-100 text-red-800' 
+            : 'bg-gray-100 text-gray-600'
+        }`}>
+          {product.discountPercentage > 0 ? `-${product.discountPercentage}%` : 'No discount'}
+        </span>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center">
+          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+            (product._count?.orderItems || 0) > 0 
+              ? 'bg-green-100 text-green-800' 
+              : 'bg-gray-100 text-gray-600'
+          }`}>
+            {product._count?.orderItems || 0} {(product._count?.orderItems || 0) === 1 ? 'purchase' : 'purchases'}
+          </span>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <ToggleSwitch
+          checked={product.isActive}
+          onChange={() => onToggleStatus(product.id, product.isActive)}
+        />
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        {new Date(product.createdAt).toLocaleDateString()}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => onAddStock(product)}
+            className="text-blue-600 hover:text-blue-900"
+            title="Add Stock"
+          >
+            <PlusCircle className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => onEdit(product)}
+            className="text-indigo-600 hover:text-indigo-900"
+            title="Edit Product"
+          >
+            <Edit className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => onDelete(product.id)}
+            className="text-red-600 hover:text-red-900"
+            title="Delete Product"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+};
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -19,8 +175,13 @@ const AdminProducts = () => {
   const [showAddStockModal, setShowAddStockModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [stockIncrement, setStockIncrement] = useState('');
-  const [currentStock, setCurrentStock] = useState(0);
-  const [refreshingStock, setRefreshingStock] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     fetchProducts();
@@ -51,13 +212,21 @@ const AdminProducts = () => {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to fetch products');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        });
+        throw new Error(`Failed to fetch products: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
       console.log('Products API response:', data);
+      console.log('Sample product with purchase count:', data.products?.items?.[0] || data.products?.[0] || data.items?.[0]);
       const productsArray = data.products?.items || data.products || data.items || [];
-      console.log('First product data:', productsArray[0]);
+      console.log('Products loaded:', productsArray.length, 'products');
+      console.log('Product IDs:', productsArray.map(p => p.id));
       setProducts(productsArray);
     } catch (err) {
       setError(err.message);
@@ -114,24 +283,7 @@ const AdminProducts = () => {
   const handleAddStock = async (product) => {
     setSelectedProduct(product);
     setStockIncrement('');
-    setCurrentStock(product.stock || 0);
     setShowAddStockModal(true);
-    
-    // Fetch the latest stock data
-    await refreshCurrentStock(product.id);
-  };
-
-  const refreshCurrentStock = async (productId) => {
-    try {
-      setRefreshingStock(true);
-      const latestProduct = await adminApiService.getProductById(productId);
-      const latestStock = latestProduct.product?.stock || 0;
-      setCurrentStock(latestStock);
-    } catch (err) {
-      console.error('Error refreshing stock:', err);
-    } finally {
-      setRefreshingStock(false);
-    }
   };
 
   const handleIncrementStock = async () => {
@@ -142,8 +294,7 @@ const AdminProducts = () => {
 
     try {
       const increment = parseInt(stockIncrement);
-      
-      // Use the current stock from state (which is refreshed when modal opens)
+      const currentStock = selectedProduct.stock || 0;
       const newStock = currentStock + increment;
       
       // Update the product with the new stock
@@ -161,14 +312,10 @@ const AdminProducts = () => {
       setShowAddStockModal(false);
       setSelectedProduct(null);
       setStockIncrement('');
-      alert(`Successfully added ${increment} units to stock. Previous stock: ${currentStock}, New stock: ${newStock}`);
+      alert(`Successfully added ${increment} units to stock. New total: ${newStock}`);
     } catch (err) {
       console.error('Error updating stock:', err);
-      if (err.message?.includes('stock')) {
-        alert('Stock update failed. The product stock may have changed. Please refresh and try again.');
-      } else {
-        alert('Failed to update stock. Please try again.');
-      }
+      alert('Failed to update stock. Please try again.');
     }
   };
 
@@ -208,6 +355,41 @@ const AdminProducts = () => {
       console.log('Export data:', response);
     } catch (err) {
       console.error('Error exporting products:', err);
+    }
+  };
+
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      const oldIndex = products.findIndex((product) => product.id === active.id);
+      const newIndex = products.findIndex((product) => product.id === over.id);
+
+      // Validate that both products exist
+      if (oldIndex === -1 || newIndex === -1) {
+        console.error('Product not found in current list');
+        return;
+      }
+
+      const newProducts = arrayMove(products, oldIndex, newIndex);
+      setProducts(newProducts);
+
+      // Update order in backend
+      try {
+        const productOrders = newProducts.map((product, index) => ({
+          id: product.id,
+          order: index
+        }));
+
+        console.log('Updating product order:', productOrders);
+        await adminApiService.updateProductOrder(productOrders);
+        console.log('Product order updated successfully');
+      } catch (error) {
+        console.error('Error updating product order:', error);
+        // Revert the change on error
+        setProducts(products);
+        alert('Failed to update product order. Please try again.');
+      }
     }
   };
 
@@ -341,6 +523,25 @@ const AdminProducts = () => {
           {value > 0 ? `-${value}%` : 'No discount'}
         </span>
       ),
+    },
+    {
+      key: 'purchases',
+      label: 'Purchases',
+      sortable: true,
+      render: (value, row) => {
+        const purchaseCount = row._count?.orderItems || 0;
+        return (
+          <div className="flex items-center">
+            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+              purchaseCount > 0 
+                ? 'bg-green-100 text-green-800' 
+                : 'bg-gray-100 text-gray-600'
+            }`}>
+              {purchaseCount} {purchaseCount === 1 ? 'purchase' : 'purchases'}
+            </span>
+          </div>
+        );
+      },
     },
     {
       key: 'loyaltyPointsAwarded',
@@ -504,32 +705,96 @@ const AdminProducts = () => {
         </div>
       </div>
 
-      {/* Products Table with Integrated Filters */}
-      <TableWithFilters
-        data={Array.isArray(products) ? products : []}
-        columns={columns}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        searchPlaceholder="Search products..."
-        filters={[
-          {
-            label: "Status",
-            value: filterStatus,
-            onChange: setFilterStatus,
-            options: [
-              { value: "all", label: "All Status" },
-              { value: "active", label: "Active" },
-              { value: "inactive", label: "Inactive" },
-              { value: "out_of_stock", label: "Out of Stock" },
-            ],
-          },
-        ]}
-        onApplyFilters={fetchProducts}
-        onExport={handleExport}
-        showApplyButton={false}
-        showExportButton={true}
-        exportButtonText="Export"
-      />
+      {/* Search and Filter Controls */}
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-gymmawy-primary focus:border-gymmawy-primary w-full sm:w-auto"
+              />
+            </div>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-gymmawy-primary focus:border-gymmawy-primary w-full sm:w-auto"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="out_of_stock">Out of Stock</option>
+            </select>
+          </div>
+          <button
+            onClick={handleExport}
+            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gymmawy-primary hover:bg-gymmawy-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gymmawy-primary w-full sm:w-auto"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </button>
+        </div>
+      </div>
+
+      {/* Products Table with Drag and Drop */}
+      <div className="bg-white shadow-sm rounded-lg">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Product Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Price
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Stock
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Discount
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Purchases
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                <SortableContext items={products.map(p => p.id)} strategy={verticalListSortingStrategy}>
+                  {products.map((product) => (
+                    <SortableRow
+                      key={product.id}
+                      product={product}
+                      onEdit={handleEditProduct}
+                      onDelete={handleDeleteProduct}
+                      onToggleStatus={handleToggleProductStatus}
+                      onAddStock={handleAddStock}
+                    />
+                  ))}
+                </SortableContext>
+              </tbody>
+            </table>
+          </div>
+        </DndContext>
+      </div>
 
       {/* Add Product Modal */}
       <AddProductModal
@@ -551,70 +816,52 @@ const AdminProducts = () => {
 
       {/* Add Stock Modal */}
       {showAddStockModal && selectedProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
-            <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-96 max-w-md mx-4">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Add Stock</h3>
               <button
                 onClick={() => setShowAddStockModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">
-                Product: <span className="font-medium">{selectedProduct.name?.en || selectedProduct.name?.ar || 'Unnamed Product'}</span>
+            <div className="p-6">
+              <p className="text-sm text-gray-600 mb-6">
+                Product: <span className="font-medium text-gray-900">{selectedProduct.name?.en || selectedProduct.name?.ar || 'Unnamed Product'}</span>
               </p>
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600">
-                  Current Stock: <span className="font-medium text-blue-600">{refreshingStock ? '...' : currentStock}</span>
-                </p>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Amount to Add
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={stockIncrement}
+                  onChange={(e) => setStockIncrement(e.target.value)}
+                  placeholder="Enter positive number"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
                 <button
-                  onClick={() => refreshCurrentStock(selectedProduct.id)}
-                  disabled={refreshingStock}
-                  className="text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  onClick={() => setShowAddStockModal(false)}
+                  className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                 >
-                  {refreshingStock ? 'Refreshing...' : 'Refresh'}
+                  Cancel
+                </button>
+                <button
+                  onClick={handleIncrementStock}
+                  className="px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary transition-colors"
+                >
+                  Add Stock
                 </button>
               </div>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Amount to Add
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={stockIncrement}
-                onChange={(e) => setStockIncrement(e.target.value)}
-                placeholder="Enter positive number"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              {stockIncrement && !isNaN(stockIncrement) && parseFloat(stockIncrement) > 0 && (
-                <p className="mt-2 text-sm text-gray-600">
-                  New stock will be: <span className="font-medium text-green-600">
-                    {currentStock + parseInt(stockIncrement)}
-                  </span>
-                </p>
-              )}
-            </div>
-
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowAddStockModal(false)}
-                className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleIncrementStock}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Add Stock
-              </button>
             </div>
           </div>
         </div>

@@ -3,6 +3,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { translations } from '../../i18n/translations';
 import transformationService from '../../services/transformationService';
 import { config } from '../../config';
+import { getFullImageUrl } from '../../utils/imageUtils';
 
 const TransformationsPage = () => {
   const { language } = useLanguage();
@@ -99,7 +100,7 @@ const TransformationsPage = () => {
               <div key={transformation.id} className="bg-white rounded-lg shadow-lg overflow-hidden">
                 <div className="aspect-w-16 aspect-h-9">
                   <img
-                    src={transformation.imageUrl ? (transformation.imageUrl.startsWith('http') ? transformation.imageUrl : `${config.API_BASE_URL}${transformation.imageUrl}`) : ''}
+                    src={getFullImageUrl(transformation.imageUrl)}
                     alt="Transformation"
                     className="w-full h-64 object-cover"
                     onError={(e) => {

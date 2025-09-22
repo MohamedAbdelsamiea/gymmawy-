@@ -15,7 +15,7 @@ class CheckoutService {
   // ==================== COUPONS ====================
   async validateCoupon(couponCode) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/coupons/validate/${couponCode}`, {
+      const response = await fetch(`${API_BASE_URL}/coupons/validate/${couponCode}`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
@@ -44,7 +44,7 @@ class CheckoutService {
 
   async applyCoupon(couponCode, amount) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/coupons/apply`, {
+      const response = await fetch(`${API_BASE_URL}/coupons/apply`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify({
@@ -68,7 +68,7 @@ class CheckoutService {
   // ==================== PAYMENTS ====================
   async createPaymentIntent(amount, currency, planId, planType) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/payments/intent`, {
+      const response = await fetch(`${API_BASE_URL}/payments/intent`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify({
@@ -97,7 +97,7 @@ class CheckoutService {
 
   async processPayment(paymentData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/payments/process`, {
+      const response = await fetch(`${API_BASE_URL}/payments/process`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(paymentData),
@@ -117,7 +117,7 @@ class CheckoutService {
 
   async verifyPayment(paymentId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/payments/${paymentId}/verify`, {
+      const response = await fetch(`${API_BASE_URL}/payments/${paymentId}/verify`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
@@ -136,7 +136,7 @@ class CheckoutService {
 
   async getPaymentMethods() {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/payments/methods`, {
+      const response = await fetch(`${API_BASE_URL}/payments/methods`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
@@ -156,7 +156,7 @@ class CheckoutService {
   // ==================== SUBSCRIPTIONS ====================
   async createSubscription(subscriptionData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/subscriptions/with-payment`, {
+      const response = await fetch(`${API_BASE_URL}/subscriptions/with-payment`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(subscriptionData),
@@ -176,7 +176,7 @@ class CheckoutService {
 
   async getSubscriptionPlans() {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/subscriptions/plans`, {
+      const response = await fetch(`${API_BASE_URL}/subscriptions/plans`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
@@ -196,7 +196,7 @@ class CheckoutService {
   // ==================== PROGRAMMES ====================
   async purchaseProgramme(programmeId, paymentData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/programmes/${programmeId}/purchase-with-payment`, {
+      const response = await fetch(`${API_BASE_URL}/programmes/${programmeId}/purchase-with-payment`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(paymentData),
@@ -222,7 +222,7 @@ class CheckoutService {
   // ==================== ORDERS ====================
   async createOrder(orderData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/orders`, {
+      const response = await fetch(`${API_BASE_URL}/orders`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(orderData),
@@ -240,9 +240,29 @@ class CheckoutService {
     }
   }
 
+  async createOrderFromCart(orderData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/orders/from-cart`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(orderData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Order creation from cart failed');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Order creation from cart error:', error);
+      throw error;
+    }
+  }
+
   async getOrderById(orderId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}`, {
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
@@ -266,7 +286,7 @@ class CheckoutService {
       formData.append('file', file);
       formData.append('type', 'payment-proof');
 
-      const response = await fetch(`${API_BASE_URL}/api/uploads/payment-proof`, {
+      const response = await fetch(`${API_BASE_URL}/uploads/payment-proof`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -308,7 +328,7 @@ class CheckoutService {
   // ==================== PAYMENT PROOF UPLOAD ====================
   async uploadPaymentProof(paymentId, proofUrl) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/payments/upload-proof`, {
+      const response = await fetch(`${API_BASE_URL}/payments/upload-proof`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify({

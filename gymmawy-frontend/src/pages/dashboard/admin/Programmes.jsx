@@ -1043,17 +1043,17 @@ const AdminProgrammes = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Programmes Management</h1>
-          <p className="text-gray-600 mt-1">Manage programmes and customer purchases</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Programmes Management</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">Manage programmes and customer purchases</p>
         </div>
         {activeTab === 'programmes' && (
           <button 
             onClick={() => setShowAddModal(true)}
-            className="flex items-center px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary transition-colors"
+            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary transition-colors text-sm sm:text-base w-full sm:w-auto"
           >
-            <Plus className="h-5 w-5 mr-2" />
+            <Plus className="h-4 w-4" />
             Add Programme
           </button>
         )}
@@ -1118,41 +1118,25 @@ const AdminProgrammes = () => {
               <div className="bg-white border border-gray-200 rounded-lg p-1 flex gap-1 shadow-sm">
                 <button
                   onClick={() => setCurrency('EGP')}
-                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                    currency === 'EGP'
-                      ? 'bg-gymmawy-primary text-white shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
+                  className="px-2 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 >
                   EGP
                 </button>
                 <button
                   onClick={() => setCurrency('SAR')}
-                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                    currency === 'SAR'
-                      ? 'bg-gymmawy-primary text-white shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
+                  className="px-2 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 >
                   SAR
                 </button>
                 <button
                   onClick={() => setCurrency('AED')}
-                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                    currency === 'AED'
-                      ? 'bg-gymmawy-primary text-white shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
+                  className="px-2 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 >
                   AED
                 </button>
                 <button
                   onClick={() => setCurrency('USD')}
-                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                    currency === 'USD'
-                      ? 'bg-gymmawy-primary text-white shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
+                  className="px-2 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 >
                   USD
                 </button>
@@ -1254,8 +1238,8 @@ const AdminProgrammes = () => {
         >
           <div className="bg-white shadow overflow-hidden sm:rounded-md">
             <div className="px-4 py-5 sm:p-6">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center space-x-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <input
@@ -1263,13 +1247,13 @@ const AdminProgrammes = () => {
                       placeholder="Search programmes..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-gymmawy-primary focus:border-gymmawy-primary"
+                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-gymmawy-primary focus:border-gymmawy-primary w-full sm:w-auto"
                     />
                   </div>
                   <select
                     value={filterProgramme}
                     onChange={(e) => setFilterProgramme(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-gymmawy-primary focus:border-gymmawy-primary"
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-gymmawy-primary focus:border-gymmawy-primary w-full sm:w-auto"
                   >
                     <option value="all">All Programmes</option>
                     {programmes.map(programme => (
@@ -1281,7 +1265,7 @@ const AdminProgrammes = () => {
                 </div>
                 <button
                   onClick={handleExport}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gymmawy-primary hover:bg-gymmawy-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gymmawy-primary"
+                  className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gymmawy-primary hover:bg-gymmawy-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gymmawy-primary w-full sm:w-auto"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Export

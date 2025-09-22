@@ -453,7 +453,7 @@ return null;
                 initialImage={imageUrl ? { url: imageUrl } : null}
                 onImageUpload={(uploadedImage) => setImageUrl(uploadedImage.url)}
                 onImageRemove={() => setImageUrl('')}
-                maxSize={5 * 1024 * 1024}
+                maxSize={10 * 1024 * 1024}
                 showPreview={true}
                 showDetails={true}
               />

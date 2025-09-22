@@ -12,6 +12,9 @@ router.get("/categories", controller.listCategories);
 router.post("/categories", requireAdmin, controller.createCategory);
 
 router.get("/", controller.listProducts);
+router.get("/new-arrivals", controller.getNewArrivals);
+router.get("/all", controller.getAllProducts);
+router.get("/:id/related", controller.getRelatedProducts);
 router.get("/:id", controller.getProduct);
 
 router.post("/", requireAdmin, controller.createProduct);

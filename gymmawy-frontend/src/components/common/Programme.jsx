@@ -86,18 +86,18 @@ return imagePath;
     return (
       <div className="bg-[#190143] overflow-hidden flex flex-col" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
         <img src={getImageUrl(image)} alt={getBilingualText(name, 'Programme')} className="w-full h-auto object-cover" />
-         <div className="p-4 flex flex-col flex-grow text-start" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
-          <h3 className="text-2xl font-bold mb-2">{getBilingualText(name, 'Programme')}</h3>
+         <div className="p-3 sm:p-4 flex flex-col flex-grow text-start" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
+          <h3 className="text-lg sm:text-2xl font-bold mb-2">{getBilingualText(name, 'Programme')}</h3>
           
           {/* Price display with discount handling */}
-          <div className="mb-4">
+          <div className="mb-3 sm:mb-4">
             {price === 'FREE' || price === 'مجاني' ? (
-              <p className="text-2xl text-orange-500 font-bold">{price}</p>
+              <p className="text-xl sm:text-2xl text-orange-500 font-bold">{price}</p>
             ) : programme?.discountPercentage > 0 ? (
               // Display discounted price similar to packages section
               <div className="flex flex-col items-start">
-                <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
-                  <span className="text-lg text-gray-400 line-through">
+                <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-1 sm:space-x-2' : 'space-x-1 sm:space-x-2'}`}>
+                  <span className="text-sm sm:text-lg text-gray-400 line-through">
                     {(() => {
                       // Get the original price from programme data
                       const originalPrice = programme.priceEGP?.originalAmount || 
@@ -113,11 +113,11 @@ return imagePath;
                       return price;
                     })()}
                   </span>
-                  <span className="bg-orange-100 text-orange-800 text-xs font-medium px-2 py-1 rounded">
+                  <span className="bg-orange-100 text-orange-800 text-xs sm:text-sm font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
                     -{programme.discountPercentage}%
                   </span>
                 </div>
-                <span className="text-2xl font-bold text-orange-400 mt-1">
+                <span className="text-xl sm:text-2xl font-bold text-orange-400 mt-1">
                   {(() => {
                     // Extract price and currency from the formatted price string
                     const priceMatch = price.match(/(\d+(?:\.\d+)?)/);
@@ -130,7 +130,7 @@ return imagePath;
                 </span>
               </div>
             ) : (
-              <p className="text-2xl">
+              <p className="text-xl sm:text-2xl">
                 {(() => {
                   // Extract price and currency from the formatted price string
                   const priceMatch = price.match(/(\d+(?:\.\d+)?)/);
@@ -146,7 +146,7 @@ return imagePath;
           <button 
             onClick={handlePurchase}
             disabled={loading}
-            className="mt-auto w-full bg-[#281159] text-white py-2 px-4 rounded-lg font-semibold hover:bg-[#3f0071] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="mt-auto w-full bg-[#281159] text-white py-2 px-3 sm:px-4 rounded-lg font-semibold hover:bg-[#3f0071] transition disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
           >
             {loading ? t("purchasing") : t("button")}
           </button>

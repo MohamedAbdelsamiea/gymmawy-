@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAsset } from '../../hooks/useAsset';
+import { config } from '../../config';
 
 /**
  * ProductCard - A reusable component for displaying product information
@@ -33,7 +34,29 @@ const ProductCard = ({
   discountedPriceClassName = "text-2xl font-light text-[#190143]",
   originalPriceClassName = "text-2xl font-light text-gray-500 line-through"
 }) => {
-  const productImage = useAsset(product.image, "common");
+  // Handle both local assets and API URLs
+  const getImageSrc = (imagePath) => {
+    if (!imagePath) return '/assets/common/store/product1-1.png';
+    
+    // If it's an API URL (starts with /uploads/), prepend the backend base URL
+    if (imagePath.startsWith('/uploads/')) {
+      // Extract the base URL from API_BASE_URL (remove /api)
+      const baseUrl = config.API_BASE_URL.replace('/api', '');
+      return `${baseUrl}${imagePath}`;
+    }
+    
+    // If it's a local asset path, return as is (will be handled by useAsset)
+    return imagePath;
+  };
+
+  // Use useAsset for local assets, direct URL for API images
+  const isApiImage = product.image && product.image.startsWith('/uploads/');
+  const productImage = isApiImage ? getImageSrc(product.image) : useAsset(product.image, "common");
+  
+  // Debug logging (remove in production)
+  if (config.ENABLE_DEBUG) {
+    console.log('ProductCard - Product:', product.name, 'Image:', product.image, 'IsApiImage:', isApiImage, 'FinalSrc:', productImage);
+  }
 
   const handleAddToCart = () => {
     if (onAddToCart) {
@@ -49,7 +72,20 @@ const ProductCard = ({
             src={productImage}
             alt={product.name}
             className={`${imageClassName} transition-transform duration-300 group-hover:scale-110`}
+            onError={(e) => {
+              // Fallback to placeholder if image fails to load
+              e.target.src = '/assets/common/store/product1-1.png';
+            }}
           />
+          
+          {/* Out of Stock Overlay */}
+          {product.stock === 0 && (
+            <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+              <div className="bg-white px-4 py-2 rounded-lg">
+                <span className="text-red-600 font-semibold text-sm">OUT OF STOCK</span>
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="text-left mt-8">

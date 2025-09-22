@@ -22,6 +22,42 @@ class StoreService {
     }
   }
 
+  async getNewArrivals(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams(filters).toString();
+      const response = await fetch(`${API_BASE_URL}/products/new-arrivals?${queryParams}`, {
+        method: 'GET',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch new arrivals');
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw new Error(`New arrivals fetch error: ${error.message}`);
+    }
+  }
+
+  async getAllProducts(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams(filters).toString();
+      const response = await fetch(`${API_BASE_URL}/products/all?${queryParams}`, {
+        method: 'GET',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch all products');
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw new Error(`All products fetch error: ${error.message}`);
+    }
+  }
+
   async getProduct(id) {
     try {
       const response = await fetch(`${API_BASE_URL}/products/${id}`, {
@@ -36,6 +72,24 @@ class StoreService {
       return data;
     } catch (error) {
       throw new Error(`Product fetch error: ${error.message}`);
+    }
+  }
+
+  async getRelatedProducts(productId, filters = {}) {
+    try {
+      const queryParams = new URLSearchParams(filters).toString();
+      const response = await fetch(`${API_BASE_URL}/products/${productId}/related?${queryParams}`, {
+        method: 'GET',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch related products');
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw new Error(`Related products fetch error: ${error.message}`);
     }
   }
 
@@ -160,7 +214,7 @@ class StoreService {
     }
   }
 
-  async addToCart(productId, quantity = 1) {
+  async addToCart(productId, quantity = 1, size = "M") {
     try {
       const response = await fetch(`${API_BASE_URL}/cart/add`, {
         method: 'POST',
@@ -168,7 +222,7 @@ class StoreService {
           'Authorization': `Bearer ${authService.getToken()}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ productId, quantity }),
+        body: JSON.stringify({ productId, quantity, size }),
       });
       
       if (!response.ok) {
@@ -198,6 +252,48 @@ class StoreService {
       return true;
     } catch (error) {
       throw new Error(`Remove from cart error: ${error.message}`);
+    }
+  }
+
+  async updateCartItem(productId, quantity, size = "M") {
+    try {
+      const response = await fetch(`${API_BASE_URL}/cart/update`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${authService.getToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ productId, quantity, size }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update cart item');
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw new Error(`Update cart item error: ${error.message}`);
+    }
+  }
+
+  async clearCart() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/cart/clear`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authService.getToken()}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to clear cart');
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      throw new Error(`Clear cart error: ${error.message}`);
     }
   }
 }

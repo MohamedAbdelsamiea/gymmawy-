@@ -46,12 +46,20 @@ const TrainingProgramsPage = () => {
       setLoading(true);
       setError(null);
       const response = await programmeService.getProgrammes({ lang: i18n.language }); // Pass current language
-      setProgrammes(response.items || []);
+      console.log('Programmes API response:', response);
+      const programmes = response.items || [];
+      console.log('Programmes loaded:', programmes.length, 'programmes');
+      
+      if (programmes.length === 0) {
+        console.log('No programmes found in API response');
+        setProgrammes([]);
+      } else {
+        setProgrammes(programmes);
+      }
     } catch (err) {
-      console.log('API failed, using fallback data:', err.message);
+      console.error('API failed:', err.message);
       setError(err.message);
-      // Fallback to hardcoded data if API fails
-      setProgrammes(fallbackProgrammes);
+      setProgrammes([]);
     } finally {
       setLoading(false);
     }
@@ -140,7 +148,7 @@ const TrainingProgramsPage = () => {
         <img
           src={text1}
           alt="Programmes Text"
-          className="w-full h-auto w-auto min-w-xl rtl:max-w-xl ltr:max-w-4xl mx-auto brand-image mt-7 md:mt-14 object-contain"
+          className="w-full h-auto w-auto min-w-xl rtl:max-w-xl ltr:max-w-4xl mx-auto mt-7 md:mt-14 object-contain"
         />
         <p className="max-w-7xl text-xl md:text-3xl font-bold mx-auto text-[#190143] md:mb-12 mb-8 md:mt-14 mt-8">
           {t("description")}
@@ -223,7 +231,7 @@ const TrainingProgramsPage = () => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
               {programmes.length > 0 ? programmes
                 .map((prog, idx) => {
                 // Use detected currency for price selection
@@ -315,8 +323,29 @@ const TrainingProgramsPage = () => {
                   />
                 );
               }) : (
-                <div className="col-span-full text-center py-8">
-                  <p className="text-white">No programmes available</p>
+                <div className="col-span-full text-center py-12">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8 max-w-md mx-auto">
+                    <div className="text-white/80 mb-4">
+                      <svg className="h-16 w-16 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                    </div>
+                    <h3 className="text-white text-lg font-medium mb-2">
+                      {i18n.language === 'ar' ? 'لا توجد برامج تدريبية متاحة' : 'No Training Programmes Available'}
+                    </h3>
+                    <p className="text-white/70 text-sm mb-4">
+                      {i18n.language === 'ar' 
+                        ? 'نعمل على إضافة برامج تدريبية جديدة قريباً' 
+                        : 'We are working on adding new training programmes soon'
+                      }
+                    </p>
+                    <button 
+                      onClick={loadProgrammes}
+                      className="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors text-sm"
+                    >
+                      {i18n.language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useCurrency } from '../../hooks/useCurrency';
+import { useLanguage } from '../../hooks/useLanguage';
 import { config } from '../../config';
 import checkoutService from '../../services/checkoutService';
 import imageUploadService from '../../services/imageUploadService';
@@ -18,10 +19,17 @@ import {
   Calendar,
   Tag,
   Shield,
+  MapPin,
+  Phone,
+  Mail,
+  User,
+  Package,
+  Truck,
 } from 'lucide-react';
 
 const Checkout = () => {
   const { t, i18n } = useTranslation(['checkout', 'common']);
+  const { isArabic } = useLanguage();
   const { user, isAuthenticated } = useAuth();
   const { showError, showSuccess } = useToast();
   const { currency: detectedCurrency, isLoading: currencyLoading } = useCurrency();
@@ -41,8 +49,8 @@ return fallback;
     return text || fallback;
   };
   
-  // Get plan data from location state
-  const { plan, type, currency: passedCurrency } = location.state || {};
+  // Get data from location state (plan, product, or cart items)
+  const { plan, product, cartItems, type, currency: passedCurrency, buyNow, subtotal: cartSubtotal, shipping: cartShipping, total: cartTotal } = location.state || {};
   
   // Use passed currency or fallback to detected currency
   const currency = passedCurrency || detectedCurrency || 'USD';
@@ -63,12 +71,13 @@ return fallback;
     }
   }, [isAuthenticated, navigate, location.pathname, plan, type]);
 
-  // Redirect if no plan data
+  // Redirect if no data (plan, product, or cart items)
   useEffect(() => {
-    if (!plan) {
+    if (!plan && !product && !cartItems) {
+      console.log('No checkout data found, redirecting to home');
       navigate('/');
     }
-  }, [plan, navigate]);
+  }, [plan, product, cartItems, navigate]);
 
   // State management
   const [selectedDuration, setSelectedDuration] = useState('normal');
@@ -86,6 +95,15 @@ return fallback;
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Shipping details state (matching database schema)
+  const [shippingDetails, setShippingDetails] = useState({
+    shippingBuilding: '',
+    shippingStreet: '',
+    shippingCity: '',
+    shippingCountry: '',
+    shippingPostcode: ''
+  });
 
   // Use secure image hook for payment proof
   const { dataUrl: secureImageUrl, loading: imageLoading, error: imageError } = useSecureImage(
@@ -251,14 +269,6 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
   };
 
   const durationData = getDurationData();
-  
-  // Debug: Log duration data
-  console.log('=== DURATION DEBUG ===');
-  console.log('Duration data:', durationData);
-  console.log('Subscription days:', durationData.subscriptionDays);
-  console.log('Gift days:', durationData.giftDays);
-  console.log('Plan data:', plan);
-  console.log('====================');
 
   // Helper function to convert Prisma Decimal to number
   const convertDecimalToNumber = (decimalField) => {
@@ -502,11 +512,19 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       return getProgrammePrice();
     }
     
+    // For cart and product orders, don't use plan price
+    if (type === 'cart' || type === 'product') {
+      return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
+    }
+    
     // For other types or fallback
-    if (typeof plan.price === 'string') {
+    if (plan && typeof plan.price === 'string') {
       return parsePriceFromStatic(plan.price);
     }
-    return plan.price || { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
+    if (plan && plan.price) {
+      return plan.price;
+    }
+    return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
   };
 
   // Get programme price
@@ -675,6 +693,38 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
   // console.log('Price currency:', currentPrice?.currency);
   // console.log('Price currencySymbol:', currentPrice?.currencySymbol);
   // console.log('==================');
+
+  // Get pricing for cart items or single product
+  const getCartOrProductPrice = () => {
+    if (type === 'cart') {
+      return {
+        amount: cartTotal || 0,
+        currency: 'EGP',
+        currencySymbol: 'L.E'
+      };
+    } else if (type === 'product') {
+      const price = product.hasDiscount ? product.discountedPrice : product.price;
+      return {
+        amount: price * (product.quantity || 1),
+        currency: 'EGP',
+        currencySymbol: 'L.E'
+      };
+    }
+    return currentPrice;
+  };
+
+  const finalPrice = getCartOrProductPrice();
+  
+  // Calculate shipping cost (hardcoded to 200 L.E for now)
+  const getShippingCost = () => {
+    // Only add shipping for cart and product orders (physical items)
+    if (type === 'cart' || type === 'product') {
+      return 200; // 200 L.E hardcoded
+    }
+    return 0; // No shipping for subscriptions/programmes (digital)
+  };
+
+  const shippingCost = getShippingCost();
   
   // Calculate discount from plan data and coupon
   const getDiscount = () => {
@@ -682,11 +732,20 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
     let couponDiscountAmount = 0;
     
     // Get the original price before any discounts
-    const originalPrice = plan?.priceUSD?.originalAmount || 
-                         plan?.priceEGP?.originalAmount || 
-                         plan?.priceSAR?.originalAmount || 
-                         plan?.priceAED?.originalAmount || 
-                         currentPrice?.amount || 0;
+    let originalPrice = 0;
+    
+    if (type === 'cart') {
+      originalPrice = cartSubtotal || 0;
+    } else if (type === 'product') {
+      originalPrice = product.price * (product.quantity || 1);
+    } else {
+      // For subscriptions/programmes
+      originalPrice = plan?.priceUSD?.originalAmount || 
+                     plan?.priceEGP?.originalAmount || 
+                     plan?.priceSAR?.originalAmount || 
+                     plan?.priceAED?.originalAmount || 
+                     currentPrice?.amount || 0;
+    }
     
     // Check for plan-level discount percentage (subscriptions and programmes)
     if (plan?.discountPercentage && plan.discountPercentage > 0) {
@@ -715,14 +774,23 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
   const discount = getDiscount();
   
   // Get the original price before any discounts
-  const originalPrice = plan?.priceUSD?.originalAmount || 
-                       plan?.priceEGP?.originalAmount || 
-                       plan?.priceSAR?.originalAmount || 
-                       plan?.priceAED?.originalAmount || 
-                       currentPrice?.amount || 0;
+  let originalPrice = 0;
+  
+  if (type === 'cart') {
+    originalPrice = cartSubtotal || 0;
+  } else if (type === 'product') {
+    originalPrice = product.price * (product.quantity || 1);
+  } else {
+    // For subscriptions/programmes
+    originalPrice = plan?.priceUSD?.originalAmount || 
+                   plan?.priceEGP?.originalAmount || 
+                   plan?.priceSAR?.originalAmount || 
+                   plan?.priceAED?.originalAmount || 
+                   currentPrice?.amount || 0;
+  }
   
   const subtotal = originalPrice;
-  const total = subtotal - discount.totalDiscount;
+  const total = subtotal - discount.totalDiscount + shippingCost;
   
   // Debug: Log discount calculation
   // console.log('=== DISCOUNT DEBUG ===');
@@ -820,6 +888,166 @@ return;
     // You could add a toast notification here
   };
 
+  // Render order summary content
+  const renderOrderSummary = () => (
+    <div className="space-y-4">
+      {type === 'cart' ? (
+        // Cart items summary
+        <div>
+          <h4 className="font-medium text-gray-900 mb-3">Order Items</h4>
+          <div className="space-y-3">
+            {cartItems?.map((item, index) => (
+              <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                <img 
+                  src={item.image} 
+                  alt={item.name}
+                  className="w-12 h-12 object-cover rounded"
+                  onError={(e) => {
+                    e.target.src = '/assets/common/store/product1-1.png';
+                  }}
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">{item.name}</p>
+                  <p className="text-xs text-gray-600">Size: {item.size} • Qty: {item.quantity}</p>
+                  <div className="flex items-center space-x-2">
+                    {item.hasDiscount ? (
+                      <>
+                        <span className="text-xs text-gray-500 line-through">
+                          {(item.price * item.quantity).toFixed(0)} L.E
+                        </span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {(item.discountedPrice * item.quantity).toFixed(0)} L.E
+                        </span>
+                        <span className="text-xs text-green-600 font-medium">
+                          -{(((item.price - item.discountedPrice) / item.price) * 100).toFixed(0)}%
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-sm font-medium text-gray-900">
+                        {(item.price * item.quantity).toFixed(0)} L.E
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : type === 'product' ? (
+        // Single product summary
+        <div>
+          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+            <img 
+              src={product.image} 
+              alt={product.name}
+              className="w-16 h-16 object-cover rounded"
+              onError={(e) => {
+                e.target.src = '/assets/common/store/product1-1.png';
+              }}
+            />
+            <div className="flex-1">
+              <h4 className="font-medium text-gray-900">{product.name}</h4>
+              <p className="text-sm text-gray-600">Size: {product.size} • Qty: {product.quantity}</p>
+              <div className="flex items-center space-x-2 mt-1">
+                {product.hasDiscount ? (
+                  <>
+                    <span className="text-xs text-gray-500 line-through">
+                      {(product.price * product.quantity).toFixed(0)} L.E
+                    </span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {(product.discountedPrice * product.quantity).toFixed(0)} L.E
+                    </span>
+                    <span className="text-xs text-green-600 font-medium">
+                      -{(((product.price - product.discountedPrice) / product.price) * 100).toFixed(0)}%
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm font-medium text-gray-900">
+                    {(product.price * product.quantity).toFixed(0)} L.E
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        // Plan/programme summary
+        <div>
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium text-gray-900">{getBilingualText(plan?.name, 'Plan')}</h4>
+            {(plan?.discountPercentage > 0) ? (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                {plan.discountPercentage}% {t('checkout.off')}
+              </span>
+            ) : null}
+          </div>
+          <p className="text-sm text-gray-600 mt-1">{getBilingualText(plan?.description, '')}</p>
+        </div>
+      )}
+
+      {/* Benefits section - only show for subscriptions */}
+      {type === 'subscription' && (
+      <div>
+        <h5 className="font-medium text-gray-900 mb-2">{t('checkout.benefits')}</h5>
+        <ul className="text-sm text-gray-600 space-y-1">
+          {plan.benefits?.map((benefit, index) => {
+            const benefitDescription = typeof benefit === 'string' ? benefit : 
+              (benefit.description ? 
+                (typeof benefit.description === 'string' ? benefit.description : 
+                  (i18n.language === 'ar' ? 
+                    (benefit.description?.ar || benefit.description?.en || '') :
+                    (benefit.description?.en || benefit.description?.ar || ''))) : '');
+            return (
+              <li key={index} className="flex items-start">
+                <CheckCircle className={`h-4 w-4 text-green-500 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'} mt-0.5 flex-shrink-0`} />
+                {benefitDescription}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      )}
+
+      <div className="border-t border-gray-200 pt-4 space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">{t('checkout.subtotal')}</span>
+          <span className="font-medium">{Number(subtotal).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{finalPrice?.currencySymbol || 'L.E'}</span>
+        </div>
+        
+        {/* Shipping cost for cart and product orders */}
+        {(type === 'cart' || type === 'product') && (
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-600">Shipping</span>
+            <span className="font-medium">
+              {shippingCost === 0 ? 'Free' : `${shippingCost} L.E`}
+            </span>
+          </div>
+        )}
+        
+        {/* Coupon discount only (for cart and product orders) */}
+        {(type === 'cart' || type === 'product') && couponValid && couponCode.trim() && discount.couponDiscount > 0 && (
+          <div className="flex justify-between text-sm text-green-600">
+            <span>{t('checkout.couponDiscount')} ({couponCode}):</span>
+            <span>-{Number(discount.couponDiscount).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{currentPrice?.currencySymbol || 'L.E'}</span>
+          </div>
+        )}
+        
+        {/* Plan discount (for subscriptions/programmes only) */}
+        {type !== 'cart' && type !== 'product' && (plan?.discountPercentage > 0) && (
+          <div className="flex justify-between text-sm text-green-600">
+            <span>{t('checkout.planDiscount')} ({plan.discountPercentage}%):</span>
+            <span>-{Number(discount.planDiscount).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{currentPrice?.currencySymbol || 'L.E'}</span>
+          </div>
+        )}
+        
+        <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2">
+          <span>{t('checkout.total')}</span>
+          <span>{Number(total).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{finalPrice?.currencySymbol || 'L.E'}</span>
+        </div>
+      </div>
+    </div>
+  );
+
   // Handle form submission
   const handleSubmit = async(e) => {
     e.preventDefault();
@@ -831,6 +1059,31 @@ return;
       const errorMessage = i18n.language === 'ar' 
         ? 'يرجى رفع إثبات الدفع قبل إرسال الطلب' 
         : 'Please upload payment proof before submitting your order';
+      setError(errorMessage);
+      showError(errorMessage);
+      setSubmitting(false);
+      return;
+    }
+
+    // Client-side validation for shipping details (cart and product orders)
+    if ((type === 'cart' || type === 'product') && paymentOption === 'cash_on_delivery') {
+      if (!shippingDetails.shippingBuilding || !shippingDetails.shippingStreet || 
+          !shippingDetails.shippingCity) {
+        const errorMessage = i18n.language === 'ar' 
+          ? 'يرجى ملء جميع البيانات المطلوبة للتوصيل' 
+          : 'Please fill in all required shipping details';
+        setError(errorMessage);
+        showError(errorMessage);
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    // Prevent submission for Tabby and Tamara (not yet available)
+    if (paymentOption === 'tabby' || paymentOption === 'tamara') {
+      const errorMessage = i18n.language === 'ar' 
+        ? 'هذا الخيار غير متاح حالياً' 
+        : 'This payment option is currently unavailable';
       setError(errorMessage);
       showError(errorMessage);
       setSubmitting(false);
@@ -938,6 +1191,52 @@ return;
         const result = await checkoutService.purchaseProgramme(plan.id, programmeData);
         console.log('Programme purchased:', result);
         showSuccess(i18n.language === 'ar' ? 'تم شراء البرنامج بنجاح!' : 'Programme purchased successfully!');
+      } else if (type === 'cart') {
+        // Handle cart order
+        const orderData = {
+          paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONE_CASH' : 
+                        paymentOption?.toUpperCase() === 'INSTAPAY' ? 'INSTA_PAY' : 
+                        paymentOption?.toUpperCase() === 'CASH_ON_DELIVERY' ? 'CASH_ON_DELIVERY' :
+                        paymentOption?.toUpperCase(),
+          currency: 'EGP',
+          couponId: couponValid && couponData ? couponData.id : null,
+          shippingDetails: shippingDetails,
+          shippingCost: shippingCost,
+        };
+
+        // Only include paymentProof if it has a value and is not cash on delivery
+        if (paymentProofUrl && paymentOption !== 'cash_on_delivery') {
+          orderData.paymentProof = paymentProofUrl;
+        }
+
+        const result = await checkoutService.createOrderFromCart(orderData);
+        showSuccess(i18n.language === 'ar' ? 'تم إنشاء الطلب بنجاح!' : 'Order created successfully!');
+      } else if (type === 'product') {
+        // Handle single product order
+        const orderData = {
+          productId: product.id,
+          quantity: product.quantity,
+          size: product.size,
+          paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONE_CASH' : 
+                        paymentOption?.toUpperCase() === 'INSTAPAY' ? 'INSTA_PAY' : 
+                        paymentOption?.toUpperCase() === 'CASH_ON_DELIVERY' ? 'CASH_ON_DELIVERY' :
+                        paymentOption?.toUpperCase(),
+          currency: 'EGP',
+          couponId: couponValid && couponData ? couponData.id : null,
+          shippingDetails: shippingDetails,
+          shippingCost: shippingCost,
+          buyNow: true,
+        };
+
+        // Only include paymentProof if it has a value and is not cash on delivery
+        if (paymentProofUrl && paymentOption !== 'cash_on_delivery') {
+          orderData.paymentProof = paymentProofUrl;
+        }
+
+        console.log('Creating single product order with data:', orderData);
+        const result = await checkoutService.createOrder(orderData);
+        console.log('Single product order created:', result);
+        showSuccess(i18n.language === 'ar' ? 'تم إنشاء الطلب بنجاح!' : 'Order created successfully!');
       } else {
         // console.log('Other order type submitted:', { plan, type, paymentOption, paymentProof });
       }
@@ -970,7 +1269,8 @@ return;
     }
   };
 
-  if (!isAuthenticated || !plan) {
+  // Show loading state if no checkout data is available
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gymmawy-primary"></div>
@@ -978,27 +1278,48 @@ return;
     );
   }
 
+  // Show error state if no checkout data is available
+  if (!plan && !product && !cartItems) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 sm:p-8 text-center">
+          <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">No Checkout Data</h2>
+          <p className="text-sm sm:text-base text-gray-600 mb-4">
+            It looks like you accessed the checkout page directly. Please add items to your cart or select a product to continue.
+          </p>
+          <button
+            onClick={() => navigate('/')}
+            className="w-full bg-gymmawy-primary text-white py-3 px-4 rounded-lg hover:bg-gymmawy-secondary transition-colors text-sm sm:text-base font-medium"
+          >
+            Go to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-          <CheckCircle className="h-16 w-16 text-blue-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('checkout.orderSubmitted')}</h2>
-          <p className="text-gray-600 mb-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 sm:p-8 text-center">
+          <CheckCircle className="h-16 w-16 text-gymmawy-primary mx-auto mb-4" />
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{t('checkout.orderSubmitted')}</h2>
+          <p className="text-sm sm:text-base text-gray-600 mb-4">
             {t('checkout.orderSubmittedMessage', { type: i18n.language === 'ar' ? (type === 'subscription' ? 'اشتراك' : type === 'programme' ? 'برنامج' : type) : type })}
           </p>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-blue-800">
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-purple-800">
               <strong>{t('checkout.nextSteps')}</strong><br/>
               • {t('checkout.nextSteps1')}<br/>
               • {t('checkout.nextSteps2')}<br/>
-              • {t('checkout.nextSteps3', { type: i18n.language === 'ar' ? (type === 'subscription' ? 'اشتراك' : type === 'programme' ? 'برنامج' : type) : type })}<br/>
-              • {t('checkout.nextSteps4')}
+              • {t(`checkout.nextSteps3${type === 'subscription' ? 'Subscription' : type === 'product' ? 'Product' : type === 'cart' ? 'Cart' : ''}`, { type: i18n.language === 'ar' ? (type === 'subscription' ? 'اشتراك' : type === 'programme' ? 'برنامج' : type) : type })}<br/>
+              • {t(`checkout.nextSteps4${type === 'subscription' ? 'Subscription' : type === 'product' ? 'Product' : type === 'cart' ? 'Cart' : ''}`, { type: i18n.language === 'ar' ? (type === 'subscription' ? 'اشتراك' : type === 'programme' ? 'برنامج' : type) : type })}
             </p>
           </div>
           <button
             onClick={() => navigate('/dashboard')}
-            className="w-full bg-gymmawy-primary text-white py-2 px-4 rounded-lg hover:bg-gymmawy-secondary transition-colors"
+            className="w-full bg-gymmawy-primary text-white py-3 px-4 rounded-lg hover:bg-gymmawy-secondary transition-colors text-sm sm:text-base font-medium"
           >
             {t('checkout.goToDashboard')}
           </button>
@@ -1008,8 +1329,8 @@ return;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gray-50 pb-20 sm:pb-8 lg:pb-8 overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 min-h-full">
         {/* Header */}
         <div className="mb-8">
           <button
@@ -1023,10 +1344,11 @@ return;
           <p className="text-gray-600 mt-2">{t('checkout.subtitle')}</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-8 sm:pb-0">
           {/* Main Form */}
           <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6 mb-8 sm:mb-0">
               {/* Duration Selection (for subscriptions) */}
               {type === 'subscription' && (
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -1209,6 +1531,94 @@ return;
                 )}
               </div>
 
+              {/* Shipping Details - Only for cart and product orders */}
+              {(type === 'cart' || type === 'product') && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Truck className={`h-5 w-5 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'} text-gymmawy-primary`} />
+                    Shipping Details
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Building/Street *
+                      </label>
+                      <input
+                        type="text"
+                        value={shippingDetails.shippingBuilding}
+                        onChange={(e) => setShippingDetails(prev => ({ ...prev, shippingBuilding: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                        placeholder="Enter building name/number"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Street Address *
+                      </label>
+                      <input
+                        type="text"
+                        value={shippingDetails.shippingStreet}
+                        onChange={(e) => setShippingDetails(prev => ({ ...prev, shippingStreet: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                        placeholder="Enter street address"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        City *
+                      </label>
+                      <input
+                        type="text"
+                        value={shippingDetails.shippingCity}
+                        onChange={(e) => setShippingDetails(prev => ({ ...prev, shippingCity: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                        placeholder="Enter your city"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Country
+                      </label>
+                      <input
+                        type="text"
+                        value={shippingDetails.shippingCountry}
+                        onChange={(e) => setShippingDetails(prev => ({ ...prev, shippingCountry: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                        placeholder="Enter your country"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Postal Code
+                      </label>
+                      <input
+                        type="text"
+                        value={shippingDetails.shippingPostcode}
+                        onChange={(e) => setShippingDetails(prev => ({ ...prev, shippingPostcode: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                        placeholder="Enter postal code (optional)"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Order Summary - Mobile Only (before payment method) */}
+              <div className="lg:hidden mb-6">
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('checkout.orderSummary')}</h3>
+                  {renderOrderSummary()}
+                </div>
+              </div>
+
               {/* Payment Method */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -1254,7 +1664,7 @@ return;
                   <div className="space-y-4">
                     <h4 className="font-medium text-gray-900">{t('checkout.choosePaymentOption')}</h4>
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
                         <input
                           type="radio"
@@ -1280,8 +1690,23 @@ return;
                           className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
                         />
                         <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
-                          <img src="/assets/common/payments/vodafone-cash.png" alt="Vodafone Cash" className={`h-8 w-8 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                          <img src="/assets/common/payments/vodafone-cash.png" alt="Vodafone Cash" className={`h-8 w-auto object-contain ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
                           <span className="text-sm font-medium text-gray-900">{t('checkout.vodafoneCash')}</span>
+                        </div>
+                      </label>
+
+                      <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input
+                          type="radio"
+                          name="paymentOption"
+                          value="cash_on_delivery"
+                          checked={paymentOption === 'cash_on_delivery'}
+                          onChange={(e) => setPaymentOption(e.target.value)}
+                          className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
+                        />
+                        <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
+                          <Package className={`h-8 w-8 text-gymmawy-primary ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                          <span className="text-sm font-medium text-gray-900">Cash on Delivery</span>
                         </div>
                       </label>
                     </div>
@@ -1328,15 +1753,15 @@ return;
 
                 {/* Payment Instructions */}
                 {paymentOption === 'instapay' && (
-                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h5 className="font-medium text-blue-900 mb-3">{t('checkout.instaPayInstructions.title')}</h5>
-                    <div className="space-y-2 text-sm text-blue-800">
+                  <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <h5 className="font-medium text-purple-900 mb-3">{t('checkout.instaPayInstructions.title')}</h5>
+                    <div className="space-y-2 text-sm text-purple-800">
                       <div className="flex items-center justify-between">
                         <span>rawdakhairy@instapay</span>
                         <button
                           type="button"
                           onClick={() => copyToClipboard('rawdakhairy@instapay')}
-                          className="flex items-center text-blue-600 hover:text-blue-800"
+                          className="flex items-center text-purple-600 hover:text-purple-800"
                         >
                           <Copy className={`h-4 w-4 ${i18n.language === 'ar' ? 'ml-1' : 'mr-1'}`} />
                           {t('checkout.copy')}
@@ -1375,6 +1800,19 @@ return;
                   </div>
                 )}
 
+                {/* Cash on Delivery Instructions */}
+                {paymentOption === 'cash_on_delivery' && (
+                  <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <h5 className="font-medium text-green-900 mb-3">Cash on Delivery</h5>
+                    <div className="space-y-2 text-sm text-green-800">
+                      <p>• Pay cash when your order is delivered</p>
+                      <p>• No upfront payment required</p>
+                      <p>• Delivery fee may apply</p>
+                      <p>• Have exact change ready for faster processing</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Payment Proof Upload */}
                 {(paymentOption === 'instapay' || paymentOption === 'vodafone') && (
                   <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
@@ -1405,7 +1843,7 @@ return;
                         <div className="text-center">
                           {uploadingProof ? (
                             <>
-                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gymmawy-primary mx-auto mb-2"></div>
                               <span className="text-sm font-medium text-gray-700">{t('checkout.uploading')}</span>
                             </>
                           ) : (
@@ -1426,7 +1864,7 @@ return;
                                   {typeof paymentProof === 'string' ? (
                                     imageLoading ? (
                                       <div className="w-full h-full flex items-center justify-center">
-                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gymmawy-primary"></div>
                                       </div>
                                     ) : imageError ? (
                                       <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -1499,19 +1937,22 @@ return;
 
                 {/* Tabby/Tamara Placeholder */}
                 {(paymentOption === 'tabby' || paymentOption === 'tamara') && (
-                  <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm text-green-800">
+                  <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800">
                       {paymentOption === 'tabby' ? t('checkout.tabbyComingSoon') : t('checkout.tamaraComingSoon')}
+                    </p>
+                    <p className="text-xs text-yellow-600 mt-1">
+                      {i18n.language === 'ar' ? 'هذا الخيار غير متاح حالياً' : 'This payment option is currently unavailable'}
                     </p>
                   </div>
                 )}
               </div>
 
               {/* Submit Button */}
-              <div className="flex justify-end">
+              <div className="flex justify-end pb-12 sm:pb-0">
                 <button
                   type="submit"
-                  disabled={submitting || !paymentOption}
+                  disabled={submitting || !paymentOption || paymentOption === 'tabby' || paymentOption === 'tamara'}
                   className="px-8 py-3 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
                   {submitting ? (
@@ -1527,86 +1968,11 @@ return;
             </form>
           </div>
 
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
+          {/* Order Summary - Desktop Only */}
+          <div className="hidden lg:block lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('checkout.orderSummary')}</h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-gray-900">{getBilingualText(plan.name, 'Plan')}</h4>
-                    {(plan?.discountPercentage > 0) ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {plan.discountPercentage}% {t('checkout.off')}
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1">{getBilingualText(plan.description, '')}</p>
-                </div>
-
-                {/* Benefits section - only show for subscriptions */}
-                {type === 'subscription' && (
-                <div>
-                  <h5 className="font-medium text-gray-900 mb-2">{t('checkout.benefits')}</h5>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    {plan.benefits?.map((benefit, index) => {
-                      const benefitDescription = typeof benefit === 'string' ? benefit : 
-                        (benefit.description ? 
-                          (typeof benefit.description === 'string' ? benefit.description : 
-                            (i18n.language === 'ar' ? 
-                              (benefit.description?.ar || benefit.description?.en || '') :
-                              (benefit.description?.en || benefit.description?.ar || ''))) : '');
-                      return (
-                        <li key={index} className="flex items-start">
-                          <CheckCircle className={`h-4 w-4 text-green-500 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'} mt-0.5 flex-shrink-0`} />
-                          {benefitDescription}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-                )}
-
-                <div className="border-t border-gray-200 pt-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">{t('checkout.subtotal')}</span>
-                    <span className="font-medium">{Number(subtotal).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{currentPrice?.currencySymbol || 'L.E'}</span>
-                  </div>
-                  
-                  {discount.totalDiscount > 0 ? (
-                    <div className="space-y-2">
-                      {/* Plan discount */}
-                      {(plan?.discountPercentage > 0) && (
-                    <div className="flex justify-between text-sm text-green-600">
-                          <span>{t('checkout.planDiscount')} ({plan.discountPercentage}%):</span>
-                          <span>-{Number(discount.planDiscount).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{currentPrice?.currencySymbol || 'L.E'}</span>
-                    </div>
-                  )}
-                      
-                      {/* Coupon discount */}
-                      {(couponValid && couponCode.trim() && discount.couponDiscount > 0) && (
-                    <div className="flex justify-between text-sm text-green-600">
-                          <span>{t('checkout.couponDiscount')}:</span>
-                          <span>{couponDiscount}%{i18n.language === 'ar' ? '\u00A0' : ' '}{t('checkout.off')}</span>
-                        </div>
-                      )}
-                      
-                      
-                      {/* Total discount */}
-                      <div className="flex justify-between text-sm font-medium text-green-600 border-t border-green-200 pt-1">
-                        <span>{t('checkout.totalDiscount')}</span>
-                        <span>-{Number(discount.totalDiscount).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{currentPrice?.currencySymbol || 'L.E'}</span>
-                      </div>
-                    </div>
-                  ) : null}
-                  
-                  <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2">
-                    <span>{t('checkout.total')}</span>
-                    <span>{Number(total).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{currentPrice?.currencySymbol || 'L.E'}</span>
-                  </div>
-                </div>
-              </div>
+              {renderOrderSummary()}
             </div>
           </div>
         </div>

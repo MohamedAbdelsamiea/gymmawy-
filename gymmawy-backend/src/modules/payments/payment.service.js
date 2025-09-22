@@ -280,8 +280,28 @@ export async function approvePayment(paymentId, adminId) {
 
       if (existingSubscription) {
         const startDate = new Date();
-        const endDate = new Date();
-        endDate.setDate(startDate.getDate() + existingSubscription.subscriptionPlan.subscriptionPeriodDays);
+        
+        // Calculate total days including both subscription period and gift period
+        // Use stored subscription data if available, otherwise fall back to plan data
+        const finalSubscriptionDays = existingSubscription.subscriptionPeriodDays !== null 
+          ? existingSubscription.subscriptionPeriodDays 
+          : existingSubscription.subscriptionPlan.subscriptionPeriodDays;
+        const finalGiftDays = existingSubscription.giftPeriodDays !== null 
+          ? existingSubscription.giftPeriodDays 
+          : existingSubscription.subscriptionPlan.giftPeriodDays;
+        
+        const totalDays = finalSubscriptionDays + finalGiftDays;
+        const endDate = new Date(startDate.getTime() + totalDays * 24 * 60 * 60 * 1000);
+        
+        console.log('Subscription payment approval - Date calculation:', {
+          subscriptionId: existingSubscription.id,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          subscriptionDays: finalSubscriptionDays,
+          giftDays: finalGiftDays,
+          totalDays: totalDays,
+          source: 'payment_approval'
+        });
 
         subscription = await tx.subscription.update({
           where: { id: payment.paymentableId },
@@ -397,7 +417,7 @@ export async function approvePayment(paymentId, adminId) {
             userId: payment.userId,
             points: programmePurchase.programme.loyaltyPointsAwarded,
             type: 'EARNED',
-            source: 'PROGRAMME',
+            source: 'PROGRAMME_PURCHASE',
             sourceId: programmePurchase.id
           }
         });
@@ -496,6 +516,30 @@ export async function rejectPayment(paymentId, adminId) {
         }
       });
 
+      // Reverse loyalty points if they were awarded
+      if (existingSubscription && existingSubscription.status === 'ACTIVE' && existingSubscription.subscriptionPlan.loyaltyPointsAwarded > 0) {
+        await tx.user.update({
+          where: { id: payment.userId },
+          data: {
+            loyaltyPoints: {
+              decrement: existingSubscription.subscriptionPlan.loyaltyPointsAwarded
+            }
+          }
+        });
+
+        await tx.loyaltyTransaction.create({
+          data: {
+            userId: payment.userId,
+            points: existingSubscription.subscriptionPlan.loyaltyPointsAwarded,
+            type: 'SPENT',
+            source: 'SUBSCRIPTION',
+            sourceId: existingSubscription.id
+          }
+        });
+
+        console.log(`Reversed ${existingSubscription.subscriptionPlan.loyaltyPointsAwarded} loyalty points for cancelled subscription ${existingSubscription.id}`);
+      }
+
       // Clean up coupon redemption if subscription had a coupon
       if (existingSubscription && existingSubscription.couponId) {
         try {
@@ -508,6 +552,22 @@ export async function rejectPayment(paymentId, adminId) {
         }
       }
     } else if (payment.paymentableType === 'PRODUCT') {
+      // Get order with items before cancelling
+      const existingOrder = await tx.order.findUnique({
+        where: { id: payment.paymentableId },
+        include: {
+          items: {
+            include: {
+              productVariant: {
+                include: {
+                  product: true
+                }
+              }
+            }
+          }
+        }
+      });
+
       // Cancel order
       order = await tx.order.update({
         where: { id: payment.paymentableId },
@@ -518,6 +578,39 @@ export async function rejectPayment(paymentId, adminId) {
           items: true
         }
       });
+
+      // Reverse loyalty points if they were awarded
+      if (existingOrder && existingOrder.status === 'PAID') {
+        let totalLoyaltyPoints = 0;
+        for (const item of existingOrder.items) {
+          const pointsPerItem = item.loyaltyPointsAwarded || 0;
+          const pointsForThisItem = pointsPerItem * item.quantity;
+          totalLoyaltyPoints += pointsForThisItem;
+        }
+
+        if (totalLoyaltyPoints > 0) {
+          await tx.user.update({
+            where: { id: payment.userId },
+            data: {
+              loyaltyPoints: {
+                decrement: totalLoyaltyPoints
+              }
+            }
+          });
+
+          await tx.loyaltyTransaction.create({
+            data: {
+              userId: payment.userId,
+              points: totalLoyaltyPoints,
+              type: 'SPENT',
+              source: 'ORDER_ITEM',
+              sourceId: existingOrder.id
+            }
+          });
+
+          console.log(`Reversed ${totalLoyaltyPoints} loyalty points for cancelled order ${existingOrder.id}`);
+        }
+      }
     } else if (payment.paymentableType === 'PROGRAMME') {
       // Get programme purchase with coupon info before cancelling
       const existingProgrammePurchase = await tx.programmePurchase.findUnique({
@@ -539,6 +632,30 @@ export async function rejectPayment(paymentId, adminId) {
         }
       });
 
+      // Reverse loyalty points if they were awarded
+      if (existingProgrammePurchase && existingProgrammePurchase.status === 'COMPLETE' && existingProgrammePurchase.programme.loyaltyPointsAwarded > 0) {
+        await tx.user.update({
+          where: { id: payment.userId },
+          data: {
+            loyaltyPoints: {
+              decrement: existingProgrammePurchase.programme.loyaltyPointsAwarded
+            }
+          }
+        });
+
+        await tx.loyaltyTransaction.create({
+          data: {
+            userId: payment.userId,
+            points: existingProgrammePurchase.programme.loyaltyPointsAwarded,
+            type: 'SPENT',
+            source: 'PROGRAMME_PURCHASE',
+            sourceId: existingProgrammePurchase.id
+          }
+        });
+
+        console.log(`Reversed ${existingProgrammePurchase.programme.loyaltyPointsAwarded} loyalty points for cancelled programme purchase ${existingProgrammePurchase.id}`);
+      }
+
       // Clean up coupon redemption if programme purchase had a coupon
       if (existingProgrammePurchase && existingProgrammePurchase.couponId) {
         try {
@@ -548,6 +665,17 @@ export async function rejectPayment(paymentId, adminId) {
         } catch (error) {
           console.error('Failed to clean up coupon redemption for cancelled programme purchase:', error);
           // Don't throw error here as programme purchase is already cancelled
+        }
+      }
+
+      // Refresh programme stats after status change
+      if (programmePurchase) {
+        try {
+          const { refreshProgrammeStats } = await import('../programmes/programme.service.js');
+          await refreshProgrammeStats(programmePurchase.programmeId);
+        } catch (error) {
+          console.error('Failed to refresh programme stats after payment rejection:', error);
+          // Don't throw error here as the main operation succeeded
         }
       }
     }

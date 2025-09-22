@@ -156,8 +156,8 @@ const AdminImageUpload = ({
 
   const formatFileSize = (bytes) => {
     if (!bytes || bytes === 0) {
-return '0 Bytes';
-}
+      return '0 Bytes';
+    }
     if (typeof bytes !== 'number') {
       return 'Invalid size';
     }

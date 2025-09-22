@@ -116,6 +116,7 @@ model Product {
   loyaltyPointsRequired Int            @default(0)
   stock                 Int            @default(0)
   isActive              Boolean        @default(true)
+  order                 Int?           @default(0)
   cartItems             CartItem[]
   orderItems            OrderItem[]
   images                ProductImage[] @relation("ProductImages")
@@ -155,10 +156,11 @@ model CartItem {
   cartId    String
   quantity  Int     @default(1)
   productId String
+  size      String? @default("M")
   cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@unique([cartId, productId])
+  @@unique([cartId, productId, size])
   @@index([cartId])
   @@index([productId])
 }
@@ -178,9 +180,11 @@ model Order {
   trackingNumber   String?
   orderNumber      String      @unique
   couponDiscount   Decimal?    @db.Decimal(10, 2)
+  discountPercentage Int       @default(0)
   deletedAt        DateTime?
   price            Decimal?    @db.Decimal(10, 2)
   currency         Currency
+  metadata         Json?
   coupon           Coupon?     @relation(fields: [couponId], references: [id])
   user             User        @relation(fields: [userId], references: [id])
   items            OrderItem[]
@@ -260,26 +264,28 @@ model SubscriptionPlanBenefit {
 }
 
 model Subscription {
-  id                 String             @id @default(uuid())
-  userId             String
-  subscriptionPlanId String
-  startDate          DateTime?
-  endDate            DateTime?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-  cancelledAt        DateTime?
-  status             SubscriptionStatus @default(PENDING)
-  discountPercentage Int                @default(0)
-  paymentMethod      PaymentMethod?
-  price              Decimal?           @db.Decimal(10, 2)
-  subscriptionNumber String             @unique
-  couponDiscount     Int?
-  couponId           String?
-  isMedical          Boolean            @default(false)
-  currency           Currency?
-  coupon             Coupon?            @relation(fields: [couponId], references: [id])
-  subscriptionPlan   SubscriptionPlan   @relation(fields: [subscriptionPlanId], references: [id])
-  user               User               @relation(fields: [userId], references: [id])
+  id                     String             @id @default(uuid())
+  userId                 String
+  subscriptionPlanId     String
+  startDate              DateTime?
+  endDate                DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  cancelledAt            DateTime?
+  status                 SubscriptionStatus @default(PENDING)
+  discountPercentage     Int                @default(0)
+  paymentMethod          PaymentMethod?
+  price                  Decimal?           @db.Decimal(10, 2)
+  subscriptionNumber     String             @unique
+  couponDiscount         Int?
+  couponId               String?
+  isMedical              Boolean            @default(false)
+  currency               Currency?
+  subscriptionPeriodDays Int?               // Store the actual subscription period used
+  giftPeriodDays         Int?               // Store the actual gift period used
+  coupon                 Coupon?            @relation(fields: [couponId], references: [id])
+  subscriptionPlan       SubscriptionPlan   @relation(fields: [subscriptionPlanId], references: [id])
+  user                   User               @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([status])
@@ -379,6 +385,7 @@ model UserCouponRedemption {
   userId     String
   couponId   String
   redeemedAt DateTime @default(now())
+  usageCount Int      @default(1) // Track how many times this user used this coupon
   coupon     Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

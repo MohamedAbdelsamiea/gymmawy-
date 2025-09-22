@@ -58,15 +58,6 @@ export const validatePassword = (password, firstName = '', lastName = '', email 
     errors.push('passwordCommon');
   }
   
-  // Check for personal information
-  const personalInfo = [firstName.toLowerCase(), lastName.toLowerCase(), email.split('@')[0].toLowerCase()].filter(Boolean);
-  const containsPersonalInfo = personalInfo.some(info => 
-    info.length > 2 && password.toLowerCase().includes(info),
-  );
-  
-  if (containsPersonalInfo) {
-    errors.push('passwordPersonalInfo');
-  }
   
   return {
     isValid: errors.length === 0,

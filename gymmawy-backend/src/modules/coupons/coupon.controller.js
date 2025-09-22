@@ -1,5 +1,6 @@
 console.log('🔥 COUPON CONTROLLER LOADED - VERSION 2!');
 import * as service from "./coupon.service.js";
+import * as redemptionService from "./couponRedemption.service.js";
 import { z } from "zod";
 import { parseOrThrow } from "../../utils/validation.js";
 
@@ -150,6 +151,15 @@ export async function deleteCoupon(req, res, next) {
   try {
     await service.deleteCoupon(req.params.id);
     res.status(204).send();
+  } catch (e) { next(e); }
+}
+
+export async function getUsageStats(req, res, next) {
+  try {
+    const schema = z.object({ id: z.string().uuid() });
+    const { id } = parseOrThrow(schema, req.params);
+    const stats = await redemptionService.getCouponUsageStats(id);
+    res.json(stats);
   } catch (e) { next(e); }
 }
 

@@ -5,7 +5,9 @@ import { useNavigate } from "react-router-dom";
 import Slider from "react-slick";
 import * as Accordion from "@radix-ui/react-accordion";
 import { useAsset } from "../../hooks/useAsset";
+import { useLanguage } from "../../hooks/useLanguage";
 import { useAuth } from "../../contexts/AuthContext";
+import { getFullImageUrl } from "../../utils/imageUtils";
 import JoinUsButton from "../../components/common/JoinUsButton";
 import VideoPlayer from "../../components/common/VideoPlayer";
 import videoService from "../../services/videoService";
@@ -15,6 +17,7 @@ import { config } from "../../config";
 
 const HomePage = () => {
   const { t, i18n } = useTranslation("home");
+  const { isArabic } = useLanguage();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [isVisible, setIsVisible] = useState(false);
@@ -111,7 +114,7 @@ const HomePage = () => {
 return fallback;
 }
     if (typeof text === 'object') {
-      return i18n.language === 'ar' && text.ar 
+      return isArabic && text.ar 
         ? text.ar 
         : text.en || text.ar || fallback;
     }
@@ -123,7 +126,7 @@ return fallback;
     // Check if it's a clean week division (like 42 days = 6 weeks)
     if (days >= 7 && days % 7 === 0) {
       const weeks = days / 7;
-      return i18n.language === 'ar' 
+      return isArabic 
         ? `${weeks} ${weeks === 1 ? 'أسبوع' : 'أسابيع'}`
         : `${weeks} ${weeks === 1 ? 'week' : 'weeks'}`;
     }
@@ -317,7 +320,7 @@ return '';
             {/* Text Column */}
             <div
               className={`order-2 md:order-${
-                i18n.language === "en" ? 1 : 4
+                !isArabic ? 1 : 4
               } lg:col-span-1 flex flex-col justify-end mb-16`}
             >
               <p className="text-2xl font-archivo font-normal text-[#ebebeb] mb-4 sm:mb-8">
@@ -342,7 +345,7 @@ return '';
             {/* Empty Column */}
             <div
               className={`order-3 md:order-${
-                i18n.language === "en" ? 4 : 1
+                !isArabic ? 4 : 1
               } lg:col-span-1`}
             ></div>
           </div>
@@ -593,7 +596,7 @@ return '';
                   <div key={transformation.id} className="px-2">
                     <div className="overflow-hidden rounded-lg">
                       <img
-                        src={transformation.imageUrl ? (transformation.imageUrl.startsWith('http') ? transformation.imageUrl : `${config.API_BASE_URL}${transformation.imageUrl}`) : ''}
+                        src={getFullImageUrl(transformation.imageUrl)}
                         alt={getTransformationTitle()}
                         className="w-full h-auto object-cover rounded-lg shadow-lg transform transition-transform duration-500 hover:scale-105 hover:brightness-110"
                         onError={(e) => {
@@ -758,7 +761,9 @@ return '';
                 return (
               <div
                 key={index}
-                className="relative bg-[#ebebeb] rounded-3xl border-[2px] shadow-lg flex flex-col"
+                className={`relative bg-[#ebebeb] rounded-3xl border-[2px] shadow-lg flex flex-col ${
+                  plan.crown && (plan.crown.en || plan.crown.ar) ? 'mt-8 md:mt-0' : ''
+                }`}
                 style={{
                   borderColor: plan.crownColor || '#190143'
                 }}
@@ -827,7 +832,7 @@ return '';
                   {/* Price with discount display */}
                   <div className="mb-4 mt-2">
                     {hasDiscount && currentPrice > 0 ? (
-                      <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-6' : 'space-x-6'}`}>
+                      <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
                         <span className="text-3xl font-bold text-gray-500 line-through">
                           {currentPrice.toFixed(0)} {currencySymbol}
                         </span>
@@ -1047,7 +1052,7 @@ return '';
           "
                       >
                         <span className="mr-4">{question}</span>
-                        <Plus className="h-6 w-6 text-[#190143] font-bold transition-transform duration-300 group-data-[state=open]:rotate-45" />
+                        <Plus className="h-6 w-6 text-[#190143] font-bold transition-transform duration-300 group-data-[state=open]:rotate-45 flex-shrink-0" />
                       </Accordion.Trigger>
                     </Accordion.Header>
 

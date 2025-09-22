@@ -3,15 +3,16 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Menu, X, Globe, User, LogOut, ShoppingBag, Gift, Home, ShoppingCart } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useCart } from "../../contexts/CartContext";
 import logo from "/assets/common/logo.webp"; // import your logo directly
 
 const Header = () => {
   const { t, i18n } = useTranslation("header"); // using "header" namespace
   const { user, logout } = useAuth();
+  const { getCartTotals } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [navItems, setNavItems] = useState([]);
-  const [cartItems, setCartItems] = useState([]); // Cart state
   const location = useLocation();
   const navigate = useNavigate();
   const profileDropdownRef = useRef(null);
@@ -260,9 +261,9 @@ element.scrollIntoView({ behavior: "smooth" });
             >
               <ShoppingCart size={20} />
               <span>{t('cart')}</span>
-              {cartItems.length > 0 && (
+              {getCartTotals().itemCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {cartItems.length}
+                  {getCartTotals().itemCount}
                 </span>
               )}
             </button>
@@ -383,9 +384,9 @@ element.scrollIntoView({ behavior: "smooth" });
             >
               <ShoppingCart size={20} />
               <span>{t('cart')}</span>
-              {cartItems.length > 0 && (
+              {getCartTotals().itemCount > 0 && (
                 <span className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ml-2">
-                  {cartItems.length}
+                  {getCartTotals().itemCount}
                 </span>
               )}
             </button>

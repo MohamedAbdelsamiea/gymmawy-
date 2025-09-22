@@ -11,7 +11,11 @@ export async function getCart(req, res, next) {
 
 export async function addItem(req, res, next) {
   try {
-    const schema = z.object({ productVariantId: z.string().uuid(), quantity: z.coerce.number().int().min(1).default(1) });
+    const schema = z.object({ 
+      productId: z.string().uuid(), 
+      quantity: z.coerce.number().int().min(1).default(1),
+      size: z.string().optional().default("M")
+    });
     const data = parseOrThrow(schema, req.body || {});
     await service.addItem(req.user.id, data);
     const cart = await service.getOrCreateCart(req.user.id);
@@ -21,7 +25,11 @@ export async function addItem(req, res, next) {
 
 export async function updateItem(req, res, next) {
   try {
-    const schema = z.object({ productVariantId: z.string().uuid(), quantity: z.coerce.number().int().min(1) });
+    const schema = z.object({ 
+      productId: z.string().uuid(), 
+      quantity: z.coerce.number().int().min(1),
+      size: z.string().optional().default("M")
+    });
     const data = parseOrThrow(schema, req.body || {});
     await service.updateQuantity(req.user.id, data);
     const cart = await service.getOrCreateCart(req.user.id);

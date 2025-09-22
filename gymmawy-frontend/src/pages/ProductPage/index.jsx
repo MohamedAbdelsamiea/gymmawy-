@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAsset } from '../../hooks/useAsset';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useCart } from '../../contexts/CartContext';
 import { ChevronLeft, ChevronRight, Plus, Minus } from 'lucide-react';
+import storeService from '../../services/storeService';
+import { config } from '../../config';
 
 const ProductPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { showSuccess, showError } = useToast();
+  const { addToCart, loading: cartLoading } = useCart();
 
   // State for product interactions
   const [selectedSize, setSelectedSize] = useState('M');
@@ -17,71 +21,147 @@ const ProductPage = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [expandedAccordion, setExpandedAccordion] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  
+  // State for product data
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
 
-  // Static product data with multiple images
-  const products = [
-    {
-      id: 1,
-      name: "ORIGINAL GYMMAWY BLACK COMPRESSION",
-      price: 1299,
-      discountedPrice: 899,
-      images: [
-        "store/product1-1.png",
-        "store/product1-2.png", 
-        "store/product1-3.png",
-        "store/product1-4.png"
-      ],
-      hasDiscount: true,
-      sizes: ['S', 'M', 'L', 'XL'],
-      description: "High-quality compression shirt designed for maximum performance and comfort during your workouts.",
+  // Load product from API
+  useEffect(() => {
+    const loadProduct = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await storeService.getProduct(id);
+        console.log('Product API response:', response);
+        
+        if (response.product) {
+          console.log('Product API response:', response.product);
+          console.log('Product prices:', response.product.prices);
+          setProduct(response.product);
+        } else {
+          setError('Product not found');
+        }
+      } catch (err) {
+        console.error('Error loading product:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      loadProduct();
+    }
+  }, [id]);
+
+  // Load related products
+  useEffect(() => {
+    const loadRelatedProducts = async () => {
+      if (!id) return;
+      
+      try {
+        setRelatedLoading(true);
+        const response = await storeService.getRelatedProducts(id, { 
+          limit: 4,
+          currency: 'EGP' 
+        });
+        console.log('Related products API response:', response);
+        
+        const transformedRelated = (response.items || []).map(transformProduct);
+        console.log('Transformed related products:', transformedRelated);
+        setRelatedProducts(transformedRelated);
+      } catch (err) {
+        console.error('Error loading related products:', err);
+        setRelatedProducts([]);
+      } finally {
+        setRelatedLoading(false);
+      }
+    };
+
+    if (id) {
+      loadRelatedProducts();
+    }
+  }, [id]);
+
+  // Transform API product data
+  const transformProduct = (apiProduct) => {
+    const primaryImage = apiProduct.images?.find(img => img.isPrimary) || apiProduct.images?.[0];
+    
+    // Get price for EGP currency (default)
+    const egpPrice = apiProduct.prices?.find(p => p.currency === 'EGP');
+    const price = egpPrice?.amount ? parseFloat(egpPrice.amount) : 0;
+    const discountPercentage = apiProduct.discountPercentage || 0;
+    const discountedPrice = discountPercentage > 0 ? price * (1 - discountPercentage / 100) : price;
+    
+    // Handle image URL - check if it's an API image or local asset
+    const getImageSrc = (imagePath) => {
+      if (!imagePath) return '/assets/common/store/product1-1.png'; // Fallback
+      
+      if (imagePath.startsWith('/uploads/')) {
+        const baseUrl = config.API_BASE_URL.replace('/api', '');
+        return `${baseUrl}${imagePath}`;
+      }
+      return imagePath;
+    };
+    
+    const productImage = primaryImage?.url ? getImageSrc(primaryImage.url) : '/assets/common/store/product1-1.png';
+    
+    console.log('Transform product - EGP Price:', egpPrice);
+    console.log('Transform product - Price:', price);
+    console.log('Transform product - Discount:', discountPercentage);
+    console.log('Transform product - Discounted Price:', discountedPrice);
+    console.log('Transform product - Primary Image:', primaryImage);
+    console.log('Transform product - Final Image:', productImage);
+    
+    return {
+      id: apiProduct.id,
+      name: apiProduct.name?.en || apiProduct.name || 'Unnamed Product',
+      price: price,
+      discountedPrice: discountedPrice,
+      hasDiscount: discountPercentage > 0,
+      stock: apiProduct.stock || 0,
+      image: productImage, // Single image for related products
+      images: apiProduct.images?.map(img => img.url) || [],
+      description: apiProduct.description?.en || apiProduct.description || '',
+      sizes: ['S', 'M', 'L', 'XL'], // Default sizes for now
       productDetails: "Made from premium moisture-wicking fabric with compression technology. Features ergonomic seams and flatlock stitching for maximum comfort. Perfect for intense workouts and training sessions.",
       careInstructions: "Machine wash cold with like colors. Do not bleach. Tumble dry low. Iron on low heat if needed. Do not dry clean.",
       sizeChart: "S: Chest 36-38\", M: Chest 38-40\", L: Chest 40-42\", XL: Chest 42-44\""
-    },
-    {
-      id: 2,
-      name: "ORIGINAL GYMMAWY BLACK PANTS",
-      price: 1600,
-      discountedPrice: 1340,
-      images: [
-        "store/product2-1.png",
-        "store/product2-2.png",
-        "store/product2-3.png", 
-        "store/product2-4.png"
-      ],
-      hasDiscount: true,
-      sizes: ['S', 'M', 'L', 'XL'],
-      description: "Premium black pants perfect for training and casual wear with superior comfort and style.",
-      productDetails: "Crafted from high-quality stretch fabric with reinforced knees and seat. Features multiple pockets and elastic waistband for comfort and functionality.",
-      careInstructions: "Machine wash cold. Do not bleach. Tumble dry low. Iron on medium heat. Do not dry clean.",
-      sizeChart: "S: Waist 30-32\", M: Waist 32-34\", L: Waist 34-36\", XL: Waist 36-38\""
-    }
-  ];
+    };
+  };
 
-  const product = products.find(p => p.id === parseInt(id)) || products[0];
-  const currentImage = useAsset(product.images[currentImageIndex], "common");
+  const transformedProduct = product ? transformProduct(product) : null;
+  const currentImage = transformedProduct?.images?.[currentImageIndex] 
+    ? (transformedProduct.images[currentImageIndex].startsWith('/uploads/') 
+        ? `${config.API_BASE_URL.replace('/api', '')}${transformedProduct.images[currentImageIndex]}`
+        : useAsset(transformedProduct.images[currentImageIndex], "common"))
+    : '/assets/common/store/product1-1.png';
 
   // Helper functions
   const nextImage = () => {
-    if (isTransitioning) return;
+    if (isTransitioning || !transformedProduct?.images?.length) return;
     setIsTransitioning(true);
     setTimeout(() => {
-      setCurrentImageIndex((prev) => (prev + 1) % product.images.length);
+      setCurrentImageIndex((prev) => (prev + 1) % transformedProduct.images.length);
       setIsTransitioning(false);
     }, 150);
   };
 
   const prevImage = () => {
-    if (isTransitioning) return;
+    if (isTransitioning || !transformedProduct?.images?.length) return;
     setIsTransitioning(true);
     setTimeout(() => {
-      setCurrentImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length);
+      setCurrentImageIndex((prev) => (prev - 1 + transformedProduct.images.length) % transformedProduct.images.length);
       setIsTransitioning(false);
     }, 150);
   };
 
   const goToImage = (index) => {
-    if (isTransitioning || index === currentImageIndex) return;
+    if (isTransitioning || index === currentImageIndex || !transformedProduct?.images?.length) return;
     setIsTransitioning(true);
     setTimeout(() => {
       setCurrentImageIndex(index);
@@ -103,23 +183,91 @@ const ProductPage = () => {
       return;
     }
 
+    if (!transformedProduct) {
+      showError('Product not loaded');
+      return;
+    }
+
+    if (transformedProduct.stock === 0) {
+      showError('This product is out of stock');
+      return;
+    }
+
     try {
-      // For now, just show success message
-      showSuccess(`Added ${quantity} ${product.name} (Size: ${selectedSize}) to cart`);
+      await addToCart(transformedProduct.id, quantity, selectedSize);
+      showSuccess(`Added ${quantity} ${transformedProduct.name} (Size: ${selectedSize}) to cart`);
     } catch (error) {
-      showError('Failed to add product to cart');
+      console.error('Error adding to cart:', error);
+      showError(error.message || 'Failed to add product to cart');
     }
   };
 
   const handleBuyNow = () => {
     if (!isAuthenticated) {
-      navigate('/auth/login');
+      navigate('/auth/login', { 
+        state: { from: '/checkout', product: transformedProduct, type: 'product' }, 
+      });
       return;
     }
 
-    // For now, just show success message
-    showSuccess('Redirecting to checkout...');
+    if (!transformedProduct) {
+      showError('Product not loaded');
+      return;
+    }
+
+    if (transformedProduct.stock === 0) {
+      showError('This product is out of stock');
+      return;
+    }
+
+    // Navigate to checkout with product data for immediate purchase
+    navigate('/checkout', {
+      state: {
+        product: {
+          id: transformedProduct.id,
+          name: transformedProduct.name,
+          price: transformedProduct.price,
+          discountedPrice: transformedProduct.discountedPrice,
+          hasDiscount: transformedProduct.hasDiscount,
+          image: transformedProduct.image,
+          quantity: quantity,
+          size: selectedSize,
+          stock: transformedProduct.stock,
+        },
+        type: 'product',
+        buyNow: true, // Flag to indicate this is a buy now purchase
+      },
+    });
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#190143] mx-auto mb-4"></div>
+          <p className="text-[#190143] text-lg">Loading product...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !transformedProduct) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 text-lg mb-4">{error || 'Product not found'}</p>
+          <button 
+            onClick={() => navigate('/store')} 
+            className="px-4 py-2 bg-[#190143] text-white rounded-lg hover:bg-[#281159] transition-colors"
+          >
+            Back to Store
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -131,16 +279,28 @@ const ProductPage = () => {
               <div className="relative w-full h-full">
                 <img
                   src={currentImage}
-                  alt={product.name}
+                  alt={transformedProduct.name}
                   className={`w-full h-full object-cover transition-all duration-300 ease-in-out ${
                     isTransitioning ? 'opacity-50 scale-105' : 'opacity-100 scale-100'
                   }`}
                   key={currentImageIndex}
+                  onError={(e) => {
+                    e.target.src = '/assets/common/store/product1-1.png';
+                  }}
                 />
               </div>
               
+              {/* Out of Stock Overlay */}
+              {transformedProduct.stock === 0 && (
+                <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+                  <div className="bg-white px-6 py-3 rounded-lg">
+                    <span className="text-red-600 font-bold text-lg">OUT OF STOCK</span>
+                  </div>
+                </div>
+              )}
+              
               {/* Carousel Navigation */}
-              {product.images.length > 1 && (
+              {transformedProduct.images.length > 1 && (
                 <>
                   <button
                     onClick={prevImage}
@@ -159,25 +319,34 @@ const ProductPage = () => {
             </div>
 
             {/* Image Thumbnails */}
-            {product.images.length > 1 && (
+            {transformedProduct.images.length > 1 && (
               <div className="flex gap-2 sm:gap-3 mt-4 sm:mt-6 justify-center">
-                {product.images.map((image, index) => (
-                  <button
-                    key={index}
-                    onClick={() => goToImage(index)}
-                    className={`w-12 h-12 sm:w-16 sm:h-16 overflow-hidden transition-all duration-300 transform hover:scale-105 ${
-                      index === currentImageIndex 
-                        ? 'ring-2 ring-[#190143] ring-opacity-30' 
-                        : 'hover:bg-[#190143] hover:bg-opacity-10'
-                    }`}
-                  >
-                    <img
-                      src={useAsset(image, "common")}
-                      alt={`${product.name} ${index + 1}`}
-                      className="w-full h-full object-cover transition-all duration-300"
-                    />
-                  </button>
-                ))}
+                {transformedProduct.images.map((image, index) => {
+                  const thumbnailSrc = image.startsWith('/uploads/') 
+                    ? `${config.API_BASE_URL.replace('/api', '')}${image}`
+                    : useAsset(image, "common");
+                  
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => goToImage(index)}
+                      className={`w-12 h-12 sm:w-16 sm:h-16 overflow-hidden transition-all duration-300 transform hover:scale-105 ${
+                        index === currentImageIndex 
+                          ? 'ring-2 ring-[#190143] ring-opacity-30' 
+                          : 'hover:bg-[#190143] hover:bg-opacity-10'
+                      }`}
+                    >
+                      <img
+                        src={thumbnailSrc}
+                        alt={`${transformedProduct.name} ${index + 1}`}
+                        className="w-full h-full object-cover transition-all duration-300"
+                        onError={(e) => {
+                          e.target.src = '/assets/common/store/product1-1.png';
+                        }}
+                      />
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -185,22 +354,29 @@ const ProductPage = () => {
           {/* Product Details */}
           <div className="space-y-4 sm:space-y-6 px-4 sm:px-8 md:px-16 lg:px-28">
             <div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#190143] mb-3 sm:mb-4">{product.name}</h1>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#190143] mb-3 sm:mb-4">{transformedProduct.name}</h1>
+              
+              {/* Stock Status */}
+              {transformedProduct.stock === 0 && (
+                <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-lg">
+                  <span className="text-red-600 font-semibold">This product is currently out of stock</span>
+                </div>
+              )}
               
               {/* Pricing */}
               <div className="mb-6">
-                {product.hasDiscount ? (
+                {transformedProduct.hasDiscount ? (
                   <div className="flex items-center space-x-4">
                     <span className="text-2xl font-bold text-[#190143]">
-                      {product.discountedPrice} L.E
+                      {transformedProduct.discountedPrice.toFixed(0)} L.E
                     </span>
                     <span className="text-2xl font-light text-gray-500 line-through">
-                      {product.price} L.E
+                      {transformedProduct.price.toFixed(0)} L.E
                     </span>
                   </div>
                 ) : (
                   <span className="text-2xl font-bold text-[#190143]">
-                    {product.price} L.E
+                    {transformedProduct.price.toFixed(0)} L.E
                   </span>
                 )}
               </div>
@@ -209,15 +385,16 @@ const ProductPage = () => {
               <div className="mb-6">
                 <h3 className="text-base font-medium text-[#190143] mb-3">Size</h3>
                 <div className="flex gap-2">
-                  {product.sizes.map((size) => (
+                  {transformedProduct.sizes.map((size) => (
                     <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
+                      disabled={transformedProduct.stock === 0}
                       className={`w-10 h-10 border border-[#190143] flex items-center justify-center text-sm font-medium transition-all duration-300 ${
                         selectedSize === size
                           ? 'bg-[#190143] text-white'
                           : 'bg-white text-[#190143] hover:bg-[#190143] hover:text-white'
-                      }`}
+                      } ${transformedProduct.stock === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {size}
                     </button>
@@ -229,10 +406,11 @@ const ProductPage = () => {
               <div className="mb-6">
                 <h3 className="text-base font-medium text-[#190143] mb-3">Quantity</h3>
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center border border-[#190143] w-28 h-12">
+                  <div className={`flex items-center border border-[#190143] w-28 h-12 ${transformedProduct.stock === 0 ? 'opacity-50' : ''}`}>
                     <button
                       onClick={() => handleQuantityChange(-1)}
-                      className="w-8 h-12 flex items-center justify-center hover:bg-[#190143] hover:text-white transition-colors duration-200 text-[#190143]"
+                      disabled={transformedProduct.stock === 0}
+                      className="w-8 h-12 flex items-center justify-center hover:bg-[#190143] hover:text-white transition-colors duration-200 text-[#190143] disabled:cursor-not-allowed"
                     >
                       <Minus className="w-4 h-4" />
                     </button>
@@ -249,12 +427,14 @@ const ProductPage = () => {
                           handleQuantityChange(-1);
                         }
                       }}
-                      className="w-12 h-12 text-center text-base font-medium text-[#190143] border-0 focus:outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      disabled={transformedProduct.stock === 0}
+                      className="w-12 h-12 text-center text-base font-medium text-[#190143] border-0 focus:outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:cursor-not-allowed"
                       min="1"
                     />
                     <button
                       onClick={() => handleQuantityChange(1)}
-                      className="w-8 h-12 flex items-center justify-center hover:bg-[#190143] hover:text-white transition-colors duration-200 text-[#190143]"
+                      disabled={transformedProduct.stock === 0}
+                      className="w-8 h-12 flex items-center justify-center hover:bg-[#190143] hover:text-white transition-colors duration-200 text-[#190143] disabled:cursor-not-allowed"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
@@ -262,12 +442,21 @@ const ProductPage = () => {
                   
                   <button
                     onClick={handleAddToCart}
-                    className="bg-[#190143] text-white px-6 py-3 text-base font-medium hover:bg-white hover:text-[#190143] hover:border-[#190143] border border-transparent transition-all duration-300 flex items-center justify-center gap-2 flex-1 h-12"
+                    disabled={transformedProduct.stock === 0 || cartLoading}
+                    className={`px-6 py-3 text-base font-medium transition-all duration-300 flex items-center justify-center gap-2 flex-1 h-12 ${
+                      transformedProduct.stock === 0 || cartLoading
+                        ? 'bg-gray-400 text-white cursor-not-allowed'
+                        : 'bg-[#190143] text-white hover:bg-white hover:text-[#190143] hover:border-[#190143] border border-transparent'
+                    }`}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0L17 13m-10 0h10" />
-                    </svg>
-                    ADD TO CART
+                    {cartLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0L17 13m-10 0h10" />
+                      </svg>
+                    )}
+                    {transformedProduct.stock === 0 ? 'OUT OF STOCK' : cartLoading ? 'ADDING...' : 'ADD TO CART'}
                   </button>
                 </div>
               </div>
@@ -276,9 +465,14 @@ const ProductPage = () => {
               <div className="mb-6">
                 <button
                   onClick={handleBuyNow}
-                  className="bg-[#190143] text-white px-6 py-3 text-base font-medium hover:bg-white hover:text-[#190143] hover:border-[#190143] border border-transparent transition-all duration-300 w-full"
+                  disabled={transformedProduct.stock === 0}
+                  className={`px-6 py-3 text-base font-medium transition-all duration-300 w-full ${
+                    transformedProduct.stock === 0
+                      ? 'bg-gray-400 text-white cursor-not-allowed'
+                      : 'bg-[#190143] text-white hover:bg-white hover:text-[#190143] hover:border-[#190143] border border-transparent'
+                  }`}
                 >
-                  BUY IT NOW
+                  {transformedProduct.stock === 0 ? 'OUT OF STOCK' : 'BUY IT NOW'}
                 </button>
               </div>
 
@@ -291,7 +485,7 @@ const ProductPage = () => {
                     className="w-full flex justify-between items-center py-3 text-left"
                   >
                     <span className="text-base font-medium text-[#190143]">PRODUCT DETAILS</span>
-                    <Plus className={`w-4 h-4 text-[#190143] transition-transform duration-300 ${
+                    <Plus className={`h-6 w-6 text-[#190143] font-bold transition-transform duration-300 flex-shrink-0 ${
                       expandedAccordion === 'details' ? 'rotate-45' : ''
                     }`} />
                   </button>
@@ -313,7 +507,7 @@ const ProductPage = () => {
                     className="w-full flex justify-between items-center py-3 text-left"
                   >
                     <span className="text-base font-medium text-[#190143]">CARE & MAINTENANCE</span>
-                    <Plus className={`w-4 h-4 text-[#190143] transition-transform duration-300 ${
+                    <Plus className={`h-6 w-6 text-[#190143] font-bold transition-transform duration-300 flex-shrink-0 ${
                       expandedAccordion === 'care' ? 'rotate-45' : ''
                     }`} />
                   </button>
@@ -335,7 +529,7 @@ const ProductPage = () => {
                     className="w-full flex justify-between items-center py-3 text-left"
                   >
                     <span className="text-base font-medium text-[#190143]">SIZE CHART</span>
-                    <Plus className={`w-4 h-4 text-[#190143] transition-transform duration-300 ${
+                    <Plus className={`h-6 w-6 text-[#190143] font-bold transition-transform duration-300 flex-shrink-0 ${
                       expandedAccordion === 'size' ? 'rotate-45' : ''
                     }`} />
                   </button>
@@ -357,36 +551,64 @@ const ProductPage = () => {
         {/* Related Items Section */}
         <div className="mt-20">
           <h2 className="text-3xl font-light text-[#190143] mb-8 text-center">RELATED ITEMS</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {products.filter(p => p.id !== product.id).map((relatedProduct) => (
-              <div key={relatedProduct.id} className="group cursor-pointer" onClick={() => navigate(`/product/${relatedProduct.id}`)}>
-                <div className="aspect-square overflow-hidden mb-4">
-                  <img
-                    src={useAsset(relatedProduct.images[0], "common")}
-                    alt={relatedProduct.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+          
+          {relatedLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+              {[...Array(4)].map((_, index) => (
+                <div key={index} className="bg-gray-200 rounded-lg aspect-square animate-pulse"></div>
+              ))}
+            </div>
+          ) : relatedProducts.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-600 text-lg">No related items found</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+              {relatedProducts.map((relatedProduct) => (
+                <div key={relatedProduct.id} className="bg-white transition-all duration-300 group">
+                  <Link to={`/product/${relatedProduct.id}`}>
+                    <div className="relative overflow-hidden">
+                      <img
+                        src={relatedProduct.image}
+                        alt={relatedProduct.name}
+                        className="w-full h-auto transition-transform duration-300 group-hover:scale-110"
+                      />
+                      
+                      {/* Out of Stock Overlay */}
+                      {relatedProduct.stock === 0 && (
+                        <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+                          <div className="bg-white px-4 py-2 rounded-lg">
+                            <span className="text-red-600 font-semibold text-sm">OUT OF STOCK</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="text-left mt-8">
+                      <h3 className="text-2xl font-semibold text-[#190143] mb-2">{relatedProduct.name}</h3>
+                      
+                      <div>
+                        {relatedProduct.hasDiscount ? (
+                          <div className="flex items-start space-x-4">
+                            <span className="text-2xl font-light text-[#190143]">
+                              {relatedProduct.discountedPrice} LE
+                            </span>
+                            <span className="text-2xl font-light text-gray-500 line-through">
+                              {relatedProduct.price} LE
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-2xl font-light text-[#190143]">
+                            {relatedProduct.price} LE
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
                 </div>
-                <h3 className="text-lg font-medium text-[#190143] mb-2">{relatedProduct.name}</h3>
-                <div className="flex items-center space-x-2">
-                  {relatedProduct.hasDiscount ? (
-                    <>
-                      <span className="text-lg font-light text-[#190143]">
-                        {relatedProduct.discountedPrice} L.E
-                      </span>
-                      <span className="text-lg font-light text-gray-500 line-through">
-                        {relatedProduct.price} L.E
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-lg font-light text-[#190143]">
-                      {relatedProduct.price} L.E
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

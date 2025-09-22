@@ -150,6 +150,14 @@ export async function deleteProduct(req, res, next) {
   } catch (e) { next(e); }
 }
 
+export async function updateProductOrder(req, res, next) {
+  try {
+    const { productOrders } = req.body;
+    const updated = await service.updateProductOrder(productOrders);
+    res.json({ message: "Product order updated successfully", products: updated });
+  } catch (e) { next(e); }
+}
+
 // Subscription management
 export async function getSubscriptions(req, res, next) {
   try {
@@ -455,7 +463,8 @@ export async function createCoupon(req, res, next) {
       code: req.body.code,
       discountPercentage: req.body.discountValue,
       expirationDate: req.body.expirationDate,
-      maxRedemptionsPerUser: req.body.maxRedemptionsPerUser || req.body.maxRedemptions,
+      maxRedemptionsPerUser: req.body.maxRedemptionsPerUser,
+      maxRedemptions: req.body.maxRedemptions,
       isActive: req.body.isActive
     };
     
@@ -556,6 +565,49 @@ export async function createAdmin(req, res, next) {
   try {
     const admin = await service.createAdmin(req.body);
     res.status(201).json({ admin, message: "Admin created successfully" });
+  } catch (e) { next(e); }
+}
+
+// Status update functions
+export async function updateSubscriptionStatus(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const subscription = await service.adminUpdateSubscriptionStatus(id, status);
+    res.json({ message: "Subscription status updated successfully", subscription });
+  } catch (e) { next(e); }
+}
+
+export async function updateProgrammePurchaseStatus(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const purchase = await service.adminUpdateProgrammePurchaseStatus(id, status);
+    res.json({ message: "Programme purchase status updated successfully", purchase });
+  } catch (e) { next(e); }
+}
+
+// Coupon usage management
+export async function getCouponUsageStats(req, res, next) {
+  try {
+    const { couponId } = req.params;
+    const stats = await service.getCouponUsageStats(couponId);
+    res.json({ stats });
+  } catch (e) { next(e); }
+}
+
+export async function getAllCouponsWithUsageStats(req, res, next) {
+  try {
+    const coupons = await service.getAllCouponsWithUsageStats();
+    res.json({ coupons });
+  } catch (e) { next(e); }
+}
+
+export async function syncCouponUsageStats(req, res, next) {
+  try {
+    const { couponId } = req.params;
+    const stats = await service.syncCouponUsageStats(couponId);
+    res.json({ message: "Coupon usage stats synced successfully", stats });
   } catch (e) { next(e); }
 }
 

@@ -14,6 +14,7 @@ export async function currencyDetectionMiddleware(req, res, next) {
   try {
     // Check if DEV_CURRENCY is set for development override
     if (process.env.DEV_CURRENCY) {
+      console.log(`🔧 DEV_CURRENCY override: ${process.env.DEV_CURRENCY}`);
       req.currency = process.env.DEV_CURRENCY;
       res.set('X-Currency', process.env.DEV_CURRENCY);
       next();
@@ -28,6 +29,8 @@ export async function currencyDetectionMiddleware(req, res, next) {
     
     // Set currency in response headers for frontend
     res.set('X-Currency', currency);
+    
+    console.log(`🌍 Currency detected: ${currency} for IP: ${getClientIP(req)}`);
     
     next();
   } catch (error) {

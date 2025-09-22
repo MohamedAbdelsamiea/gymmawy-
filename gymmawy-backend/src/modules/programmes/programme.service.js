@@ -248,16 +248,26 @@ export async function getProgrammeStats() {
   const [
     totalProgrammes,
     totalPurchases,
+    activePurchases,
+    pendingPurchases,
     totalRevenue,
     recentPurchases
   ] = await Promise.all([
     prisma.programme.count(),
     prisma.programmePurchase.count(),
+    prisma.programmePurchase.count({
+      where: { status: 'COMPLETE' }
+    }),
+    prisma.programmePurchase.count({
+      where: { status: 'PENDING' }
+    }),
     prisma.programmePurchase.aggregate({
-      _sum: { price: true }
+      _sum: { price: true },
+      where: { status: 'COMPLETE' }
     }),
     prisma.programmePurchase.findMany({
       take: 10,
+      where: { status: 'COMPLETE' },
       include: {
         programme: true,
         user: { select: { id: true, email: true, firstName: true, lastName: true } }
@@ -268,7 +278,9 @@ export async function getProgrammeStats() {
 
   return {
     totalProgrammes,
-    totalPurchases,
+    totalPurchases: activePurchases, // Only count active purchases
+    monthlyPurchases: activePurchases, // For consistency with frontend
+    pendingPurchases,
     totalRevenue: totalRevenue._sum.price || 0,
     recentPurchases
   };
@@ -312,7 +324,7 @@ export async function approveProgrammePurchase(id) {
         userId: purchase.userId,
         points: purchase.programme.loyaltyPointsAwarded,
         type: 'EARNED',
-        source: 'PROGRAMME',
+        source: 'PROGRAMME_PURCHASE',
         sourceId: purchase.id
       }
     });
@@ -541,18 +553,45 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
 
     // Redeem coupon if used (within the same transaction)
     if (validatedCoupon) {
-      // Create user redemption record
-      await tx.userCouponRedemption.create({ 
-        data: { userId, couponId: validatedCoupon.id } 
+      // Check if user has already redeemed this coupon
+      const existingRedemption = await tx.userCouponRedemption.findUnique({
+        where: {
+          userId_couponId: {
+            userId: userId,
+            couponId: validatedCoupon.id
+          }
+        }
       });
-      
-      // Increment total redemptions
-      await tx.coupon.update({ 
-        where: { id: validatedCoupon.id }, 
-        data: { totalRedemptions: { increment: 1 } } 
-      });
-      
-      console.log('Coupon redeemed successfully for programme purchase:', purchase.id);
+
+      if (!existingRedemption) {
+        // Create user redemption record only if it doesn't exist
+        await tx.userCouponRedemption.create({ 
+          data: { userId, couponId: validatedCoupon.id } 
+        });
+        
+        // Increment total redemptions only for new redemptions
+        await tx.coupon.update({ 
+          where: { id: validatedCoupon.id }, 
+          data: { totalRedemptions: { increment: 1 } } 
+        });
+        
+        console.log('Coupon redeemed successfully for programme purchase:', purchase.id);
+      } else {
+        // Update usage count for existing redemption
+        await tx.userCouponRedemption.update({
+          where: {
+            userId_couponId: {
+              userId: userId,
+              couponId: validatedCoupon.id
+            }
+          },
+          data: {
+            usageCount: { increment: 1 }
+          }
+        });
+        
+        console.log('Coupon usage count incremented for programme purchase:', purchase.id);
+      }
     }
 
     // Create payment record if payment method is provided
@@ -622,4 +661,159 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
   }
 }
 
+export async function adminUpdateProgrammePurchaseStatus(id, status) {
+  // Get the current programme purchase with all related data
+  const currentPurchase = await prisma.programmePurchase.findUnique({
+    where: { id },
+    include: {
+      user: true,
+      programme: true,
+      coupon: true
+    }
+  });
 
+  if (!currentPurchase) {
+    const e = new Error("Programme purchase not found");
+    e.status = 404;
+    e.expose = true;
+    throw e;
+  }
+
+  const previousStatus = currentPurchase.status;
+
+  // Use transaction to ensure data consistency
+  return await prisma.$transaction(async (tx) => {
+    // Update the programme purchase status
+    const updatedPurchase = await tx.programmePurchase.update({
+      where: { id },
+      data: { 
+        status,
+        ...(status === 'CANCELLED' && { cancelledAt: new Date() }),
+        ...(status === 'REJECTED' && { rejectedAt: new Date() })
+      }
+    });
+
+    // Handle status changes that affect loyalty points and coupons
+    if (previousStatus !== status) {
+      // If changing from COMPLETE to CANCELLED, reverse loyalty points
+      if (previousStatus === 'COMPLETE' && status === 'CANCELLED') {
+        if (currentPurchase.programme.loyaltyPointsAwarded > 0) {
+          await tx.user.update({
+            where: { id: currentPurchase.userId },
+            data: {
+              loyaltyPoints: {
+                decrement: currentPurchase.programme.loyaltyPointsAwarded
+              }
+            }
+          });
+
+          await tx.loyaltyTransaction.create({
+            data: {
+              userId: currentPurchase.userId,
+              points: currentPurchase.programme.loyaltyPointsAwarded,
+              type: 'SPENT',
+              source: 'PROGRAMME_PURCHASE',
+              sourceId: currentPurchase.id
+            }
+          });
+
+          console.log(`Reversed ${currentPurchase.programme.loyaltyPointsAwarded} loyalty points for programme purchase status change from ${previousStatus} to ${status}`);
+        }
+
+        // Remove coupon usage if purchase had a coupon
+        if (currentPurchase.couponId) {
+          try {
+            const { removeCouponUsage } = await import('../coupons/couponUsage.service.js');
+            await removeCouponUsage(currentPurchase.userId, currentPurchase.couponId, 'PROGRAMME_PURCHASE', currentPurchase.id);
+            console.log('Coupon usage removed for programme purchase status change:', currentPurchase.id);
+          } catch (error) {
+            console.error('Failed to remove coupon usage for programme purchase status change:', error);
+          }
+        }
+      }
+      // If changing from CANCELLED to COMPLETE, award loyalty points
+      else if (previousStatus === 'CANCELLED' && status === 'COMPLETE') {
+        if (currentPurchase.programme.loyaltyPointsAwarded > 0) {
+          await tx.user.update({
+            where: { id: currentPurchase.userId },
+            data: {
+              loyaltyPoints: {
+                increment: currentPurchase.programme.loyaltyPointsAwarded
+              }
+            }
+          });
+
+          await tx.loyaltyTransaction.create({
+            data: {
+              userId: currentPurchase.userId,
+              points: currentPurchase.programme.loyaltyPointsAwarded,
+              type: 'EARNED',
+              source: 'PROGRAMME_PURCHASE',
+              sourceId: currentPurchase.id
+            }
+          });
+
+          console.log(`Awarded ${currentPurchase.programme.loyaltyPointsAwarded} loyalty points for programme purchase status change from ${previousStatus} to ${status}`);
+        }
+
+        // Apply coupon usage if purchase had a coupon
+        if (currentPurchase.couponId) {
+          try {
+            const { applyCouponUsage } = await import('../coupons/couponUsage.service.js');
+            await applyCouponUsage(currentPurchase.userId, currentPurchase.couponId, 'PROGRAMME_PURCHASE', currentPurchase.id);
+            console.log('Coupon usage applied for programme purchase status change:', currentPurchase.id);
+          } catch (error) {
+            console.error('Failed to apply coupon usage for programme purchase status change:', error);
+          }
+        }
+      }
+    }
+
+    // Refresh programme stats after status change
+    try {
+      await refreshProgrammeStats(currentPurchase.programmeId);
+    } catch (error) {
+      console.error('Failed to refresh programme stats after status change:', error);
+      // Don't throw error here as the main operation succeeded
+    }
+
+    return updatedPurchase;
+  });
+}
+
+
+
+
+/**
+ * Refresh programme stats after purchase status changes
+ * This ensures the admin dashboard shows consistent data
+ */
+export async function refreshProgrammeStats(programmeId) {
+  try {
+    // Get updated purchase counts for the specific programme
+    const activePurchases = await prisma.programmePurchase.count({
+      where: {
+        programmeId: programmeId,
+        status: "COMPLETE"
+      }
+    });
+
+    const pendingPurchases = await prisma.programmePurchase.count({
+      where: {
+        programmeId: programmeId,
+        status: "PENDING"
+      }
+    });
+
+    console.log(`Programme ${programmeId} stats refreshed - Active: ${activePurchases}, Pending: ${pendingPurchases}`);
+    
+    return {
+      programmeId,
+      activePurchases,
+      pendingPurchases
+    };
+  } catch (error) {
+    console.error("Failed to refresh programme stats:", error);
+    throw error;
+  }
+}

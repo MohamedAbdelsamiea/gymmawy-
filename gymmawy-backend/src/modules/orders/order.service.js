@@ -3,39 +3,215 @@ import { generateOrderNumber, generateUniqueId } from "../../utils/idGenerator.j
 
 const prisma = getPrismaClient();
 
+export async function createSingleProductOrder(userId, orderData = {}) {
+  const { productId, quantity = 1, size = 'M', couponId, currency = 'EGP', shippingDetails, paymentMethod, paymentProof, shippingCost = 0 } = orderData;
+  
+  // Get product details
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    include: {
+      images: true,
+      prices: true
+    }
+  });
+  
+  if (!product) {
+    const e = new Error("Product not found");
+    e.status = 404;
+    e.expose = true;
+    throw e;
+  }
+
+  // Calculate total price using Price model
+  const price = await prisma.price.findFirst({
+    where: {
+      purchasableId: product.id,
+      purchasableType: 'PRODUCT',
+      currency: currency
+    }
+  });
+  
+  if (!price) {
+    const e = new Error(`Price not found for product ${product.id} in currency ${currency}`);
+    e.status = 400;
+    e.expose = true;
+    throw e;
+  }
+  
+  // Calculate original price and discounted price
+  const productDiscountPercentage = product.discountPercentage || 0;
+  const originalPrice = price.amount * quantity;
+  const discountedPrice = originalPrice * (1 - productDiscountPercentage / 100);
+  
+  // Calculate order-level discount percentage
+  const orderDiscountPercentage = originalPrice > 0 ? 
+    ((originalPrice - discountedPrice) / originalPrice) * 100 : 0;
+
+  // Handle coupon validation and calculation if provided
+  let couponDiscount = 0;
+  let validatedCoupon = null;
+  
+  if (couponId) {
+    validatedCoupon = await prisma.coupon.findUnique({ 
+      where: { id: couponId } 
+    });
+    
+    if (!validatedCoupon) {
+      const e = new Error("Invalid coupon"); 
+      e.status = 400; 
+      e.expose = true; 
+      throw e;
+    }
+    
+    if (validatedCoupon.discountType === 'PERCENTAGE' || validatedCoupon.discountPercentage) {
+      couponDiscount = (discountedPrice * (validatedCoupon.discountPercentage || validatedCoupon.discountValue)) / 100;
+    } else if (validatedCoupon.discountType === 'FIXED') {
+      couponDiscount = Math.min(validatedCoupon.discountAmount || validatedCoupon.discountValue, discountedPrice);
+    }
+  }
+
+  const finalPrice = discountedPrice - couponDiscount + shippingCost;
+
+  // Generate unique order number
+  const orderNumber = await generateUniqueId(
+    generateOrderNumber,
+    async (number) => {
+      const existing = await prisma.order.findUnique({ where: { orderNumber: number } });
+      return !existing;
+    }
+  );
+
+  const order = await prisma.$transaction(async (tx) => {
+    // Create order
+    const created = await tx.order.create({
+      data: {
+        userId,
+        orderNumber,
+        price: finalPrice,
+        currency: currency,
+        couponId: validatedCoupon?.id || null,
+        couponDiscount: couponDiscount || null,
+        discountPercentage: Math.round(orderDiscountPercentage),
+        // Add shipping details if provided
+        shippingBuilding: shippingDetails?.shippingBuilding || null,
+        shippingStreet: shippingDetails?.shippingStreet || null,
+        shippingCity: shippingDetails?.shippingCity || null,
+        shippingCountry: shippingDetails?.shippingCountry || null,
+        shippingPostcode: shippingDetails?.shippingPostcode || null
+      }
+    });
+
+    // Create order item
+    await tx.orderItem.create({
+      data: {
+        orderId: created.id,
+        productId: product.id,
+        quantity: quantity,
+        totalPrice: finalPrice,
+      }
+    });
+
+    // Update product stock
+    await tx.product.update({
+      where: { id: product.id },
+      data: { stock: { decrement: quantity } }
+    });
+
+    // Redeem coupon if valid
+    if (validatedCoupon) {
+      await tx.userCouponRedemption.create({
+        data: { userId, couponId: validatedCoupon.id }
+      });
+      
+      await tx.coupon.update({
+        where: { id: validatedCoupon.id },
+        data: { totalRedemptions: { increment: 1 } }
+      });
+    }
+
+    return created;
+  });
+
+  return {
+    id: order.id,
+    orderNumber: order.orderNumber,
+    price: order.price,
+    currency: order.currency,
+    status: order.status,
+    createdAt: order.createdAt
+  };
+}
+
 export async function createOrderFromCart(userId, orderData = {}) {
-  const { couponId, currency = 'EGP' } = orderData;
+  const { couponId, currency = 'EGP', shippingDetails, paymentMethod, paymentProof, shippingCost = 0 } = orderData;
   
   const cart = await prisma.cart.findUnique({ 
     where: { userId }, 
     include: { 
       items: { 
         include: { 
-          productVariant: { 
-            include: { 
-              product: true 
-            } 
-          } 
+          product: true 
         } 
       } 
     } 
   });
   
-  if (!cart || cart.items.length === 0) {
+  if (!cart) {
+    const e = new Error("Cart not found"); 
+    e.status = 400; 
+    e.expose = true; 
+    throw e;
+  }
+  
+  if (cart.items.length === 0) {
     const e = new Error("Cart is empty"); 
     e.status = 400; 
     e.expose = true; 
     throw e;
   }
+  
+  console.log('Cart found with items:', cart.items.length);
+  console.log('Cart items:', cart.items.map(item => ({
+    id: item.id,
+    productId: item.productId,
+    quantity: item.quantity,
+    size: item.size,
+    productName: item.product.name?.en || 'Unknown'
+  })));
 
   // Calculate total price from cart items
   let totalPrice = 0;
-  const currencyField = currency === 'SAR' ? 'priceSAR' : 'priceEGP';
+  let originalTotalPrice = 0;
   
   for (const item of cart.items) {
-    const itemPrice = item.productVariant[currencyField] ?? item.productVariant.product[currencyField];
-    totalPrice += itemPrice * item.quantity;
+    // Get price for the specific currency
+    const price = await prisma.price.findFirst({
+      where: {
+        purchasableId: item.product.id,
+        purchasableType: 'PRODUCT',
+        currency: currency
+      }
+    });
+    
+    if (!price) {
+      const e = new Error(`Price not found for product ${item.product.id} in currency ${currency}`);
+      e.status = 400;
+      e.expose = true;
+      throw e;
+    }
+    
+    // Calculate original price and discounted price
+    const productDiscountPercentage = item.product.discountPercentage || 0;
+    const originalItemPrice = price.amount * item.quantity;
+    const discountedItemPrice = originalItemPrice * (1 - productDiscountPercentage / 100);
+    
+    originalTotalPrice += originalItemPrice;
+    totalPrice += discountedItemPrice;
   }
+  
+  // Calculate order-level discount percentage
+  const orderDiscountPercentage = originalTotalPrice > 0 ? 
+    ((originalTotalPrice - totalPrice) / originalTotalPrice) * 100 : 0;
 
   // Handle coupon validation and calculation if provided
   let couponDiscount = 0;
@@ -73,7 +249,7 @@ export async function createOrderFromCart(userId, orderData = {}) {
     }
   }
 
-  const finalPrice = Math.max(0, totalPrice - couponDiscount);
+  const finalPrice = Math.max(0, totalPrice - couponDiscount + shippingCost);
 
   console.log('Order creation - server calculated price:', {
     userId,
@@ -101,41 +277,75 @@ export async function createOrderFromCart(userId, orderData = {}) {
         price: finalPrice,
         currency: currency,
         couponId: validatedCoupon?.id || null,
-        couponDiscount: couponDiscount || null
+        couponDiscount: couponDiscount || null,
+        discountPercentage: Math.round(orderDiscountPercentage),
+        // Add shipping details if provided
+        shippingBuilding: shippingDetails?.shippingBuilding || null,
+        shippingStreet: shippingDetails?.shippingStreet || null,
+        shippingCity: shippingDetails?.shippingCity || null,
+        shippingCountry: shippingDetails?.shippingCountry || null,
+        shippingPostcode: shippingDetails?.shippingPostcode || null
       } 
     });
     
-    for (const item of cart.items) {
-      await tx.orderItem.create({
-        data: {
-          orderId: created.id,
-          productVariantId: item.productVariantId,
-          quantity: item.quantity,
-          priceEGP: item.productVariant.priceEGP ?? item.productVariant.product.priceEGP,
-          priceSAR: item.productVariant.priceSAR ?? item.productVariant.product.priceSAR,
-          loyaltyPointsAwarded: item.productVariant.product.loyaltyPointsAwarded,
-        },
-      });
-      await tx.productVariant.update({ 
-        where: { id: item.productVariantId }, 
-        data: { stock: { decrement: item.quantity } } 
-      });
-    }
+    // Create order item for single product
+    await tx.orderItem.create({
+      data: {
+        orderId: created.id,
+        productId: product.id,
+        quantity: quantity,
+        totalPrice: discountedPrice,
+        discountPercentage: productDiscountPercentage,
+      },
+    });
     
+    // Update product stock
+    await tx.product.update({ 
+      where: { id: product.id }, 
+      data: { stock: { decrement: quantity } } 
+    });
+
     // Redeem coupon if valid (within the same transaction)
     if (validatedCoupon) {
-      // Create user redemption record
-      await tx.userCouponRedemption.create({ 
-        data: { userId, couponId: validatedCoupon.id } 
+      // Check if user has already redeemed this coupon
+      const existingRedemption = await tx.userCouponRedemption.findUnique({
+        where: {
+          userId_couponId: {
+            userId: userId,
+            couponId: validatedCoupon.id
+          }
+        }
       });
-      
-      // Increment total redemptions
-      await tx.coupon.update({ 
-        where: { id: validatedCoupon.id }, 
-        data: { totalRedemptions: { increment: 1 } } 
-      });
-      
-      console.log('Coupon redeemed successfully for order:', created.id);
+
+      if (!existingRedemption) {
+        // Create user redemption record only if it doesn't exist
+        await tx.userCouponRedemption.create({ 
+          data: { userId, couponId: validatedCoupon.id } 
+        });
+        
+        // Increment total redemptions only for new redemptions
+        await tx.coupon.update({ 
+          where: { id: validatedCoupon.id }, 
+          data: { totalRedemptions: { increment: 1 } } 
+        });
+        
+        console.log('Coupon redeemed successfully for order:', created.id);
+      } else {
+        // Update usage count for existing redemption
+        await tx.userCouponRedemption.update({
+          where: {
+            userId_couponId: {
+              userId: userId,
+              couponId: validatedCoupon.id
+            }
+          },
+          data: {
+            usageCount: { increment: 1 }
+          }
+        });
+        
+        console.log('Coupon usage count incremented for order:', created.id);
+      }
     }
     
     await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
@@ -156,7 +366,17 @@ export async function listOrders(userId) {
     where: { userId }, 
     orderBy: { createdAt: "desc" }, 
     include: { 
-      items: true,
+      items: {
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              stock: true
+            }
+          }
+        }
+      },
       coupon: true
     } 
   });
@@ -166,7 +386,17 @@ export async function getOrderById(userId, id) {
   return prisma.order.findFirst({ 
     where: { id, userId }, 
     include: { 
-      items: true,
+      items: {
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              stock: true
+            }
+          }
+        }
+      },
       coupon: true
     } 
   });
@@ -265,7 +495,133 @@ export async function getOrderTracking(userId, orderId) {
 }
 
 export async function adminUpdateStatus(id, status) {
-  return prisma.order.update({ where: { id }, data: { status } });
+  // Get the current order with all related data
+  const currentOrder = await prisma.order.findUnique({
+    where: { id },
+    include: {
+      user: true,
+      items: {
+        include: {
+          productVariant: {
+            include: {
+              product: true
+            }
+          }
+        }
+      },
+      coupon: true
+    }
+  });
+
+  if (!currentOrder) {
+    const e = new Error("Order not found");
+    e.status = 404;
+    e.expose = true;
+    throw e;
+  }
+
+  const previousStatus = currentOrder.status;
+
+  // Use transaction to ensure data consistency
+  return await prisma.$transaction(async (tx) => {
+    // Update the order status
+    const updatedOrder = await tx.order.update({
+      where: { id },
+      data: { status }
+    });
+
+    // Handle status changes that affect loyalty points and coupons
+    if (previousStatus !== status) {
+      // If changing from PAID to CANCELLED/REFUNDED, reverse loyalty points
+      if (previousStatus === 'PAID' && (status === 'CANCELLED' || status === 'REFUNDED')) {
+        let totalLoyaltyPoints = 0;
+        for (const item of currentOrder.items) {
+          const pointsPerItem = item.loyaltyPointsAwarded || 0;
+          const pointsForThisItem = pointsPerItem * item.quantity;
+          totalLoyaltyPoints += pointsForThisItem;
+        }
+
+        if (totalLoyaltyPoints > 0) {
+          await tx.user.update({
+            where: { id: currentOrder.userId },
+            data: {
+              loyaltyPoints: {
+                decrement: totalLoyaltyPoints
+              }
+            }
+          });
+
+          await tx.loyaltyTransaction.create({
+            data: {
+              userId: currentOrder.userId,
+              points: totalLoyaltyPoints,
+              type: 'SPENT',
+              source: 'ORDER_ITEM',
+              sourceId: currentOrder.id
+            }
+          });
+
+          console.log(`Reversed ${totalLoyaltyPoints} loyalty points for order status change from ${previousStatus} to ${status}`);
+        }
+
+        // Remove coupon usage if order had a coupon
+        if (currentOrder.couponId) {
+          try {
+            const { removeCouponUsage } = await import('../coupons/couponUsage.service.js');
+            await removeCouponUsage(currentOrder.userId, currentOrder.couponId, 'ORDER', currentOrder.id);
+            console.log('Coupon usage removed for order status change:', currentOrder.id);
+          } catch (error) {
+            console.error('Failed to remove coupon usage for order status change:', error);
+          }
+        }
+      }
+      // If changing from CANCELLED/REFUNDED to PAID, award loyalty points
+      else if ((previousStatus === 'CANCELLED' || previousStatus === 'REFUNDED') && status === 'PAID') {
+        let totalLoyaltyPoints = 0;
+        for (const item of currentOrder.items) {
+          const pointsPerItem = item.loyaltyPointsAwarded || 0;
+          const pointsForThisItem = pointsPerItem * item.quantity;
+          totalLoyaltyPoints += pointsForThisItem;
+        }
+
+        if (totalLoyaltyPoints > 0) {
+          await tx.user.update({
+            where: { id: currentOrder.userId },
+            data: {
+              loyaltyPoints: {
+                increment: totalLoyaltyPoints
+              }
+            }
+          });
+
+          await tx.loyaltyTransaction.create({
+            data: {
+              userId: currentOrder.userId,
+              points: totalLoyaltyPoints,
+              type: 'EARNED',
+              source: 'ORDER_ITEM',
+              sourceId: currentOrder.id
+            }
+          });
+
+          console.log(`Awarded ${totalLoyaltyPoints} loyalty points for order status change from ${previousStatus} to ${status}`);
+        }
+
+        // Apply coupon usage if order had a coupon
+        if (currentOrder.couponId) {
+          try {
+            const { applyCouponUsage } = await import('../coupons/couponUsage.service.js');
+            await applyCouponUsage(currentOrder.userId, currentOrder.couponId, 'ORDER', currentOrder.id);
+            console.log('Coupon usage applied for order status change:', currentOrder.id);
+          } catch (error) {
+            console.error('Failed to apply coupon usage for order status change:', error);
+          }
+        }
+      }
+    }
+
+    return updatedOrder;
+  });
 }
 
 export async function activateOrder(orderId, adminId) {
@@ -572,7 +928,14 @@ export async function adminListOrders(params = {}) {
       },
       items: {
         include: {
-          product: true
+          product: {
+            select: {
+              id: true,
+              name: true,
+              imageUrl: true,
+              stock: true
+            }
+          }
         }
       },
       coupon: {
@@ -586,9 +949,27 @@ export async function adminListOrders(params = {}) {
     orderBy: { createdAt: 'desc' }
   });
   
+  // Get payment information for each order
+  const ordersWithPayments = await Promise.all(
+    orders.map(async (order) => {
+      const payment = await prisma.payment.findFirst({
+        where: {
+          paymentableId: order.id,
+          paymentableType: 'ORDER'
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+      
+      return {
+        ...order,
+        payment
+      };
+    })
+  );
+  
   // Get subscriptions for each order separately
   const ordersWithSubscriptions = await Promise.all(
-    orders.map(async (order) => {
+    ordersWithPayments.map(async (order) => {
       const subscriptions = await prisma.subscription.findMany({
         where: { userId: order.userId },
         include: {
@@ -605,43 +986,59 @@ export async function adminListOrders(params = {}) {
   );
   
   // Transform the data for frontend
-  return ordersWithSubscriptions.map(order => ({
-    id: order.id,
-    orderNumber: order.orderNumber,
-    customerName: order.user ? `${order.user.firstName || ''} ${order.user.lastName || ''}`.trim() : 'N/A',
-    customerEmail: order.user?.email || 'N/A',
-    customerMobile: order.user?.mobileNumber || 'N/A',
-    items: order.items.length,
-    total: order.price?.toString() || '0.00',
-    currency: order.currency,
-    status: order.status,
-    paymentStatus: 'SUCCESS', // Default for now
-    shippingStatus: 'PENDING', // Default for now
-    createdAt: order.createdAt,
-    updatedAt: order.updatedAt,
-    shippingAddress: order.shippingBuilding || order.shippingStreet || order.shippingCity ? 
-      `${order.shippingBuilding || ''} ${order.shippingStreet || ''} ${order.shippingCity || ''}`.trim() : 'N/A',
-    // Subscription information
-    subscription: order.subscriptions?.[0] ? {
-      id: order.subscriptions[0].id,
-      isMedical: order.subscriptions[0].isMedical,
-      startDate: order.subscriptions[0].startDate,
-      endDate: order.subscriptions[0].endDate,
-      status: order.subscriptions[0].status,
-      planName: order.subscriptions[0].subscriptionPlan.name,
-      planDiscount: order.subscriptions[0].subscriptionPlan.discountPercentage
-    } : null,
-    // Coupon information
-    coupon: order.coupon ? {
-      code: order.coupon.code,
-      discount: order.coupon.discountPercentage
-    } : null,
-    // Payment information (placeholder for now)
-    payment: {
-      method: 'INSTA_PAY', // Default
-      status: 'SUCCESS',
-      proofFile: null // Will be populated if payment proof exists
-    }
-  }));
+    return ordersWithSubscriptions.map(order => ({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      price: order.price,
+      currency: order.currency,
+      status: order.status,
+      paymentMethod: order.payment?.method || null,
+      paymentProof: order.payment?.paymentProofUrl || null,
+      couponDiscount: order.couponDiscount,
+      discountPercentage: order.discountPercentage,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+
+      // User information
+      user: order.user,
+
+      // Order items with product details
+      items: order.items.map(item => ({
+        id: item.id,
+        quantity: item.quantity,
+        totalPrice: item.totalPrice,
+        discountPercentage: item.discountPercentage,
+        product: item.product
+      })),
+
+      // Shipping details
+      shippingBuilding: order.shippingBuilding,
+      shippingStreet: order.shippingStreet,
+      shippingCity: order.shippingCity,
+      shippingCountry: order.shippingCountry,
+      shippingPostcode: order.shippingPostcode,
+
+      // Coupon information
+      coupon: order.coupon,
+
+      // Payment information
+      payment: order.payment,
+
+      // Metadata for original price tracking
+      metadata: {
+        originalPrice: order.metadata?.originalPrice || order.price
+      },
+
+      // Subscription information (if applicable)
+      subscription: order.subscriptions?.[0] ? {
+        id: order.subscriptions[0].id,
+        isMedical: order.subscriptions[0].isMedical,
+        startDate: order.subscriptions[0].startDate,
+        endDate: order.subscriptions[0].endDate,
+        status: order.subscriptions[0].status,
+        planName: order.subscriptions[0].subscriptionPlan.name,
+        planDiscount: order.subscriptions[0].subscriptionPlan.discountPercentage
+      } : null
+    }));
 }
 

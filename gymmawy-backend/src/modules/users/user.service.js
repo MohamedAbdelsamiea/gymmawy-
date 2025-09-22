@@ -174,10 +174,17 @@ export async function deleteAccount(userId) {
 }
 
 export async function adminCreateUser(userData) {
-  const { email, password, firstName, lastName, role = 'MEMBER' } = userData;
+  const { email, password, firstName, lastName, mobileNumber, role = 'MEMBER' } = userData;
   
   if (!email || !password) {
     const e = new Error("Email and password are required");
+    e.status = 400;
+    e.expose = true;
+    throw e;
+  }
+
+  if (!mobileNumber || mobileNumber.trim() === '') {
+    const e = new Error("Mobile number is required");
     e.status = 400;
     e.expose = true;
     throw e;
@@ -191,6 +198,15 @@ export async function adminCreateUser(userData) {
     throw e;
   }
 
+  // Check for duplicate mobile number
+  const existingMobileUser = await prisma.user.findUnique({ where: { mobileNumber } });
+  if (existingMobileUser) {
+    const e = new Error("User with this mobile number already exists");
+    e.status = 409;
+    e.expose = true;
+    throw e;
+  }
+
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
     data: {
@@ -198,6 +214,7 @@ export async function adminCreateUser(userData) {
       passwordHash,
       firstName,
       lastName,
+      mobileNumber,
       role,
       emailVerified: true // Admin created users are pre-verified
     }

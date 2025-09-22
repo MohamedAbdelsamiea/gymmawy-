@@ -94,3 +94,72 @@ export async function deleteProduct(req, res, next) {
   } catch (e) { next(e); }
 }
 
+// Get new arrivals
+export async function getNewArrivals(req, res, next) {
+  try {
+    const schema = z.object({
+      limit: z.coerce.number().int().min(1).max(50).default(8),
+      currency: z.enum(['EGP', 'SAR', 'AED', 'USD']).optional()
+    });
+    const { limit, currency } = parseOrThrow(schema, req.query);
+    const result = await service.getNewArrivals({ 
+      limit, 
+      currency: currency || req.currency 
+    });
+    res.json({
+      ...result,
+      currency: currency || req.currency,
+      meta: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (e) { next(e); }
+}
+
+// Get all products for shop-all page
+export async function getAllProducts(req, res, next) {
+  try {
+    const schema = paginationSchema.extend({
+      categoryId: z.string().uuid().optional(),
+      currency: z.enum(['EGP', 'SAR', 'AED', 'USD']).optional(),
+      search: z.string().optional()
+    });
+    const base = parseOrThrow(schema, req.query);
+    const { skip, take } = buildPagination(base);
+    const result = await service.getAllProducts({ 
+      skip, 
+      take, 
+      categoryId: base.categoryId,
+      currency: base.currency || req.currency,
+      search: base.search
+    });
+    res.json({
+      ...result,
+      currency: base.currency || req.currency,
+      meta: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (e) { next(e); }
+}
+
+export async function getRelatedProducts(req, res, next) {
+  try {
+    const schema = z.object({
+      id: z.string().uuid(),
+      limit: z.coerce.number().int().min(1).max(20).default(4),
+      currency: z.enum(['EGP', 'SAR', 'AED', 'USD']).optional()
+    });
+    const { id, limit, currency } = parseOrThrow(schema, { ...req.params, ...req.query });
+    const relatedProducts = await service.getRelatedProducts(id, limit);
+    res.json({
+      items: relatedProducts,
+      total: relatedProducts.length,
+      currency: currency || req.currency,
+      meta: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (e) { next(e); }
+}
+

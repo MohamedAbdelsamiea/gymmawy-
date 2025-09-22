@@ -12,6 +12,7 @@ router.get("/validate/:code", requireAuth, controller.validateCoupon); // Requir
 router.post("/", requireAuth, requireAdmin, controller.create);
 router.get("/", requireAuth, requireAdmin, controller.list);
 router.get("/:id", requireAuth, requireAdmin, controller.getById);
+router.get("/:id/usage-stats", requireAuth, requireAdmin, controller.getUsageStats);
 router.patch("/:id", requireAuth, requireAdmin, controller.update);
 router.delete("/:id", requireAuth, requireAdmin, controller.deleteCoupon);
 

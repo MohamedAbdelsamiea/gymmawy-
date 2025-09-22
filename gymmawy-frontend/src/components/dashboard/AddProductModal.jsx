@@ -7,8 +7,7 @@ import { useToast } from '../../contexts/ToastContext';
 const AddProductModal = ({ isOpen, onClose, onSave }) => {
   const { showSuccess, showError } = useToast();
   const [formData, setFormData] = useState({
-    name: { en: '', ar: '' },
-    description: { en: '', ar: '' },
+    name: { en: '' },
     discountPercentage: 0,
     loyaltyPointsAwarded: 0,
     loyaltyPointsRequired: 0,
@@ -34,8 +33,7 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
     if (isOpen) {
       // Reset form when modal opens
       setFormData({
-        name: { en: '', ar: '' },
-        description: { en: '', ar: '' },
+        name: { en: '' },
         discountPercentage: 0,
         loyaltyPointsAwarded: 0,
         loyaltyPointsRequired: 0,
@@ -121,9 +119,9 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Validate name - at least one language required
-    if (!formData.name.en?.trim() && !formData.name.ar?.trim()) {
-      newErrors.name = 'Name is required in at least one language';
+    // Validate name - English required
+    if (!formData.name.en?.trim()) {
+      newErrors.name = 'Name is required';
     }
 
     // Validate stock
@@ -176,6 +174,9 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
       
       const productData = {
         ...restFormData,
+        // Ensure numeric fields are properly converted
+        stock: parseInt(formData.stock) || 0,
+        discountPercentage: parseInt(formData.discountPercentage) || 0,
         imageUrl: imageUrl || '', // Send empty string, backend will transform to undefined
         carouselImages: carouselImages.map(img => img.url), // Send array of carousel image URLs
         prices: prices,
@@ -183,6 +184,10 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
         loyaltyPointsAwarded: enableLoyaltyPoints ? (parseFloat(loyaltyPointsAwarded) || 0) : 0,
         loyaltyPointsRequired: enableLoyaltyPoints ? (parseFloat(loyaltyPointsRequired) || 0) : 0,
       };
+      
+      console.log('AddProductModal - Sending product data:', productData);
+      console.log('AddProductModal - Stock:', productData.stock, 'Type:', typeof productData.stock);
+      console.log('AddProductModal - Discount:', productData.discountPercentage, 'Type:', typeof productData.discountPercentage);
       
       await onSave(productData);
       showSuccess('Product created successfully!');
@@ -232,71 +237,23 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-gray-900">Basic Information</h3>
             
-            {/* Product Names - Side by Side */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Product Name (English) *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name.en ?? ''}
-                  onChange={(e) => handleBilingualInputChange('name', 'en', e.target.value)}
-                  required
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent ${
-                    errors.name ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="Enter product name in English"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Product Name (Arabic) *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name.ar ?? ''}
-                  onChange={(e) => handleBilingualInputChange('name', 'ar', e.target.value)}
-                  required
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent ${
-                    errors.name ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="أدخل اسم المنتج بالعربية"
-                  dir="rtl"
-                />
-              </div>
+            {/* Product Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Product Name *
+              </label>
+              <input
+                type="text"
+                value={formData.name.en ?? ''}
+                onChange={(e) => handleBilingualInputChange('name', 'en', e.target.value)}
+                required
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent ${
+                  errors.name ? 'border-red-300' : 'border-gray-300'
+                }`}
+                placeholder="Enter product name"
+              />
             </div>
 
-            {/* Descriptions - Side by Side */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (English)
-                </label>
-                <textarea
-                  value={formData.description.en ?? ''}
-                  onChange={(e) => handleBilingualInputChange('description', 'en', e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-                  placeholder="Enter product description in English"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (Arabic)
-                </label>
-                <textarea
-                  value={formData.description.ar ?? ''}
-                  onChange={(e) => handleBilingualInputChange('description', 'ar', e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-                  placeholder="أدخل وصف المنتج بالعربية"
-                  dir="rtl"
-                />
-              </div>
-            </div>
           </div>
 
           {/* Product Details */}
@@ -432,7 +389,7 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
                 initialImage={imageUrl ? { url: imageUrl } : null}
                 onImageUpload={(uploadedImage) => setImageUrl(uploadedImage.url)}
                 onImageRemove={() => setImageUrl('')}
-                maxSize={5 * 1024 * 1024}
+                maxSize={10 * 1024 * 1024}
                 showPreview={true}
                 showDetails={true}
               />
@@ -452,10 +409,10 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
                   onChange={(e) => {
                     const files = Array.from(e.target.files);
                     files.forEach(file => {
-                      if (file.size <= 5 * 1024 * 1024) { // 5MB limit
+                      if (file.size <= 10 * 1024 * 1024) { // 10MB limit
                         handleCarouselImageUpload(file);
                       } else {
-                        showError('File size must be less than 5MB');
+                        showError('File size must be less than 10MB');
                       }
                     });
                     e.target.value = ''; // Reset input
@@ -479,7 +436,7 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
                       <span className="font-medium text-blue-600 hover:text-blue-500">Click to upload</span>
                     )} or drag and drop
                   </div>
-                  <div className="text-xs text-gray-500">Multiple images allowed (max 5MB each)</div>
+                  <div className="text-xs text-gray-500">Multiple images allowed (max 10MB each)</div>
                 </label>
               </div>
               

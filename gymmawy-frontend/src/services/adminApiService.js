@@ -94,6 +94,13 @@ class AdminApiService {
     });
   }
 
+  async updateProductOrder(productOrders) {
+    return this.apiCall('/admin/products/order', {
+      method: 'PATCH',
+      body: JSON.stringify({ productOrders })
+    });
+  }
+
   // ==================== CATEGORIES ====================
   async getCategories() {
     // Mock data since GET /categories endpoint doesn't exist yet

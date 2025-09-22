@@ -51,11 +51,11 @@ const TableFilters = ({
         ))}
 
         {/* Action Buttons */}
-        <div className="flex items-end space-x-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 sm:gap-4">
           {showApplyButton && (
             <button
               onClick={onApplyFilters}
-              className="flex items-center px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              className="flex items-center justify-center px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors w-full sm:w-auto"
             >
               <Filter className="h-4 w-4 mr-2" />
               {applyButtonText}
@@ -64,7 +64,7 @@ const TableFilters = ({
           {showExportButton && (
             <button
               onClick={onExport}
-              className="flex items-center px-4 py-1.5 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary transition-colors"
+              className="flex items-center justify-center px-4 py-1.5 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary transition-colors w-full sm:w-auto"
             >
               <Download className="h-4 w-4 mr-2" />
               {exportButtonText}

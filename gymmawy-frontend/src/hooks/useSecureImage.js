@@ -32,7 +32,7 @@ export const useSecureImage = (imagePath) => {
         // Remove leading slash if present to avoid double slashes
         const cleanPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
         const encodedPath = encodeURIComponent(cleanPath);
-        const fullUrl = `${config.API_BASE_URL}/api/images/data/${encodedPath}`;
+        const fullUrl = `${config.API_BASE_URL}/images/data/${encodedPath}`;
         const response = await fetch(fullUrl, {
           headers: {
             'Authorization': `Bearer ${authService.getToken()}`,

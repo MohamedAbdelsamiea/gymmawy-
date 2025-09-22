@@ -4,8 +4,59 @@ import { z } from "zod";
 export async function createOrder(req, res, next) {
   try {
     const schema = z.object({
-      couponId: z.string().optional(),
-      currency: z.enum(['EGP', 'SAR', 'AED', 'USD']).optional().default('EGP')
+      couponId: z.string().nullable().optional(),
+      currency: z.enum(['EGP', 'SAR', 'AED', 'USD']).optional().default('EGP'),
+      // For single product orders
+      productId: z.string().optional(),
+      quantity: z.number().optional(),
+      size: z.string().optional(),
+      buyNow: z.boolean().optional(),
+      // Shipping details
+      shippingDetails: z.object({
+        shippingBuilding: z.string().optional(),
+        shippingStreet: z.string().optional(),
+        shippingCity: z.string().optional(),
+        shippingCountry: z.string().optional(),
+        shippingPostcode: z.string().optional()
+      }).optional(),
+      // Payment details
+      paymentMethod: z.string().optional(),
+      paymentProof: z.string().optional(),
+      // Shipping details
+      shippingCost: z.number().optional().default(0)
+    });
+    const orderData = schema.parse(req.body || {});
+    
+    // If it's a single product order, create it directly
+    if (orderData.productId && orderData.buyNow) {
+      const order = await service.createSingleProductOrder(req.user.id, orderData);
+      res.status(201).json({ order });
+    } else {
+      // Otherwise create from cart
+      const order = await service.createOrderFromCart(req.user.id, orderData);
+      res.status(201).json({ order });
+    }
+  } catch (e) { next(e); }
+}
+
+export async function createOrderFromCart(req, res, next) {
+  try {
+    const schema = z.object({
+      couponId: z.string().nullable().optional(),
+      currency: z.enum(['EGP', 'SAR', 'AED', 'USD']).optional().default('EGP'),
+      // Shipping details
+      shippingDetails: z.object({
+        shippingBuilding: z.string().optional(),
+        shippingStreet: z.string().optional(),
+        shippingCity: z.string().optional(),
+        shippingCountry: z.string().optional(),
+        shippingPostcode: z.string().optional()
+      }).optional(),
+      // Payment details
+      paymentMethod: z.string().optional(),
+      paymentProof: z.string().optional(),
+      // Shipping details
+      shippingCost: z.number().optional().default(0)
     });
     const orderData = schema.parse(req.body || {});
     const order = await service.createOrderFromCart(req.user.id, orderData);

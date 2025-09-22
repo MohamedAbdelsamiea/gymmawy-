@@ -30,11 +30,11 @@ export async function applyCouponToOrderOrCart(userId, code) {
     // Count completed redemptions
     const completedRedemptions = coupon.totalRedemptions;
     
-    // Count pending orders that use this coupon
-    const pendingOrdersWithCoupon = await prisma.order.count({
+    // Count orders that use this coupon (all statuses except CANCELLED)
+    const ordersWithCoupon = await prisma.order.count({
       where: {
         couponId: coupon.id,
-        status: 'PENDING'
+        status: { not: 'CANCELLED' }
       }
     });
     
@@ -54,8 +54,8 @@ export async function applyCouponToOrderOrCart(userId, code) {
       }
     });
     
-    // Total global usage count (completed + pending)
-    const totalGlobalUsage = completedRedemptions + pendingOrdersWithCoupon + pendingSubscriptionsWithCoupon + pendingProgrammePurchasesWithCoupon;
+    // Total global usage count (completed + active orders/subscriptions/purchases)
+    const totalGlobalUsage = completedRedemptions + ordersWithCoupon + pendingSubscriptionsWithCoupon + pendingProgrammePurchasesWithCoupon;
     
     if (totalGlobalUsage >= coupon.maxRedemptions) {
       const e = new Error("This coupon has reached its global usage limit and can no longer be used"); e.status = 400; e.expose = true; throw e;
@@ -72,35 +72,35 @@ export async function applyCouponToOrderOrCart(userId, code) {
       }
     });
 
-    // Check pending orders that use this coupon
-    const pendingOrdersWithCoupon = await prisma.order.count({
+    // Check orders that use this coupon (all statuses except CANCELLED)
+    const ordersWithCoupon = await prisma.order.count({
       where: {
         userId: userId,
         couponId: coupon.id,
-        status: 'PENDING'
+        status: { not: 'CANCELLED' }
       }
     });
 
-    // Check pending subscriptions that use this coupon
-    const pendingSubscriptionsWithCoupon = await prisma.subscription.count({
+    // Check subscriptions that use this coupon (both PENDING and ACTIVE)
+    const subscriptionsWithCoupon = await prisma.subscription.count({
       where: {
         userId: userId,
         couponId: coupon.id,
-        status: 'PENDING'
+        status: { in: ['PENDING', 'COMPLETE'] }
       }
     });
 
-    // Check pending programme purchases that use this coupon
-    const pendingProgrammePurchasesWithCoupon = await prisma.programmePurchase.count({
+    // Check programme purchases that use this coupon (both PENDING and COMPLETE)
+    const programmePurchasesWithCoupon = await prisma.programmePurchase.count({
       where: {
         userId: userId,
         couponId: coupon.id,
-        status: 'PENDING'
+        status: { in: ['PENDING', 'COMPLETE'] }
       }
     });
 
-    // Total usage count (completed + pending)
-    const totalUsageCount = userRedemptions + pendingOrdersWithCoupon + pendingSubscriptionsWithCoupon + pendingProgrammePurchasesWithCoupon;
+    // Total usage count (completed redemptions + active orders/subscriptions/purchases)
+    const totalUsageCount = userRedemptions + ordersWithCoupon + subscriptionsWithCoupon + programmePurchasesWithCoupon;
 
     if (totalUsageCount >= coupon.maxRedemptionsPerUser) {
       const e = new Error("You have already used this coupon the maximum number of times allowed per user"); e.status = 400; e.expose = true; throw e;
@@ -130,11 +130,11 @@ export async function redeemCoupon(userId, code) {
     // Count completed redemptions
     const completedRedemptions = coupon.totalRedemptions;
     
-    // Count pending orders that use this coupon
-    const pendingOrdersWithCoupon = await prisma.order.count({
+    // Count orders that use this coupon (all statuses except CANCELLED)
+    const ordersWithCoupon = await prisma.order.count({
       where: {
         couponId: coupon.id,
-        status: 'PENDING'
+        status: { not: 'CANCELLED' }
       }
     });
     
@@ -154,8 +154,8 @@ export async function redeemCoupon(userId, code) {
       }
     });
     
-    // Total global usage count (completed + pending)
-    const totalGlobalUsage = completedRedemptions + pendingOrdersWithCoupon + pendingSubscriptionsWithCoupon + pendingProgrammePurchasesWithCoupon;
+    // Total global usage count (completed + active orders/subscriptions/purchases)
+    const totalGlobalUsage = completedRedemptions + ordersWithCoupon + pendingSubscriptionsWithCoupon + pendingProgrammePurchasesWithCoupon;
     
     if (totalGlobalUsage >= coupon.maxRedemptions) {
       const e = new Error("This coupon has reached its global usage limit and can no longer be used"); e.status = 400; e.expose = true; throw e;
@@ -172,45 +172,45 @@ export async function redeemCoupon(userId, code) {
       }
     });
 
-    // Check pending orders that use this coupon
-    const pendingOrdersWithCoupon = await prisma.order.count({
+    // Check orders that use this coupon (all statuses except CANCELLED)
+    const ordersWithCoupon = await prisma.order.count({
       where: {
         userId: userId,
         couponId: coupon.id,
-        status: 'PENDING'
+        status: { not: 'CANCELLED' }
       }
     });
 
-    // Check pending subscriptions that use this coupon
-    const pendingSubscriptionsWithCoupon = await prisma.subscription.count({
+    // Check subscriptions that use this coupon (both PENDING and ACTIVE)
+    const subscriptionsWithCoupon = await prisma.subscription.count({
       where: {
         userId: userId,
         couponId: coupon.id,
-        status: 'PENDING'
+        status: { in: ['PENDING', 'COMPLETE'] }
       }
     });
 
-    // Check pending programme purchases that use this coupon
-    const pendingProgrammePurchasesWithCoupon = await prisma.programmePurchase.count({
+    // Check programme purchases that use this coupon (both PENDING and COMPLETE)
+    const programmePurchasesWithCoupon = await prisma.programmePurchase.count({
       where: {
         userId: userId,
         couponId: coupon.id,
-        status: 'PENDING'
+        status: { in: ['PENDING', 'COMPLETE'] }
       }
     });
 
-    // Total usage count (completed + pending)
-    const totalUsageCount = userRedemptions + pendingOrdersWithCoupon + pendingSubscriptionsWithCoupon + pendingProgrammePurchasesWithCoupon;
+    // Total usage count (completed redemptions + active orders/subscriptions/purchases)
+    const totalUsageCount = userRedemptions + ordersWithCoupon + subscriptionsWithCoupon + programmePurchasesWithCoupon;
 
     if (totalUsageCount >= coupon.maxRedemptionsPerUser) {
       const e = new Error("You have already used this coupon the maximum number of times allowed per user"); e.status = 400; e.expose = true; throw e;
     }
   }
   
-  await prisma.$transaction([
-    prisma.userCouponRedemption.create({ data: { userId, couponId: coupon.id } }),
-    prisma.coupon.update({ where: { id: coupon.id }, data: { totalRedemptions: { increment: 1 } } }),
-  ]);
+  // Use centralized coupon usage tracking
+  const { applyCouponUsage } = await import('./couponUsage.service.js');
+  await applyCouponUsage(userId, coupon.id, 'DIRECT_REDEMPTION', 'direct');
+  
   return coupon;
 }
 
@@ -257,11 +257,11 @@ export async function validateCoupon(code, userId = null) {
     // Count completed redemptions
     const completedRedemptions = coupon.totalRedemptions;
     
-    // Count pending orders that use this coupon
-    const pendingOrdersWithCoupon = await prisma.order.count({
+    // Count orders that use this coupon (all statuses except CANCELLED)
+    const ordersWithCoupon = await prisma.order.count({
       where: {
         couponId: coupon.id,
-        status: 'PENDING'
+        status: { not: 'CANCELLED' }
       }
     });
     
@@ -281,8 +281,8 @@ export async function validateCoupon(code, userId = null) {
       }
     });
     
-    // Total global usage count (completed + pending)
-    const totalGlobalUsage = completedRedemptions + pendingOrdersWithCoupon + pendingSubscriptionsWithCoupon + pendingProgrammePurchasesWithCoupon;
+    // Total global usage count (completed + active orders/subscriptions/purchases)
+    const totalGlobalUsage = completedRedemptions + ordersWithCoupon + pendingSubscriptionsWithCoupon + pendingProgrammePurchasesWithCoupon;
     
     if (totalGlobalUsage >= coupon.maxRedemptions) {
       const e = new Error("This coupon has reached its global usage limit and can no longer be used");
@@ -294,45 +294,19 @@ export async function validateCoupon(code, userId = null) {
 
   // Check per-user max redemptions limit (if userId is provided)
   if (userId && coupon.maxRedemptionsPerUser > 0) {
-    // Check completed redemptions
-    const userRedemptions = await prisma.userCouponRedemption.count({
+    // Get user's actual usage count from redemption records
+    const userRedemption = await prisma.userCouponRedemption.findUnique({
       where: {
-        userId: userId,
-        couponId: coupon.id
+        userId_couponId: {
+          userId: userId,
+          couponId: coupon.id
+        }
       }
     });
 
-    // Check pending orders that use this coupon
-    const pendingOrdersWithCoupon = await prisma.order.count({
-      where: {
-        userId: userId,
-        couponId: coupon.id,
-        status: 'PENDING'
-      }
-    });
+    const userUsageCount = userRedemption ? userRedemption.usageCount : 0;
 
-    // Check pending subscriptions that use this coupon
-    const pendingSubscriptionsWithCoupon = await prisma.subscription.count({
-      where: {
-        userId: userId,
-        couponId: coupon.id,
-        status: 'PENDING'
-      }
-    });
-
-    // Check pending programme purchases that use this coupon
-    const pendingProgrammePurchasesWithCoupon = await prisma.programmePurchase.count({
-      where: {
-        userId: userId,
-        couponId: coupon.id,
-        status: 'PENDING'
-      }
-    });
-
-    // Total usage count (completed + pending)
-    const totalUsageCount = userRedemptions + pendingOrdersWithCoupon + pendingSubscriptionsWithCoupon + pendingProgrammePurchasesWithCoupon;
-
-    if (totalUsageCount >= coupon.maxRedemptionsPerUser) {
+    if (userUsageCount >= coupon.maxRedemptionsPerUser) {
       const e = new Error("You have already used this coupon the maximum number of times allowed per user");
       e.status = 400;
       e.expose = true;

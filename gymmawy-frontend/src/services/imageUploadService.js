@@ -15,7 +15,7 @@ class ImageUploadService {
       formData.append('file', file);
       formData.append('module', module);
 
-      const response = await fetch(`${this.baseURL}/api/uploads/payment-proof`, {
+      const response = await fetch(`${this.baseURL}/uploads/payment-proof`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

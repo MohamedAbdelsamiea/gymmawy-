@@ -61,6 +61,13 @@ const AddAdminModal = ({ isOpen, onClose, onSuccess }) => {
           validation = { isValid: false, error: 'invalidEmail' };
         }
         break;
+      case 'mobileNumber':
+        if (!value || value.trim() === '') {
+          validation = { isValid: false, error: 'mobileNumberRequired' };
+        } else if (value && value.length < 10) {
+          validation = { isValid: false, error: 'mobileNumberTooShort' };
+        }
+        break;
       default:
         break;
     }
@@ -82,6 +89,15 @@ const AddAdminModal = ({ isOpen, onClose, onSuccess }) => {
         throw new Error('Email and password are required');
       }
 
+      // Mobile number validation (required by backend)
+      if (!formData.mobileNumber || formData.mobileNumber.trim() === '') {
+        throw new Error('Mobile number is required');
+      }
+      
+      if (formData.mobileNumber.length < 10) {
+        throw new Error('Mobile number must be at least 10 digits');
+      }
+
       // Email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.email)) {
@@ -97,8 +113,7 @@ const AddAdminModal = ({ isOpen, onClose, onSuccess }) => {
           passwordLowercase: 'Password must contain at least one lowercase letter',
           passwordNumber: 'Password must contain at least one number',
           passwordSpecial: 'Password must contain at least one special character (!@#$%^&*)',
-          passwordCommon: 'Password is too common, please choose a stronger one',
-          passwordPersonalInfo: 'Password should not contain personal information like your name or email'
+          passwordCommon: 'Password is too common, please choose a stronger one'
         };
         throw new Error(errorMessages[passwordValidation.error] || 'Password does not meet requirements');
       }
@@ -130,8 +145,38 @@ const AddAdminModal = ({ isOpen, onClose, onSuccess }) => {
       setPasswordValidation({});
       setRealTimeErrors({});
     } catch (err) {
-      setError(err.message || 'Failed to create admin');
-      showError(err.message || 'Failed to create admin');
+      let errorMessage = 'Failed to create admin';
+      
+      // Handle different types of errors
+      if (err.message) {
+        // Check for specific validation errors
+        if (err.message.includes('mobileNumber') && err.message.includes('must not be null')) {
+          errorMessage = 'Mobile number is required';
+        } else if (err.message.includes('mobile number') && err.message.includes('already exists')) {
+          errorMessage = 'A user with this mobile number already exists';
+        } else if (err.message.includes('email') && err.message.includes('already exists')) {
+          errorMessage = 'An admin with this email already exists';
+        } else if (err.message.includes('email') && err.message.includes('invalid')) {
+          errorMessage = 'Please enter a valid email address';
+        } else if (err.message.includes('password')) {
+          errorMessage = 'Password does not meet requirements';
+        } else if (err.message.includes('validation')) {
+          errorMessage = 'Please check all required fields and try again';
+        } else if (err.message.includes('Mobile number is required')) {
+          errorMessage = 'Mobile number is required';
+        } else if (err.message.includes('Mobile number must be at least 10 digits')) {
+          errorMessage = 'Mobile number must be at least 10 digits';
+        } else if (err.message.includes('Unique constraint failed') && err.message.includes('mobileNumber')) {
+          errorMessage = 'A user with this mobile number already exists';
+        } else if (err.message.includes('Unique constraint failed') && err.message.includes('email')) {
+          errorMessage = 'An admin with this email already exists';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
+      showError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -242,7 +287,6 @@ const AddAdminModal = ({ isOpen, onClose, onSuccess }) => {
                     {realTimeErrors.password === 'passwordNumber' && 'Password must contain at least one number'}
                     {realTimeErrors.password === 'passwordSpecial' && 'Password must contain at least one special character (!@#$%^&*)'}
                     {realTimeErrors.password === 'passwordCommon' && 'Password is too common, please choose a stronger one'}
-                    {realTimeErrors.password === 'passwordPersonalInfo' && 'Password should not contain personal information like your name or email'}
                   </p>
                 )}
                 {passwordValidation.isValid && formData.password && (
@@ -351,16 +395,25 @@ const AddAdminModal = ({ isOpen, onClose, onSuccess }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mobile Number
+                  Mobile Number *
                 </label>
                 <input
                   type="tel"
                   name="mobileNumber"
                   value={formData.mobileNumber}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                  required
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent ${
+                    realTimeErrors.mobileNumber ? 'border-red-300' : 'border-gray-300'
+                  }`}
                   placeholder="+1234567890"
                 />
+                {realTimeErrors.mobileNumber && (
+                  <p className="text-xs text-red-600 mt-1">
+                    {realTimeErrors.mobileNumber === 'mobileNumberRequired' && 'Mobile number is required'}
+                    {realTimeErrors.mobileNumber === 'mobileNumberTooShort' && 'Mobile number must be at least 10 digits'}
+                  </p>
+                )}
               </div>
             </div>
 

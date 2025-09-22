@@ -46,8 +46,13 @@ export async function dashboardStats() {
         createdAt: { gte: startOfWeek } 
       } 
     }),
-    prisma.programmePurchase.count(),
-    prisma.programmePurchase.count({ where: { purchasedAt: { gte: startOfWeek } } }),
+    prisma.programmePurchase.count({ where: { status: 'COMPLETE' } }),
+    prisma.programmePurchase.count({ 
+      where: { 
+        status: 'COMPLETE',
+        purchasedAt: { gte: startOfWeek } 
+      } 
+    }),
     
     // All successful payments - EGP
     prisma.payment.aggregate({
@@ -378,10 +383,43 @@ export async function deleteUser(id) {
 
 // Order management
 export async function getOrders(query = {}) {
-  const { page = 1, pageSize = 10, status } = query;
+  const { page = 1, pageSize = 10, status, search, date } = query;
   const skip = (page - 1) * pageSize;
   
-  const where = status ? { status } : {};
+  // Build where clause
+  const where = {};
+  
+  if (status && status !== 'all') {
+    where.status = status;
+  }
+  
+  if (date && date !== 'all') {
+    const now = new Date();
+    switch (date) {
+      case 'today':
+        where.createdAt = {
+          gte: new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        };
+        break;
+      case 'week':
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        where.createdAt = { gte: weekAgo };
+        break;
+      case 'month':
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        where.createdAt = { gte: monthAgo };
+        break;
+    }
+  }
+  
+  if (search) {
+    where.OR = [
+      { orderNumber: { contains: search, mode: 'insensitive' } },
+      { user: { firstName: { contains: search, mode: 'insensitive' } } },
+      { user: { lastName: { contains: search, mode: 'insensitive' } } },
+      { user: { email: { contains: search, mode: 'insensitive' } } }
+    ];
+  }
 
   const [orders, total] = await Promise.all([
     prisma.order.findMany({
@@ -390,14 +428,102 @@ export async function getOrders(query = {}) {
       take: pageSize,
       orderBy: { createdAt: 'desc' },
       include: {
-        user: { select: { id: true, email: true, firstName: true, lastName: true } },
-        items: { include: { product: true } }
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            mobileNumber: true
+          }
+        },
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                stock: true
+              }
+            }
+          }
+        },
+        coupon: {
+          select: {
+            id: true,
+            code: true,
+            discountPercentage: true
+          }
+        }
       }
     }),
     prisma.order.count({ where })
   ]);
 
-  return { items: orders, total, page, pageSize };
+  // Get payment information for each order
+  const ordersWithPayments = await Promise.all(
+    orders.map(async (order) => {
+      const payment = await prisma.payment.findFirst({
+        where: {
+          paymentableId: order.id,
+          paymentableType: 'ORDER'
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+      
+      return {
+        ...order,
+        payment
+      };
+    })
+  );
+
+  // Transform the data for frontend
+    const transformedOrders = ordersWithPayments.map(order => ({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      price: order.price,
+      currency: order.currency,
+      status: order.status,
+      paymentMethod: order.payment?.method || null,
+      paymentProof: order.payment?.paymentProofUrl || null,
+      couponDiscount: order.couponDiscount,
+      discountPercentage: order.discountPercentage,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+
+      // User information
+      user: order.user,
+
+      // Order items with product details
+      items: order.items.map(item => ({
+        id: item.id,
+        quantity: item.quantity,
+        totalPrice: item.totalPrice,
+        discountPercentage: item.discountPercentage,
+        product: item.product
+      })),
+
+      // Shipping details
+      shippingBuilding: order.shippingBuilding,
+      shippingStreet: order.shippingStreet,
+      shippingCity: order.shippingCity,
+      shippingCountry: order.shippingCountry,
+      shippingPostcode: order.shippingPostcode,
+
+      // Coupon information
+      coupon: order.coupon,
+
+      // Payment information
+      payment: order.payment,
+
+      // Metadata for original price tracking
+      metadata: {
+        originalPrice: order.metadata?.originalPrice || order.price
+      }
+    }));
+
+  return { items: transformedOrders, total, page, pageSize };
 }
 
 export async function getOrderById(id) {
@@ -440,9 +566,17 @@ export async function getProducts(query = {}) {
       where,
       skip,
       take: pageSize,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [
+        { order: 'asc' }, // Order by the new 'order' field first
+        { createdAt: 'desc' } // Then by creation date
+      ],
       include: {
-        images: true
+        images: true,
+        _count: {
+          select: {
+            orderItems: true
+          }
+        }
       }
     }),
     prisma.product.count({ where })
@@ -558,7 +692,12 @@ export async function getProductById(id) {
   const product = await prisma.product.findUnique({
     where: { id },
     include: {
-      images: true
+      images: true,
+      _count: {
+        select: {
+          orderItems: true
+        }
+      }
     }
   });
 
@@ -665,6 +804,35 @@ export async function updateProduct(id, data) {
 
 export async function deleteProduct(id) {
   return prisma.product.delete({ where: { id } });
+}
+
+export async function updateProductOrder(productOrders) {
+  console.log('Backend - Received product orders:', productOrders);
+  
+  // Validate that all products exist before updating
+  const productIds = productOrders.map(p => p.id);
+  const existingProducts = await prisma.product.findMany({
+    where: { id: { in: productIds } },
+    select: { id: true }
+  });
+  
+  const existingIds = existingProducts.map(p => p.id);
+  const missingIds = productIds.filter(id => !existingIds.includes(id));
+  
+  if (missingIds.length > 0) {
+    console.error('Missing product IDs:', missingIds);
+    throw new Error(`Products not found: ${missingIds.join(', ')}`);
+  }
+  
+  // Update multiple products' order in a transaction
+  return await prisma.$transaction(
+    productOrders.map(({ id, order }) =>
+      prisma.product.update({
+        where: { id },
+        data: { order }
+      })
+    )
+  );
 }
 
 // Additional service functions for missing endpoints
@@ -1333,7 +1501,11 @@ export async function getProgrammes(query = {}) {
       include: {
         _count: {
           select: {
-            purchases: true
+            purchases: {
+              where: {
+                status: 'COMPLETE'
+              }
+            }
           }
         }
       }
@@ -2539,42 +2711,16 @@ export async function deleteBenefit(id) {
 }
 
 export async function createAdmin(data) {
-  const { email, password, firstName, lastName, mobileNumber, building, street, city, country, postcode } = data;
+  // Import the user service function that has proper validation
+  const { adminCreateUser } = await import('../users/user.service.js');
   
-  // Check if user already exists
-  const existingUser = await prisma.user.findUnique({ where: { email } });
-  if (existingUser) {
-    const error = new Error("User with this email already exists");
-    error.status = 409;
-    error.expose = true;
-    throw error;
-  }
+  // Set role to ADMIN and call the user service function
+  const adminData = {
+    ...data,
+    role: 'ADMIN'
+  };
   
-  // Hash password
-  const bcrypt = await import('bcryptjs');
-  const passwordHash = await bcrypt.hash(password, 12);
-  
-  // Create admin user
-  const adminUser = await prisma.user.create({
-    data: {
-      email,
-      passwordHash,
-      firstName: firstName || null,
-      lastName: lastName || null,
-      mobileNumber: mobileNumber || null,
-      building: building || null,
-      street: street || null,
-      city: city || null,
-      country: country || null,
-      postcode: postcode || null,
-      role: 'ADMIN',
-      loyaltyPoints: 0,
-    }
-  });
-  
-  // Remove password hash from response
-  const { passwordHash: _, ...userWithoutPassword } = adminUser;
-  return userWithoutPassword;
+  return await adminCreateUser(adminData);
 }
 
 // Helper function to handle plan-benefit relationships
@@ -2645,6 +2791,33 @@ async function handlePlanPrices(planId, prices) {
       throw error;
     }
   }
+}
+
+// Import the service functions from their respective modules
+export async function adminUpdateSubscriptionStatus(id, status) {
+  const { adminUpdateSubscriptionStatus } = await import('../subscriptions/subscription.service.js');
+  return adminUpdateSubscriptionStatus(id, status);
+}
+
+export async function adminUpdateProgrammePurchaseStatus(id, status) {
+  const { adminUpdateProgrammePurchaseStatus } = await import('../programmes/programme.service.js');
+  return adminUpdateProgrammePurchaseStatus(id, status);
+}
+
+// Coupon usage management
+export async function getCouponUsageStats(couponId) {
+  const { getCouponUsageStats } = await import('../coupons/couponUsage.service.js');
+  return getCouponUsageStats(couponId);
+}
+
+export async function getAllCouponsWithUsageStats() {
+  const { getAllCouponsWithUsageStats } = await import('../coupons/couponUsage.service.js');
+  return getAllCouponsWithUsageStats();
+}
+
+export async function syncCouponUsageStats(couponId) {
+  const { syncCouponUsageStats } = await import('../coupons/couponUsage.service.js');
+  return syncCouponUsageStats(couponId);
 }
 
 

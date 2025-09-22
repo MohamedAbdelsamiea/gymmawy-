@@ -177,21 +177,27 @@ const PaymentProofModal = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-            <div className="text-sm text-gray-600">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-6 border-t border-gray-200">
+            <div className="text-sm text-gray-600 text-center sm:text-left">
               Review the payment proof and choose an action
             </div>
-            <div className="flex space-x-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                onClick={handleApprove}
+                disabled={isLoading}
+                className="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto order-1 sm:order-3"
               >
-                Cancel
+                {isLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                ) : (
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                )}
+                Approve Payment
               </button>
               <button
                 onClick={handleReject}
                 disabled={isLoading}
-                className="flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto order-2 sm:order-2"
               >
                 {isLoading ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -201,16 +207,10 @@ const PaymentProofModal = ({
                 Reject Payment
               </button>
               <button
-                onClick={handleApprove}
-                disabled={isLoading}
-                className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full sm:w-auto order-3 sm:order-1"
               >
-                {isLoading ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                ) : (
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                )}
-                Approve Payment
+                Cancel
               </button>
             </div>
           </div>

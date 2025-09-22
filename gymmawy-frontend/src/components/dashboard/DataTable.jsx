@@ -159,21 +159,21 @@ return 0;
       {/* Table Header with Search and Actions */}
       <div className="">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             {searchable && (
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                  <input
-                    type="text"
-                    placeholder={t('common.search')}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-                  />
+                <input
+                  type="text"
+                  placeholder={t('common.search')}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent w-full sm:w-auto"
+                />
               </div>
             )}
             {filterable && (
-              <button className="flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+              <button className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 w-full sm:w-auto">
                 <Filter className="h-4 w-4 mr-2" />
                 {t('common.filter')}
               </button>
@@ -183,7 +183,7 @@ return 0;
           {exportable && (
             <button
               onClick={handleExport}
-              className="flex items-center px-4 py-2 bg-gymmawy-primary text-white rounded-lg text-sm hover:bg-gymmawy-secondary transition-colors"
+              className="flex items-center justify-center px-4 py-2 bg-gymmawy-primary text-white rounded-lg text-sm hover:bg-gymmawy-secondary transition-colors w-full sm:w-auto"
             >
               <Download className="h-4 w-4 mr-2" />
               {t('common.export')}

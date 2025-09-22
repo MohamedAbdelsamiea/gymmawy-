@@ -244,9 +244,50 @@ const AdminOverview = () => {
           <ChartCard 
             title={`${selectedTrend.charAt(0).toUpperCase() + selectedTrend.slice(1)} Trend`} 
             subtitle="Monthly data and revenue by currency"
+            actions={
+              <div className="bg-gray-100 rounded-lg p-1 flex">
+                <button
+                  onClick={() => setSelectedTrend('subscriptions')}
+                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                    selectedTrend === 'subscriptions'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Subscriptions
+                </button>
+                <button
+                  onClick={() => setSelectedTrend('programmes')}
+                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                    selectedTrend === 'programmes'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Programmes
+                </button>
+                <button
+                  onClick={() => setSelectedTrend('orders')}
+                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                    selectedTrend === 'orders'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Orders
+                </button>
+              </div>
+            }
           >
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyTrends || []}>
+              <LineChart data={(monthlyTrends || []).map(month => ({
+                ...month,
+                [`${selectedTrend.slice(0, -1)}TotalRevenueUSD`]: 
+                  (month[`${selectedTrend.slice(0, -1)}RevenueEgp`] * exchangeRates.EGP) +
+                  (month[`${selectedTrend.slice(0, -1)}RevenueSar`] * exchangeRates.SAR) +
+                  (month[`${selectedTrend.slice(0, -1)}RevenueAed`] * exchangeRates.AED) +
+                  (month[`${selectedTrend.slice(0, -1)}RevenueUsd`] * exchangeRates.USD)
+              }))}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis yAxisId="left" />
@@ -272,6 +313,12 @@ const AdminOverview = () => {
                       name === 'programmeRevenueSar' ? 'Programme Revenue (SAR)' :
                       name === 'programmeRevenueAed' ? 'Programme Revenue (AED)' :
                       name === 'programmeRevenueUsd' ? 'Programme Revenue (USD)' :
+                      name === 'subscriptionTotalRevenueUSD' ? 'Total Subscription Revenue (USD)' :
+                      name === 'orderTotalRevenueUSD' ? 'Total Order Revenue (USD)' :
+                      name === 'programmeTotalRevenueUSD' ? 'Total Programme Revenue (USD)' :
+                      name === 'subscriptionRevenueTotal' ? 'Total Subscription Revenue (EGP)' :
+                      name === 'orderRevenueTotal' ? 'Total Order Revenue (EGP)' :
+                      name === 'programmeRevenueTotal' ? 'Total Programme Revenue (EGP)' :
                       name === 'egpRevenue' ? 'Total Revenue (EGP)' :
                       name === 'sarRevenue' ? 'Total Revenue (SAR)' :
                       name === 'aedRevenue' ? 'Total Revenue (AED)' :
@@ -324,51 +371,16 @@ const AdminOverview = () => {
                 />
                 <Line 
                   type="monotone" 
-                  dataKey="totalRevenueUSD"
+                  dataKey={`${selectedTrend.slice(0, -1)}TotalRevenueUSD`}
                   stroke="#8B5A2B" 
                   strokeWidth={3}
                   yAxisId="right"
                   strokeDasharray="5 5"
-                  name="Total Revenue (USD)"
+                  name={`Total ${selectedTrend.charAt(0).toUpperCase() + selectedTrend.slice(1)} Revenue (USD)`}
                 />
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
-          {/* Trend Toggle - Top Right */}
-          <div className="absolute top-2 right-2">
-            <div className="bg-gray-100 rounded-lg p-1 flex">
-              <button
-                onClick={() => setSelectedTrend('subscriptions')}
-                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                  selectedTrend === 'subscriptions'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Subscriptions
-              </button>
-              <button
-                onClick={() => setSelectedTrend('programmes')}
-                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                  selectedTrend === 'programmes'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Programmes
-              </button>
-              <button
-                onClick={() => setSelectedTrend('orders')}
-                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                  selectedTrend === 'orders'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Orders
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Top Selling Items */}
@@ -376,6 +388,40 @@ const AdminOverview = () => {
           <ChartCard 
             title={`Top Selling ${selectedTopSelling.charAt(0).toUpperCase() + selectedTopSelling.slice(1)}`} 
             subtitle="Best performing items by sales"
+            actions={
+              <div className="bg-gray-100 rounded-lg p-1 flex">
+                <button
+                  onClick={() => setSelectedTopSelling('programmes')}
+                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                    selectedTopSelling === 'programmes'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Programmes
+                </button>
+                <button
+                  onClick={() => setSelectedTopSelling('subscriptions')}
+                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                    selectedTopSelling === 'subscriptions'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Subscriptions
+                </button>
+                <button
+                  onClick={() => setSelectedTopSelling('products')}
+                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                    selectedTopSelling === 'products'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Products
+                </button>
+              </div>
+            }
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={(topSellingData?.[selectedTopSelling] || []).map(item => ({
@@ -410,41 +456,6 @@ const AdminOverview = () => {
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
-          {/* Top Selling Toggle - Top Right */}
-          <div className="absolute top-2 right-2">
-            <div className="bg-gray-100 rounded-lg p-1 flex">
-              <button
-                onClick={() => setSelectedTopSelling('programmes')}
-                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                  selectedTopSelling === 'programmes'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Programmes
-              </button>
-              <button
-                onClick={() => setSelectedTopSelling('subscriptions')}
-                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                  selectedTopSelling === 'subscriptions'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Subscriptions
-              </button>
-              <button
-                onClick={() => setSelectedTopSelling('products')}
-                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                  selectedTopSelling === 'products'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Products
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 

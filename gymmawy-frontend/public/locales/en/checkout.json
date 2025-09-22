@@ -54,8 +54,14 @@
     "nextSteps": "Next Steps:",
     "nextSteps1": "We've received your payment proof",
     "nextSteps2": "Our team will review and approve your order",
-    "nextSteps3": "You'll be notified once your {{type}} is activated",
-    "nextSteps4": "Your subscription period will start from the approval date",
+    "nextSteps3": "You'll be notified once your {{type}} is processed",
+    "nextSteps4": "Your {{type}} will be processed and delivered according to the approval date",
+    "nextSteps3Subscription": "You'll be notified once your subscription is activated",
+    "nextSteps4Subscription": "Your subscription period will start from the approval date",
+    "nextSteps3Product": "You'll be notified once your order is confirmed",
+    "nextSteps4Product": "Your products will be shipped according to the processing timeline",
+    "nextSteps3Cart": "You'll be notified once your order is confirmed",
+    "nextSteps4Cart": "Your products will be shipped according to the processing timeline",
     "goToDashboard": "Go to Dashboard",
     "copy": "COPY",
     "instaPayInstructions": {
@@ -70,8 +76,8 @@
       "step2": "After the transfer, attach a picture of the transfer",
       "step3": "You will be contacted as soon as possible to confirm the transfer and start the subscription"
     },
-    "tabbyComingSoon": "Tabby integration coming soon. Your order will be processed automatically.",
-    "tamaraComingSoon": "Tamara integration coming soon. Your order will be processed automatically."
+    "tabbyComingSoon": "Tabby integration coming soon.",
+    "tamaraComingSoon": "Tamara integration coming soon."
   },
   "common": {
     "weeks": "{{count}} week",

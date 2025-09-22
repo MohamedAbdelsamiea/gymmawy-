@@ -6,6 +6,7 @@ import adminApiService from '../../../services/adminApiService';
 import AddTransformationModal from '../../../components/modals/AddTransformationModal';
 import AddVideoModal from '../../../components/modals/AddVideoModal';
 import { config } from '../../../config';
+import { getFullImageUrl } from '../../../utils/imageUtils';
 
 const AdminCMS = () => {
   const [activeTab, setActiveTab] = useState('transformations');
@@ -242,8 +243,8 @@ const AdminCMS = () => {
       label: 'Image',
       sortable: false,
       render: (value) => {
-        // Convert relative URL to full URL
-        const imageUrl = value ? (value.startsWith('http') ? value : `${config.API_BASE_URL}${value}`) : null;
+        // Convert relative URL to full URL (uploads are served directly, not through /api)
+        const imageUrl = getFullImageUrl(value);
         return (
           <div className="w-16 h-16">
             {imageUrl ? (

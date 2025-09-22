@@ -28,6 +28,7 @@ router.delete("/orders/:id", requireAuth, requireAdmin, controller.deleteOrder);
 // Product management
 router.get("/products", requireAuth, requireAdmin, controller.getProducts);
 router.post("/products", requireAuth, requireAdmin, controller.createProduct);
+router.patch("/products/order", requireAuth, requireAdmin, controller.updateProductOrder);
 router.get("/products/:id", requireAuth, requireAdmin, controller.getProductById);
 router.patch("/products/:id", requireAuth, requireAdmin, controller.updateProduct);
 router.delete("/products/:id", requireAuth, requireAdmin, controller.deleteProduct);
@@ -38,6 +39,7 @@ router.get("/subscriptions/stats", requireAuth, requireAdmin, controller.getSubs
 router.get("/subscriptions/export", requireAuth, requireAdmin, controller.exportSubscriptions);
 router.get("/subscriptions/:id", requireAuth, requireAdmin, controller.getSubscriptionById);
 router.patch("/subscriptions/:id", requireAuth, requireAdmin, controller.updateSubscription);
+router.patch("/subscriptions/:id/status", requireAuth, requireAdmin, controller.updateSubscriptionStatus);
 router.patch("/subscriptions/:id/cancel", requireAuth, requireAdmin, controller.cancelSubscription);
 router.delete("/subscriptions/:id", requireAuth, requireAdmin, controller.deleteSubscription);
 router.get("/programmes/stats", requireAuth, requireAdmin, controller.getProgrammeStats);
@@ -74,6 +76,12 @@ router.get("/programmes/stats", requireAuth, requireAdmin, controller.getProgram
 router.get("/programmes/purchases", requireAuth, requireAdmin, controller.getProgrammePurchases);
 router.get("/programmes/purchases/:id", requireAuth, requireAdmin, controller.getProgrammePurchaseById);
 router.patch("/programmes/purchases/:id", requireAuth, requireAdmin, controller.updateProgrammePurchase);
+router.patch("/programmes/purchases/:id/status", requireAuth, requireAdmin, controller.updateProgrammePurchaseStatus);
+
+// Coupon usage management
+router.get("/coupons/usage-stats", requireAuth, requireAdmin, controller.getAllCouponsWithUsageStats);
+router.get("/coupons/:couponId/usage-stats", requireAuth, requireAdmin, controller.getCouponUsageStats);
+router.post("/coupons/:couponId/sync-usage", requireAuth, requireAdmin, controller.syncCouponUsageStats);
 
 // Programme individual management (must come after specific routes)
 router.get("/programmes/:id", requireAuth, requireAdmin, controller.getProgrammeById);

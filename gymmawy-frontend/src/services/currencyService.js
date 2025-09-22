@@ -1,13 +1,14 @@
 /**
  * Currency detection and management service for frontend
  */
+import { config } from '../config';
 
 class CurrencyService {
   constructor() {
     this.currentCurrency = 'USD';
     this.currencyRates = {};
-    // Default API URL - can be overridden by environment variable
-    this.baseUrl = 'http://localhost:3000/api';
+    // Use API URL from config
+    this.baseUrl = config.API_BASE_URL;
   }
 
   /**
