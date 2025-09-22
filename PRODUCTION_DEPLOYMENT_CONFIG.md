@@ -18,13 +18,14 @@ This document outlines the configuration changes made for production deployment 
   - Kept development proxy for local API
 
 ### 3. Environment Variables
-- **Development** (`.env.development`):
+- **Template**: Use `.env.example` as a template
+- **Development**: Create `.env.development`:
   ```
   VITE_API_BASE_URL=http://localhost:3000/api
   VITE_ENABLE_DEBUG=true
   VITE_ENABLE_ANALYTICS=false
   ```
-- **Production** (`.env.production`):
+- **Production**: Create `.env.production`:
   ```
   VITE_API_BASE_URL=https://gym.omarelnemr.xyz/api
   VITE_ENABLE_DEBUG=false
@@ -38,12 +39,13 @@ This document outlines the configuration changes made for production deployment 
 ## Backend Configuration
 
 ### 1. Environment Variables
-- **Production** (`.env.production`):
+- **Template**: Use `.env.example` as a template
+- **Production**: Create `.env.production`:
   ```
   BASE_URL=https://gym.omarelnemr.xyz/api
   CORS_ORIGIN=http://localhost:5173,http://localhost:3000,http://localhost:3001,https://gym.omarelnemr.xyz
   ```
-- **Development** (`.env.development`):
+- **Development**: Create `.env.development`:
   ```
   BASE_URL=http://localhost:4000
   CORS_ORIGIN=http://localhost:5173,http://localhost:3000,http://localhost:3001
@@ -73,6 +75,8 @@ This document outlines the configuration changes made for production deployment 
 1. **Development**:
    ```bash
    cd gymmawy-backend
+   cp .env.example .env.development
+   # Edit .env.development with your values
    cp .env.development .env
    npm run dev
    ```
@@ -80,6 +84,8 @@ This document outlines the configuration changes made for production deployment 
 2. **Production**:
    ```bash
    cd gymmawy-backend
+   cp .env.example .env.production
+   # Edit .env.production with your production values
    cp .env.production .env
    npm start
    ```
@@ -96,11 +102,10 @@ This document outlines the configuration changes made for production deployment 
 - Backend API: `https://gym.omarelnemr.xyz/api`
 - Backend Base: `https://gym.omarelnemr.xyz/api`
 
-## Environment Files Created
-- `gymmawy-frontend/.env.development`
-- `gymmawy-frontend/.env.production`
-- `gymmawy-backend/.env.development`
-- `gymmawy-backend/.env.production`
+## Environment Files
+- **Templates**: `gymmawy-frontend/.env.example`, `gymmawy-backend/.env.example`
+- **Note**: Actual `.env.*` files are gitignored for security
+- **Setup**: Copy `.env.example` to `.env.development` or `.env.production` and fill in your values
 
 ## Testing
 - ✅ Frontend builds successfully
