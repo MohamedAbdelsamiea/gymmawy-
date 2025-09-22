@@ -78,13 +78,23 @@ async function detectCurrencyFromIP(req) {
     return process.env.DEV_CURRENCY || Currency.USD; // Default for localhost
   }
   
-  const countryCode = await getCountryFromIP(ip);
-  
-  switch (countryCode) {
-    case 'EG': return Currency.EGP;
-    case 'SA': return Currency.SAR;
-    case 'AE': return Currency.AED;
-    default: return Currency.USD; // Default for all other countries
+  try {
+    const countryCode = await getCountryFromIP(ip);
+    
+    if (!countryCode) {
+      console.log(`⚠️ No country code returned for IP: ${ip}, using default currency`);
+      return process.env.DEV_CURRENCY || Currency.USD;
+    }
+    
+    switch (countryCode) {
+      case 'EG': return Currency.EGP;
+      case 'SA': return Currency.SAR;
+      case 'AE': return Currency.AED;
+      default: return Currency.USD; // Default for all other countries
+    }
+  } catch (error) {
+    console.error('💥 Currency detection completely failed:', error);
+    return process.env.DEV_CURRENCY || Currency.USD;
   }
 }
 
@@ -93,10 +103,18 @@ async function detectCurrencyFromIP(req) {
  */
 async function getCountryFromIP(ip) {
   try {
+    console.log(`🔍 MaxMind lookup for IP: ${ip}`);
     const response = await client.country(ip);
+    console.log(`✅ MaxMind response for ${ip}:`, response.country?.isoCode || 'No country code');
     return response.country?.isoCode || null;
   } catch (err) {
-    console.error('MaxMind lookup failed:', err.message);
+    console.error('❌ MaxMind lookup failed for IP:', ip);
+    console.error('❌ Error details:', {
+      message: err.message,
+      code: err.code,
+      stack: err.stack,
+      fullError: err
+    });
     return null;
   }
 }
