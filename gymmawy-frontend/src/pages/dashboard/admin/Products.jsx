@@ -6,6 +6,7 @@ import AddProductModal from '../../../components/dashboard/AddProductModal';
 import EditProductModal from '../../../components/dashboard/EditProductModal';
 import adminApiService from '../../../services/adminApiService';
 import productService from '../../../services/productService';
+import { config } from '../../../config';
 import {
   DndContext,
   closestCenter,
@@ -56,7 +57,7 @@ const SortableRow = ({ product, onEdit, onDelete, onToggleStatus, onAddStock }) 
           <div className="flex-shrink-0">
             {product.images?.[0] ? (
               <img
-                src={product.images[0].url.startsWith('http') ? product.images[0].url : `http://localhost:3000${product.images[0].url}`}
+                src={product.images[0].url.startsWith('http') ? product.images[0].url : `${config.API_BASE_URL.replace('/api', '')}${product.images[0].url}`}
                 alt="Product"
                 className="w-12 h-12 object-cover rounded-lg border border-gray-200"
               />
@@ -201,7 +202,7 @@ const AdminProducts = () => {
       }
       
       const queryParams = new URLSearchParams(params).toString();
-      const url = `http://localhost:3000/api/admin/products?${queryParams}`;
+      const url = `${config.API_BASE_URL}/admin/products?${queryParams}`;
       
       const response = await fetch(url, {
         method: 'GET',
@@ -222,11 +223,7 @@ const AdminProducts = () => {
       }
       
       const data = await response.json();
-      console.log('Products API response:', data);
-      console.log('Sample product with purchase count:', data.products?.items?.[0] || data.products?.[0] || data.items?.[0]);
       const productsArray = data.products?.items || data.products || data.items || [];
-      console.log('Products loaded:', productsArray.length, 'products');
-      console.log('Product IDs:', productsArray.map(p => p.id));
       setProducts(productsArray);
     } catch (err) {
       setError(err.message);
@@ -406,7 +403,7 @@ const AdminProducts = () => {
         
         // Construct full image URL
         const imageUrl = primaryImage?.url ? 
-          (primaryImage.url.startsWith('http') ? primaryImage.url : `http://localhost:3000${primaryImage.url}`) : 
+          (primaryImage.url.startsWith('http') ? primaryImage.url : `${config.API_BASE_URL.replace('/api', '')}${primaryImage.url}`) : 
           null;
         
         return (

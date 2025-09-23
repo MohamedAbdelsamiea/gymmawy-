@@ -64,7 +64,6 @@ return;
         } else {
           // Ensure video is loaded before playing
           if (videoRef.current.readyState < 3) {
-            console.log('Video not ready, loading...');
             videoRef.current.load();
             await new Promise((resolve) => {
               videoRef.current.addEventListener('canplay', resolve, { once: true });
@@ -75,21 +74,18 @@ return;
           if (playPromise !== undefined) {
             await playPromise;
             setShowThumbnail(false);
-            console.log('Video started playing successfully');
           }
         }
       } catch (error) {
         console.error('Error playing video:', error);
         // Handle autoplay restrictions
         if (error.name === 'NotAllowedError') {
-          console.log('Autoplay blocked, user interaction required');
           // Try to play with muted first
           videoRef.current.muted = true;
           setIsMuted(true);
           try {
             await videoRef.current.play();
             setShowThumbnail(false);
-            console.log('Video started playing muted');
           } catch (mutedError) {
             console.error('Even muted play failed:', mutedError);
           }
@@ -127,7 +123,6 @@ return;
 
   const handleVideoClick = async() => {
     if (showThumbnail) {
-      console.log('Video thumbnail clicked, starting playback...');
       await handlePlayPause();
     }
   };
@@ -224,9 +219,6 @@ return;
         muted={isMuted}
         preload="metadata"
         playsInline
-        onLoadStart={() => console.log('Video load started')}
-        onLoadedData={() => console.log('Video data loaded')}
-        onCanPlay={() => console.log('Video can play')}
         onError={(e) => console.error('Video error:', e)}
       >
         <source src={videoUrl} type="video/mp4" />

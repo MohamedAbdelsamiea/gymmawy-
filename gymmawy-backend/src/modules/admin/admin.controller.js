@@ -118,9 +118,7 @@ export async function getProducts(req, res, next) {
 
 export async function createProduct(req, res, next) {
   try {
-    console.log('Controller - createProduct called with data:', JSON.stringify(req.body, null, 2));
     const product = await service.createProduct(req.body);
-    console.log('Controller - createProduct result:', JSON.stringify(product, null, 2));
     res.status(201).json({ product });
   } catch (e) { next(e); }
 }
@@ -135,10 +133,7 @@ export async function getProductById(req, res, next) {
 
 export async function updateProduct(req, res, next) {
   try {
-    console.log('Controller - updateProduct called with ID:', req.params.id);
-    console.log('Controller - updateProduct data:', JSON.stringify(req.body, null, 2));
     const product = await service.updateProduct(req.params.id, req.body);
-    console.log('Controller - updateProduct result:', JSON.stringify(product, null, 2));
     res.json({ product });
   } catch (e) { next(e); }
 }

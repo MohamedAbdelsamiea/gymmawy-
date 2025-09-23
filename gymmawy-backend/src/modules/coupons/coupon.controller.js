@@ -1,4 +1,3 @@
-console.log('🔥 COUPON CONTROLLER LOADED - VERSION 2!');
 import * as service from "./coupon.service.js";
 import * as redemptionService from "./couponRedemption.service.js";
 import { z } from "zod";

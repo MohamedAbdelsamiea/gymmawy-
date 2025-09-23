@@ -1,6 +1,9 @@
 import { Currency } from '@prisma/client';
 import { detectCurrencyService } from '../../middlewares/currencyMiddleware.js';
 import { getPricesByCurrency, getCurrencyRates } from './currency.service.js';
+import { getPrismaClient } from '../../config/db.js';
+
+const prisma = getPrismaClient();
 
 /**
  * Detect user's currency based on location

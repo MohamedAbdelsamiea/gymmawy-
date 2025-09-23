@@ -76,7 +76,7 @@ export const rateLimiter = rateLimit({
 });
 
 // 4. Body size limit
-export const bodyParserOptions = { limit: "100mb" };
+export const bodyParserOptions = { limit: "10mb" };
 
 // 5. Security event logging
 export const logSecurityEvents = (req, res, next) => {

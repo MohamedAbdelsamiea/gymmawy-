@@ -1,4 +1,5 @@
 // src/utils/imageUtils.js
+import { config } from '../config';
 
 /**
  * Convert a relative image URL to a full URL
@@ -7,7 +8,7 @@
  * @param {string} baseUrl - The base URL (defaults to current backend URL)
  * @returns {string} - The full image URL
  */
-export function getFullImageUrl(imageUrl, baseUrl = 'http://localhost:3000') {
+export function getFullImageUrl(imageUrl, baseUrl = config.API_BASE_URL.replace('/api', '')) {
   if (!imageUrl) return '';
   
   // If already a full URL, return as is

@@ -373,45 +373,7 @@ export const getAdminUploadsController = async (req, res, next) => {
 export const deleteUploadController = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
-    // Find the file path using the same logic as getUpload
-    const uploadDirs = [
-      'uploads/content/images',
-      'uploads/content/videos', 
-      'uploads/content/documents',
-      'uploads/content/products',
-      'uploads/content/programmes',
-      'uploads/content/transformations',
-      'uploads/admin/images',
-      'uploads/admin/documents',
-      'uploads/payment-proofs'
-    ];
-    
-    let foundFile = null;
-    let uploadDir = null;
-    
-    // Search for the file in all upload directories
-    for (const dir of uploadDirs) {
-      if (fs.existsSync(dir)) {
-        const files = fs.readdirSync(dir);
-        const matchingFile = files.find(file => file.startsWith(id));
-        
-        if (matchingFile) {
-          foundFile = matchingFile;
-          uploadDir = dir;
-          break;
-        }
-      }
-    }
-    
-    if (!foundFile) {
-      return res.status(404).json({ 
-        error: { message: 'Upload not found' } 
-      });
-    }
-    
-    const filePath = path.join(uploadDir, foundFile);
-    const result = await deleteUpload(filePath);
+    const result = await deleteUpload(id);
     
     res.json({
       success: true,

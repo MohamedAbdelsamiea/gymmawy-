@@ -37,7 +37,6 @@ const HomePage = () => {
       try {
         setVideoLoading(true);
         const video = await videoService.getFeaturedVideo();
-        console.log('Featured video data:', video);
         setFeaturedVideo(video);
       } catch (error) {
         console.error('Error fetching featured video:', error);
@@ -54,16 +53,10 @@ const HomePage = () => {
     const fetchTransformations = async() => {
       try {
         setTransformationsLoading(true);
-        console.log('=== FETCHING TRANSFORMATIONS ===');
         const response = await transformationService.getTransformations({
           isActive: true,
           language: i18n.language,
         });
-        console.log('=== TRANSFORMATIONS RESPONSE ===');
-        console.log('Response:', response);
-        console.log('Transformations:', response.transformations);
-        console.log('Transformations length:', response.transformations?.length);
-        console.log('=====================================');
         setTransformations(response.transformations || []);
       } catch (error) {
         console.error('Error fetching transformations:', error);
@@ -77,25 +70,12 @@ const HomePage = () => {
 
   // Fetch subscription plans
   useEffect(() => {
-    console.log('=== HOME PAGE useEffect TRIGGERED ===');
-    console.log('i18n.language:', i18n.language);
-    console.log('Timestamp:', Date.now());
-    console.log('=====================================');
     
     const fetchSubscriptionPlans = async() => {
       try {
         setPlansLoading(true);
         setSubscriptionPlans([]); // Clear existing data first
-        console.log('=== FETCHING SUBSCRIPTION PLANS ===');
         const response = await subscriptionService.getPlans(i18n.language);
-        console.log('=== HOME PAGE SUBSCRIPTION PLANS ===');
-        console.log('Response:', response);
-        console.log('First plan:', response.items?.[0]);
-        console.log('First plan subscriptionPeriodDays:', response.items?.[0]?.subscriptionPeriodDays);
-        console.log('First plan giftPeriodDays:', response.items?.[0]?.giftPeriodDays);
-        console.log('Currency from API:', response.currency);
-        console.log('Setting plansCurrency to:', response.currency || 'EGP');
-        console.log('=====================================');
         setSubscriptionPlans(response.items || []);
         setPlansCurrency(response.currency || 'EGP');
       } catch (error) {
@@ -222,9 +202,6 @@ return '';
 
   // Handle subscription plan selection
   const handleChoosePlan = (plan) => {
-    console.log('🔍 Home - handleChoosePlan called');
-    console.log('🔍 Home - plansCurrency:', plansCurrency);
-    console.log('🔍 Home - plan:', plan);
     
     if (!isAuthenticated) {
       navigate('/auth/login', { 
@@ -389,9 +366,9 @@ return '';
           {!videoLoading && featuredVideo && (
             <div className="max-w-[1300px] mx-auto mb-12 px-4">
               <VideoPlayer
-                videoUrl={featuredVideo.videoUrl.startsWith('http') ? featuredVideo.videoUrl : `http://localhost:3000${featuredVideo.videoUrl}`}
-                thumbnailEn={featuredVideo.thumbnailEn ? (featuredVideo.thumbnailEn.startsWith('http') ? featuredVideo.thumbnailEn : `http://localhost:3000${featuredVideo.thumbnailEn}`) : null}
-                thumbnailAr={featuredVideo.thumbnailAr ? (featuredVideo.thumbnailAr.startsWith('http') ? featuredVideo.thumbnailAr : `http://localhost:3000${featuredVideo.thumbnailAr}`) : null}
+                videoUrl={featuredVideo.videoUrl.startsWith('http') ? featuredVideo.videoUrl : `${config.API_BASE_URL.replace('/api', '')}${featuredVideo.videoUrl}`}
+                thumbnailEn={featuredVideo.thumbnailEn ? (featuredVideo.thumbnailEn.startsWith('http') ? featuredVideo.thumbnailEn : `${config.API_BASE_URL.replace('/api', '')}${featuredVideo.thumbnailEn}`) : null}
+                thumbnailAr={featuredVideo.thumbnailAr ? (featuredVideo.thumbnailAr.startsWith('http') ? featuredVideo.thumbnailAr : `${config.API_BASE_URL.replace('/api', '')}${featuredVideo.thumbnailAr}`) : null}
                 title={featuredVideo.title?.en || featuredVideo.title?.ar || 'Featured Video'}
                 className="rounded-lg"
                 showControls={true}
@@ -650,7 +627,6 @@ return '';
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {subscriptionPlans.map((plan, index) => {
                 // Debug: Log the plan data to see its structure
-                console.log('🔍 Plan imageUrl:', plan.imageUrl);
                 const planName = getBilingualText(plan.name, 'Package');
                 const planDescription = getBilingualText(plan.description, '');
                 

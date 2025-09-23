@@ -22,18 +22,14 @@ const AdminImageUpload = ({
 
   // Update preview when initialImage changes
   useEffect(() => {
-    console.log('🔍 AdminImageUpload - initialImage changed:', initialImage);
     if (initialImage) {
       // If initialImage only has URL (from existing data), fetch full metadata
       if (initialImage.url && !initialImage.originalName) {
-        console.log('🔍 AdminImageUpload - Fetching metadata for URL:', initialImage.url);
         fetchImageMetadata(initialImage.url);
       } else {
-        console.log('🔍 AdminImageUpload - Setting preview directly:', initialImage);
         setPreview(initialImage);
       }
     } else {
-      console.log('🔍 AdminImageUpload - No initial image, clearing preview');
       setPreview(null);
     }
   }, [initialImage]);
@@ -41,26 +37,21 @@ const AdminImageUpload = ({
   // Fetch image metadata from URL
   const fetchImageMetadata = async(imageUrl) => {
     try {
-      console.log('🔍 AdminImageUpload - fetchImageMetadata called with:', imageUrl);
       // Extract filename from URL to get the upload ID
       const filename = imageUrl.split('/').pop();
       const uploadId = filename.split('.')[0]; // Remove .webp extension
-      console.log('🔍 AdminImageUpload - Extracted uploadId:', uploadId);
       
       // Fetch upload details from server
       const response = await adminApiService.getImage(uploadId);
-      console.log('🔍 AdminImageUpload - getImage response:', response);
       if (response.success) {
         setPreview(response.upload);
       } else {
         // If we can't fetch metadata, just use the URL
-        console.log('🔍 AdminImageUpload - Using URL directly (no metadata)');
         setPreview({ url: imageUrl });
       }
     } catch (error) {
       console.warn('Could not fetch image metadata:', error);
       // If we can't fetch metadata, just use the URL
-      console.log('🔍 AdminImageUpload - Error, using URL directly');
       setPreview({ url: imageUrl });
     }
   };

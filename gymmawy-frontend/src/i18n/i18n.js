@@ -20,7 +20,7 @@ i18n
       caches: ['cookie'],
       lookupCookie: 'i18next',
       cookieMinutes: 10080, // 7 days
-      cookieDomain: window.location.hostname === 'localhost' ? 'localhost' : '.omarelnemr.xyz',
+      cookieDomain: process.env.NODE_ENV === 'production' ? 'gym.omarelnemr.xyz' : 'localhost',
     },
     backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',

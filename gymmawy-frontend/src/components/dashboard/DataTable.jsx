@@ -18,9 +18,6 @@ const DataTable = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Debug logging
-  console.log('DataTable received data:', data);
-  console.log('DataTable received columns:', columns);
 
   // Filter data based on search term
   const filteredData = data.filter(item => {
@@ -36,8 +33,6 @@ const DataTable = ({
     return matches;
   });
 
-  console.log('DataTable filtered data:', filteredData);
-  console.log('DataTable search term:', searchTerm);
 
   // Sort data with proper type handling
   const sortedData = [...filteredData].sort((a, b) => {

@@ -3,6 +3,7 @@ import { X, Save, AlertCircle } from 'lucide-react';
 import AdminImageUpload from '../common/AdminImageUpload';
 import adminApiService from '../../services/adminApiService';
 import { useToast } from '../../contexts/ToastContext';
+import { config } from '../../config';
 
 const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
   const { showSuccess, showError } = useToast();
@@ -422,11 +423,9 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
               <AdminImageUpload
                 initialImage={imageUrl ? { url: imageUrl } : null}
                 onImageUpload={(uploadedImage) => {
-                  console.log('EditModal - Main image uploaded:', uploadedImage);
                   setImageUrl(uploadedImage.url);
                 }}
                 onImageRemove={() => {
-                  console.log('EditModal - Main image removed');
                   setImageUrl('');
                 }}
                 maxSize={10 * 1024 * 1024}
@@ -484,12 +483,11 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
               {carouselImages.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="text-sm font-medium text-gray-700">Uploaded Carousel Images ({carouselImages.length})</h4>
-                  {console.log('EditModal - Rendering carousel images:', carouselImages)}
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {carouselImages.map((image, index) => (
                       <div key={index} className="relative group">
                         <img
-                          src={image.url && image.url.startsWith('http') ? image.url : `http://localhost:3000${image.url || ''}`}
+                          src={image.url && image.url.startsWith('http') ? image.url : `${config.API_BASE_URL.replace('/api', '')}${image.url || ''}`}
                           alt={`Carousel ${index + 1}`}
                           className="w-full h-20 object-cover rounded-lg border border-gray-200"
                         />
