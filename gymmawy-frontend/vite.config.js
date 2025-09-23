@@ -17,5 +17,15 @@ export default defineConfig({
   preview: {
     host: '0.0.0.0',
     port: 8000
+  },
+  build: {
+    // Force cache busting with timestamps
+    rollupOptions: {
+      output: {
+        entryFileNames: `assets/[name]-[hash].js`,
+        chunkFileNames: `assets/[name]-[hash].js`,
+        assetFileNames: `assets/[name]-[hash].[ext]`
+      }
+    }
   }
 })
