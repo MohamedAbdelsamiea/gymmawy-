@@ -169,7 +169,7 @@ app.use((error, req, res, next) => {
     });
   }
   
-  if (error.message === 'File too large. Maximum size is 10MB.') {
+  if (error.message.includes('File too large. Maximum size is')) {
     return res.status(400).json({ 
       error: { message: error.message } 
     });

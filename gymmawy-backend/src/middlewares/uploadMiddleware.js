@@ -86,8 +86,11 @@ export const handleMulterErrors = (multerMiddleware) => {
       if (err) {
         if (err instanceof multer.MulterError) {
           if (err.code === 'LIMIT_FILE_SIZE') {
+            // Check if this is a video upload to show appropriate error message
+            const isVideoUpload = req.path.includes('/videos') || req.file?.mimetype?.startsWith('video/');
+            const maxSize = isVideoUpload ? '100MB' : '10MB';
             return res.status(400).json({ 
-              error: { message: 'File too large. Maximum size is 10MB.' } 
+              error: { message: `File too large. Maximum size is ${maxSize}.` } 
             });
           }
           if (err.code === 'LIMIT_FILE_COUNT') {
