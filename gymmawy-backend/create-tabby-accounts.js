@@ -271,11 +271,11 @@ async function testLogin(email, password) {
 
 // Main function
 async function main() {
-  console.log(`${colors.cyan}👥 Creating custom test accounts...${colors.reset}\n`);
+  console.log(`${colors.cyan}👥 Creating official Tabby test accounts...${colors.reset}\n`);
   
-  // Get admin credentials
-  const adminEmail = await prompt('Enter admin email: ');
-  const adminPassword = await prompt('Enter admin password: ');
+  // Get admin credentials from environment or prompt
+  const adminEmail = process.env.ADMIN_EMAIL || await prompt('Enter admin email: ');
+  const adminPassword = process.env.ADMIN_PASSWORD || await prompt('Enter admin password: ');
   
   if (!adminEmail || !adminPassword) {
     log.error('Admin email and password are required');
@@ -300,23 +300,52 @@ async function main() {
     const adminToken = loginResponse.data.accessToken;
     log.success('Admin login successful');
     
-    // Ask how many accounts to create
-    const numAccounts = await prompt('\nHow many accounts do you want to create? ');
-    const accountCount = parseInt(numAccounts) || 1;
+    // Create all Tabby test accounts automatically
+    console.log(`\n${colors.yellow}📋 Official Tabby Test Accounts:${colors.reset}`);
+    console.log(`${colors.cyan}These are the official test credentials from Tabby documentation:${colors.reset}\n`);
     
-    if (accountCount < 1 || accountCount > 50) {
-      log.error('Please enter a number between 1 and 50');
-      rl.close();
-      process.exit(1);
+    TABBY_TEST_ACCOUNTS.forEach((account, index) => {
+      console.log(`${index + 1}. ${account.description}`);
+      console.log(`   Email: ${account.email}`);
+      console.log(`   Password: ${account.password}`);
+      console.log(`   Name: ${account.firstName} ${account.lastName}`);
+      console.log(`   Phone: ${account.mobileNumber}`);
+      console.log(`   Role: ${account.role}`);
+      console.log('');
+    });
+    
+    // Create all Tabby test accounts
+    log.info(`Creating ${TABBY_TEST_ACCOUNTS.length} official Tabby test accounts...\n`);
+    
+    const createdAccounts = [];
+    let successCount = 0;
+    let failedCount = 0;
+    
+    for (const account of TABBY_TEST_ACCOUNTS) {
+      const result = await createTestAccount(account, adminToken);
+      if (result.success) {
+        successCount++;
+        createdAccounts.push(account);
+      } else {
+        failedCount++;
+      }
+      console.log(''); // Add spacing
     }
     
-    // Ask if user wants to use Tabby test accounts
-    const useTabbyAccounts = await prompt('\nDo you want to create official Tabby test accounts? (y/n): ');
-    if (useTabbyAccounts.toLowerCase() === 'y' || useTabbyAccounts.toLowerCase() === 'yes') {
-      console.log(`\n${colors.yellow}📋 Official Tabby Test Accounts:${colors.reset}`);
-      console.log(`${colors.cyan}These are the official test credentials from Tabby documentation:${colors.reset}\n`);
-      
-      TABBY_TEST_ACCOUNTS.forEach((account, index) => {
+    // Summary
+    console.log('==========================================');
+    log.info('Tabby test account creation summary:');
+    log.success(`Successfully created: ${successCount} accounts`);
+    if (failedCount > 0) {
+      log.warning(`Failed to create: ${failedCount} accounts`);
+    }
+    console.log('==========================================\n');
+    
+    // Display created account credentials
+    if (createdAccounts.length > 0) {
+      log.info('Created Tabby Test Account Credentials:');
+      console.log('');
+      createdAccounts.forEach((account, index) => {
         console.log(`${index + 1}. ${account.description}`);
         console.log(`   Email: ${account.email}`);
         console.log(`   Password: ${account.password}`);
@@ -326,156 +355,17 @@ async function main() {
         console.log('');
       });
       
-      const createTabbyAccounts = await prompt('Do you want to create these Tabby test accounts? (y/n): ');
-      if (createTabbyAccounts.toLowerCase() === 'y' || createTabbyAccounts.toLowerCase() === 'yes') {
-        // Create all Tabby test accounts
-        log.info(`Creating ${TABBY_TEST_ACCOUNTS.length} official Tabby test accounts...\n`);
-        
-        const createdAccounts = [];
-        let successCount = 0;
-        let failedCount = 0;
-        
-        for (const account of TABBY_TEST_ACCOUNTS) {
-          const result = await createTestAccount(account, adminToken);
-          if (result.success) {
-            successCount++;
-            createdAccounts.push(account);
-          } else {
-            failedCount++;
-          }
-          console.log(''); // Add spacing
-        }
-        
-        // Summary
-        console.log('==========================================');
-        log.info('Tabby test account creation summary:');
-        log.success(`Successfully created: ${successCount} accounts`);
-        if (failedCount > 0) {
-          log.warning(`Failed to create: ${failedCount} accounts`);
-        }
-        console.log('==========================================\n');
-        
-        // Display created account credentials
-        if (createdAccounts.length > 0) {
-          log.info('Created Tabby Test Account Credentials:');
-          console.log('');
-          createdAccounts.forEach((account, index) => {
-            console.log(`${index + 1}. ${account.description}`);
-            console.log(`   Email: ${account.email}`);
-            console.log(`   Password: ${account.password}`);
-            console.log(`   Name: ${account.firstName} ${account.lastName}`);
-            console.log(`   Phone: ${account.mobileNumber}`);
-            console.log(`   Role: ${account.role}`);
-            console.log('');
-          });
-          
-          // Test login for first account
-          if (createdAccounts.length > 0) {
-            log.info('Testing login for first Tabby test account...');
-            await testLogin(createdAccounts[0].email, createdAccounts[0].password);
-          }
-        }
-        
-        console.log('');
-        log.success('Tabby test account creation completed!');
-        log.info('These accounts are ready for Tabby payment testing.');
-        log.info('Use OTP: 8888 for testing payments.');
-        
-        rl.close();
-        return;
-      }
-    }
-    
-    // Ask if user wants to see custom sample accounts
-    const useSamples = await prompt('\nDo you want to see custom sample accounts first? (y/n): ');
-    if (useSamples.toLowerCase() === 'y' || useSamples.toLowerCase() === 'yes') {
-      console.log(`\n${colors.yellow}📋 Custom Sample Account Examples:${colors.reset}`);
-      CUSTOM_SAMPLE_ACCOUNTS.forEach((sample, index) => {
-        console.log(`\n${index + 1}. ${sample.description}`);
-        console.log(`   Email: ${sample.email}`);
-        console.log(`   Password: ${sample.password}`);
-        console.log(`   Name: ${sample.firstName} ${sample.lastName}`);
-        console.log(`   Phone: ${sample.mobileNumber}`);
-        console.log(`   Role: ${sample.role}`);
-      });
-      console.log('');
-    }
-    
-    // Create accounts
-    log.info(`Creating ${accountCount} custom account(s)...\n`);
-    
-    const createdAccounts = [];
-    let successCount = 0;
-    let failedCount = 0;
-    
-    for (let i = 1; i <= accountCount; i++) {
-      let account;
-      let isValid = false;
-      
-      // Keep asking for account details until valid
-      while (!isValid) {
-        account = await promptForAccountDetails(i);
-        const errors = validateAccountDetails(account);
-        
-        if (errors.length === 0) {
-          isValid = true;
-        } else {
-          log.warning('Validation errors:');
-          errors.forEach(error => log.warning(`  - ${error}`));
-          console.log('');
-        }
-      }
-      
-      // Create the account
-      const result = await createTestAccount(account, adminToken);
-      if (result.success) {
-        successCount++;
-        createdAccounts.push(account);
-      } else {
-        failedCount++;
-      }
-      
-      // Ask if user wants to continue
-      if (i < accountCount) {
-        const continueCreating = await prompt('\nContinue creating next account? (y/n): ');
-        if (continueCreating.toLowerCase() === 'n' || continueCreating.toLowerCase() === 'no') {
-          break;
-        }
-      }
-    }
-    
-    // Summary
-    console.log('\n==========================================');
-    log.info('Account creation summary:');
-    log.success(`Successfully created: ${successCount} accounts`);
-    if (failedCount > 0) {
-      log.warning(`Failed to create: ${failedCount} accounts`);
-    }
-    console.log('==========================================\n');
-    
-    // Display created account credentials
-    if (createdAccounts.length > 0) {
-      log.info('Created Account Credentials:');
-      console.log('');
-      createdAccounts.forEach((account, index) => {
-        console.log(`${index + 1}. ${account.email}`);
-        console.log(`   Password: ${account.password}`);
-        console.log(`   Name: ${account.firstName} ${account.lastName}`);
-        console.log(`   Phone: ${account.mobileNumber}`);
-        console.log(`   Role: ${account.role}`);
-        console.log('');
-      });
-      
       // Test login for first account
       if (createdAccounts.length > 0) {
-        log.info('Testing login for first account...');
+        log.info('Testing login for first Tabby test account...');
         await testLogin(createdAccounts[0].email, createdAccounts[0].password);
       }
     }
     
     console.log('');
-    log.success('Account creation completed!');
-    log.info('These accounts are ready for testing.');
+    log.success('Tabby test account creation completed!');
+    log.info('These accounts are ready for Tabby payment testing.');
+    log.info('Use OTP: 8888 for testing payments.');
     
   } catch (error) {
     log.error(`Admin login failed: ${error.response?.data?.message || error.message}`);
