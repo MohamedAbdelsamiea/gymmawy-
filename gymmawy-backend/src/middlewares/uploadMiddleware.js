@@ -336,12 +336,27 @@ export const serveUploadedFiles = (req, res, next) => {
   const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
     "http://localhost:3000", 
     "http://localhost:3001", 
-    "http://localhost:5173"
+    "http://localhost:5173",
+    "https://gym.omarelnemr.xyz",
+    "https://www.gym.omarelnemr.xyz"
   ];
   const origin = req.headers.origin;
   
-  if (allowedOrigins.includes("*") || (origin && allowedOrigins.includes(origin))) {
-    res.header('Access-Control-Allow-Origin', origin || allowedOrigins[0]);
+  // Check for exact match or subdomain match
+  const isAllowed = allowedOrigins.some(allowedOrigin => {
+    if (allowedOrigin === "*") return true;
+    if (allowedOrigin === origin) return true;
+    // Allow subdomains for production domain
+    if (allowedOrigin === "https://gym.omarelnemr.xyz" && origin && origin.startsWith("https://")) {
+      return origin.includes("gym.omarelnemr.xyz");
+    }
+    return false;
+  });
+  
+  if (isAllowed && origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else if (allowedOrigins.includes("*")) {
+    res.header('Access-Control-Allow-Origin', "*");
   }
   
   res.header('Cross-Origin-Resource-Policy', 'cross-origin');

@@ -51,19 +51,33 @@ app.use(cors({
     const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
       "http://localhost:3000", 
       "http://localhost:3001", 
-      "http://localhost:5173"
+      "http://localhost:5173",
+      "https://gym.omarelnemr.xyz",
+      "https://www.gym.omarelnemr.xyz"
     ];
     
-    if (allowedOrigins.includes(origin)) {
+    // Check for exact match or subdomain match
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      if (allowedOrigin === origin) return true;
+      // Allow subdomains for production domain
+      if (allowedOrigin === "https://gym.omarelnemr.xyz" && origin.startsWith("https://")) {
+        return origin.includes("gym.omarelnemr.xyz");
+      }
+      return false;
+    });
+    
+    if (isAllowed) {
       return callback(null, true);
     }
     
+    console.warn(`CORS blocked origin: ${origin}`);
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
-  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'X-API-Key'],
+  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar', 'X-Total-Count'],
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
 }));
 app.use(express.json(bodyParserOptions));
 app.use(express.urlencoded({ extended: true }));
@@ -124,12 +138,27 @@ app.use("/uploads", (req, res, next) => {
   const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
     "http://localhost:3000", 
     "http://localhost:3001", 
-    "http://localhost:5173"
+    "http://localhost:5173",
+    "https://gym.omarelnemr.xyz",
+    "https://www.gym.omarelnemr.xyz"
   ];
   const origin = req.headers.origin;
   
-  if (allowedOrigins.includes("*") || (origin && allowedOrigins.includes(origin))) {
-    res.header('Access-Control-Allow-Origin', origin || allowedOrigins[0]);
+  // Check for exact match or subdomain match
+  const isAllowed = allowedOrigins.some(allowedOrigin => {
+    if (allowedOrigin === "*") return true;
+    if (allowedOrigin === origin) return true;
+    // Allow subdomains for production domain
+    if (allowedOrigin === "https://gym.omarelnemr.xyz" && origin && origin.startsWith("https://")) {
+      return origin.includes("gym.omarelnemr.xyz");
+    }
+    return false;
+  });
+  
+  if (isAllowed && origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else if (allowedOrigins.includes("*")) {
+    res.header('Access-Control-Allow-Origin', "*");
   }
   
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
