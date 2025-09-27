@@ -29,31 +29,126 @@ const log = {
 // Configuration
 const BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000/api';
 
-// Predefined test accounts (optional)
-const SAMPLE_ACCOUNTS = [
+// Official Tabby test accounts (from Tabby documentation)
+const TABBY_TEST_ACCOUNTS = [
+  // Payment Success Flow
   {
-    email: 'uae.test1@tabby.com',
-    password: 'Test123!',
+    email: 'otp.success@tabby.ai',
+    password: 'TabbyTest123!',
     firstName: 'UAE',
+    lastName: 'Success',
+    mobileNumber: '+971500000001',
+    role: 'MEMBER',
+    description: 'UAE Payment Success Flow'
+  },
+  {
+    email: 'otp.success@tabby.ai',
+    password: 'TabbyTest123!',
+    firstName: 'Saudi',
+    lastName: 'Success',
+    mobileNumber: '+966500000001',
+    role: 'MEMBER',
+    description: 'KSA Payment Success Flow'
+  },
+  {
+    email: 'otp.success@tabby.ai',
+    password: 'TabbyTest123!',
+    firstName: 'Kuwait',
+    lastName: 'Success',
+    mobileNumber: '+96590000001',
+    role: 'MEMBER',
+    description: 'Kuwait Payment Success Flow'
+  },
+  
+  // Background Pre-scoring Reject Flow
+  {
+    email: 'otp.success@tabby.ai',
+    password: 'TabbyTest123!',
+    firstName: 'UAE',
+    lastName: 'Reject',
+    mobileNumber: '+971500000002',
+    role: 'MEMBER',
+    description: 'UAE Background Pre-scoring Reject'
+  },
+  {
+    email: 'otp.success@tabby.ai',
+    password: 'TabbyTest123!',
+    firstName: 'Saudi',
+    lastName: 'Reject',
+    mobileNumber: '+966500000002',
+    role: 'MEMBER',
+    description: 'KSA Background Pre-scoring Reject'
+  },
+  {
+    email: 'otp.success@tabby.ai',
+    password: 'TabbyTest123!',
+    firstName: 'Kuwait',
+    lastName: 'Reject',
+    mobileNumber: '+96590000002',
+    role: 'MEMBER',
+    description: 'Kuwait Background Pre-scoring Reject'
+  },
+  
+  // Payment Failure Flow
+  {
+    email: 'otp.rejected@tabby.ai',
+    password: 'TabbyTest123!',
+    firstName: 'UAE',
+    lastName: 'Failure',
+    mobileNumber: '+971500000001',
+    role: 'MEMBER',
+    description: 'UAE Payment Failure Flow'
+  },
+  {
+    email: 'otp.rejected@tabby.ai',
+    password: 'TabbyTest123!',
+    firstName: 'Saudi',
+    lastName: 'Failure',
+    mobileNumber: '+966500000001',
+    role: 'MEMBER',
+    description: 'KSA Payment Failure Flow'
+  },
+  {
+    email: 'otp.rejected@tabby.ai',
+    password: 'TabbyTest123!',
+    firstName: 'Kuwait',
+    lastName: 'Failure',
+    mobileNumber: '+96590000001',
+    role: 'MEMBER',
+    description: 'Kuwait Payment Failure Flow'
+  },
+  
+  // National ID Upload (Kuwait only)
+  {
+    email: 'id.success@tabby.ai',
+    password: 'TabbyTest123!',
+    firstName: 'Kuwait',
+    lastName: 'IDUpload',
+    mobileNumber: '+96590000001',
+    role: 'MEMBER',
+    description: 'Kuwait National ID Upload Test'
+  }
+];
+
+// Custom sample accounts (for reference)
+const CUSTOM_SAMPLE_ACCOUNTS = [
+  {
+    email: 'custom.test1@example.com',
+    password: 'Test123!',
+    firstName: 'Custom',
     lastName: 'Test1',
     mobileNumber: '+971501234567',
-    role: 'MEMBER'
+    role: 'MEMBER',
+    description: 'Custom Test Account 1'
   },
   {
-    email: 'sa.test1@tabby.com',
+    email: 'custom.test2@example.com',
     password: 'Test123!',
-    firstName: 'Saudi',
-    lastName: 'Test1',
+    firstName: 'Custom',
+    lastName: 'Test2',
     mobileNumber: '+966501234567',
-    role: 'MEMBER'
-  },
-  {
-    email: 'tabby.team1@tabby.com',
-    password: 'TabbyTest123!',
-    firstName: 'Tabby',
-    lastName: 'Team1',
-    mobileNumber: '+971501234570',
-    role: 'MEMBER'
+    role: 'MEMBER',
+    description: 'Custom Test Account 2'
   }
 ];
 
@@ -215,12 +310,89 @@ async function main() {
       process.exit(1);
     }
     
-    // Ask if user wants to use sample accounts
-    const useSamples = await prompt('\nDo you want to see sample accounts first? (y/n): ');
+    // Ask if user wants to use Tabby test accounts
+    const useTabbyAccounts = await prompt('\nDo you want to create official Tabby test accounts? (y/n): ');
+    if (useTabbyAccounts.toLowerCase() === 'y' || useTabbyAccounts.toLowerCase() === 'yes') {
+      console.log(`\n${colors.yellow}📋 Official Tabby Test Accounts:${colors.reset}`);
+      console.log(`${colors.cyan}These are the official test credentials from Tabby documentation:${colors.reset}\n`);
+      
+      TABBY_TEST_ACCOUNTS.forEach((account, index) => {
+        console.log(`${index + 1}. ${account.description}`);
+        console.log(`   Email: ${account.email}`);
+        console.log(`   Password: ${account.password}`);
+        console.log(`   Name: ${account.firstName} ${account.lastName}`);
+        console.log(`   Phone: ${account.mobileNumber}`);
+        console.log(`   Role: ${account.role}`);
+        console.log('');
+      });
+      
+      const createTabbyAccounts = await prompt('Do you want to create these Tabby test accounts? (y/n): ');
+      if (createTabbyAccounts.toLowerCase() === 'y' || createTabbyAccounts.toLowerCase() === 'yes') {
+        // Create all Tabby test accounts
+        log.info(`Creating ${TABBY_TEST_ACCOUNTS.length} official Tabby test accounts...\n`);
+        
+        const createdAccounts = [];
+        let successCount = 0;
+        let failedCount = 0;
+        
+        for (const account of TABBY_TEST_ACCOUNTS) {
+          const result = await createTestAccount(account, adminToken);
+          if (result.success) {
+            successCount++;
+            createdAccounts.push(account);
+          } else {
+            failedCount++;
+          }
+          console.log(''); // Add spacing
+        }
+        
+        // Summary
+        console.log('==========================================');
+        log.info('Tabby test account creation summary:');
+        log.success(`Successfully created: ${successCount} accounts`);
+        if (failedCount > 0) {
+          log.warning(`Failed to create: ${failedCount} accounts`);
+        }
+        console.log('==========================================\n');
+        
+        // Display created account credentials
+        if (createdAccounts.length > 0) {
+          log.info('Created Tabby Test Account Credentials:');
+          console.log('');
+          createdAccounts.forEach((account, index) => {
+            console.log(`${index + 1}. ${account.description}`);
+            console.log(`   Email: ${account.email}`);
+            console.log(`   Password: ${account.password}`);
+            console.log(`   Name: ${account.firstName} ${account.lastName}`);
+            console.log(`   Phone: ${account.mobileNumber}`);
+            console.log(`   Role: ${account.role}`);
+            console.log('');
+          });
+          
+          // Test login for first account
+          if (createdAccounts.length > 0) {
+            log.info('Testing login for first Tabby test account...');
+            await testLogin(createdAccounts[0].email, createdAccounts[0].password);
+          }
+        }
+        
+        console.log('');
+        log.success('Tabby test account creation completed!');
+        log.info('These accounts are ready for Tabby payment testing.');
+        log.info('Use OTP: 8888 for testing payments.');
+        
+        rl.close();
+        return;
+      }
+    }
+    
+    // Ask if user wants to see custom sample accounts
+    const useSamples = await prompt('\nDo you want to see custom sample accounts first? (y/n): ');
     if (useSamples.toLowerCase() === 'y' || useSamples.toLowerCase() === 'yes') {
-      console.log(`\n${colors.yellow}📋 Sample Account Examples:${colors.reset}`);
-      SAMPLE_ACCOUNTS.forEach((sample, index) => {
-        console.log(`\n${index + 1}. ${sample.email}`);
+      console.log(`\n${colors.yellow}📋 Custom Sample Account Examples:${colors.reset}`);
+      CUSTOM_SAMPLE_ACCOUNTS.forEach((sample, index) => {
+        console.log(`\n${index + 1}. ${sample.description}`);
+        console.log(`   Email: ${sample.email}`);
         console.log(`   Password: ${sample.password}`);
         console.log(`   Name: ${sample.firstName} ${sample.lastName}`);
         console.log(`   Phone: ${sample.mobileNumber}`);
