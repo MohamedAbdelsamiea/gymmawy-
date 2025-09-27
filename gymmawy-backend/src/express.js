@@ -43,41 +43,14 @@ app.set("trust proxy", 1);
 // Security middleware (order matters!)
 app.use(addSecurityHeaders);
 app.use(compression());
-app.use(cors({ 
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
-      "http://localhost:3000", 
-      "http://localhost:3001", 
-      "http://localhost:5173",
-      "https://gym.omarelnemr.xyz",
-      "https://www.gym.omarelnemr.xyz"
-    ];
-    
-    // Check for exact match or subdomain match
-    const isAllowed = allowedOrigins.some(allowedOrigin => {
-      if (allowedOrigin === origin) return true;
-      // Allow subdomains for production domain
-      if (allowedOrigin === "https://gym.omarelnemr.xyz" && origin.startsWith("https://")) {
-        return origin.includes("gym.omarelnemr.xyz");
-      }
-      return false;
-    });
-    
-    if (isAllowed) {
-      return callback(null, true);
-    }
-    
-    console.warn(`CORS blocked origin: ${origin}`);
-    return callback(new Error('Not allowed by CORS'));
-  },
+// Temporarily disable CORS for development - TODO: Re-enable with proper configuration
+app.use(cors({
+  origin: true, // Allow all origins
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'X-API-Key'],
   exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar', 'X-Total-Count'],
-  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+  optionsSuccessStatus: 200
 }));
 app.use(express.json(bodyParserOptions));
 app.use(express.urlencoded({ extended: true }));

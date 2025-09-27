@@ -4,9 +4,9 @@ export function parseOrThrow(schema, data) {
   const result = schema.safeParse(data);
   if (!result.success) {
     const errorMessages = result.error.issues ? 
-      result.error.issues.map(e => e.message).join(", ") : 
+      result.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(", ") : 
       "Validation failed";
-    const err = new Error(errorMessages);
+    const err = new Error(`Invalid input: ${errorMessages}`);
     err.status = 400;
     err.expose = true;
     throw err;

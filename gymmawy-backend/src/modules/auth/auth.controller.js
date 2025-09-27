@@ -12,6 +12,11 @@ export async function register(req, res, next) {
 
 export async function login(req, res, next) {
   try {
+    // Debug logging for production issues
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Login request body:', JSON.stringify(req.body));
+      console.log('Login request headers:', JSON.stringify(req.headers));
+    }
     const { identifier, password } = parseOrThrow(loginSchema, req.body || {});
     const { accessToken, refreshToken, user } = await service.loginUser({ identifier, password });
     // HttpOnly cookie for refresh token (optional; also return in body for non-cookie clients)
