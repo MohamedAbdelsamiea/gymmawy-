@@ -29,106 +29,16 @@ const log = {
 // Configuration
 const BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000/api';
 
-// Official Tabby test accounts (from Tabby documentation)
-const TABBY_TEST_ACCOUNTS = [
-  // Payment Success Flow
-  {
-    email: 'otp.success@tabby.ai',
-    password: 'TabbyTest123!',
-    firstName: 'UAE',
-    lastName: 'Success',
-    mobileNumber: '+971500000001',
-    role: 'MEMBER',
-    description: 'UAE Payment Success Flow'
-  },
-  {
-    email: 'otp.success@tabby.ai',
-    password: 'TabbyTest123!',
-    firstName: 'Saudi',
-    lastName: 'Success',
-    mobileNumber: '+966500000001',
-    role: 'MEMBER',
-    description: 'KSA Payment Success Flow'
-  },
-  {
-    email: 'otp.success@tabby.ai',
-    password: 'TabbyTest123!',
-    firstName: 'Kuwait',
-    lastName: 'Success',
-    mobileNumber: '+96590000001',
-    role: 'MEMBER',
-    description: 'Kuwait Payment Success Flow'
-  },
-  
-  // Background Pre-scoring Reject Flow
-  {
-    email: 'otp.success@tabby.ai',
-    password: 'TabbyTest123!',
-    firstName: 'UAE',
-    lastName: 'Reject',
-    mobileNumber: '+971500000002',
-    role: 'MEMBER',
-    description: 'UAE Background Pre-scoring Reject'
-  },
-  {
-    email: 'otp.success@tabby.ai',
-    password: 'TabbyTest123!',
-    firstName: 'Saudi',
-    lastName: 'Reject',
-    mobileNumber: '+966500000002',
-    role: 'MEMBER',
-    description: 'KSA Background Pre-scoring Reject'
-  },
-  {
-    email: 'otp.success@tabby.ai',
-    password: 'TabbyTest123!',
-    firstName: 'Kuwait',
-    lastName: 'Reject',
-    mobileNumber: '+96590000002',
-    role: 'MEMBER',
-    description: 'Kuwait Background Pre-scoring Reject'
-  },
-  
-  // Payment Failure Flow
-  {
-    email: 'otp.rejected@tabby.ai',
-    password: 'TabbyTest123!',
-    firstName: 'UAE',
-    lastName: 'Failure',
-    mobileNumber: '+971500000001',
-    role: 'MEMBER',
-    description: 'UAE Payment Failure Flow'
-  },
-  {
-    email: 'otp.rejected@tabby.ai',
-    password: 'TabbyTest123!',
-    firstName: 'Saudi',
-    lastName: 'Failure',
-    mobileNumber: '+966500000001',
-    role: 'MEMBER',
-    description: 'KSA Payment Failure Flow'
-  },
-  {
-    email: 'otp.rejected@tabby.ai',
-    password: 'TabbyTest123!',
-    firstName: 'Kuwait',
-    lastName: 'Failure',
-    mobileNumber: '+96590000001',
-    role: 'MEMBER',
-    description: 'Kuwait Payment Failure Flow'
-  },
-  
-  // National ID Upload (Kuwait only)
-  {
-    email: 'id.success@tabby.ai',
-    password: 'TabbyTest123!',
-    firstName: 'Kuwait',
-    lastName: 'IDUpload',
-    mobileNumber: '+96590000001',
-    role: 'MEMBER',
-    description: 'Kuwait National ID Upload Test'
-  }
-];
+// Single test account
+const TEST_ACCOUNT = {
+  email: 'qa_tester@gymmawy.com',
+  password: 'test1234',
+  firstName: 'QA',
+  lastName: 'Tester',
+  mobileNumber: '+971501234567',
+  role: 'MEMBER',
+  description: 'QA Tester Account'
+};
 
 // Custom sample accounts (for reference)
 const CUSTOM_SAMPLE_ACCOUNTS = [
@@ -271,7 +181,7 @@ async function testLogin(email, password) {
 
 // Main function
 async function main() {
-  console.log(`${colors.cyan}👥 Creating official Tabby test accounts...${colors.reset}\n`);
+  console.log(`${colors.cyan}👥 Creating QA test account...${colors.reset}\n`);
   
   // Get admin credentials from environment or prompt
   const adminEmail = process.env.ADMIN_EMAIL || await prompt('Enter admin email: ');
@@ -300,72 +210,50 @@ async function main() {
     const adminToken = loginResponse.data.accessToken;
     log.success('Admin login successful');
     
-    // Create all Tabby test accounts automatically
-    console.log(`\n${colors.yellow}📋 Official Tabby Test Accounts:${colors.reset}`);
-    console.log(`${colors.cyan}These are the official test credentials from Tabby documentation:${colors.reset}\n`);
+    // Show the test account details
+    console.log(`\n${colors.yellow}📋 QA Test Account:${colors.reset}`);
+    console.log(`${colors.cyan}Creating single test account:${colors.reset}\n`);
     
-    TABBY_TEST_ACCOUNTS.forEach((account, index) => {
-      console.log(`${index + 1}. ${account.description}`);
-      console.log(`   Email: ${account.email}`);
-      console.log(`   Password: ${account.password}`);
-      console.log(`   Name: ${account.firstName} ${account.lastName}`);
-      console.log(`   Phone: ${account.mobileNumber}`);
-      console.log(`   Role: ${account.role}`);
-      console.log('');
-    });
+    console.log(`1. ${TEST_ACCOUNT.description}`);
+    console.log(`   Email: ${TEST_ACCOUNT.email}`);
+    console.log(`   Password: ${TEST_ACCOUNT.password}`);
+    console.log(`   Name: ${TEST_ACCOUNT.firstName} ${TEST_ACCOUNT.lastName}`);
+    console.log(`   Phone: ${TEST_ACCOUNT.mobileNumber}`);
+    console.log(`   Role: ${TEST_ACCOUNT.role}`);
+    console.log('');
     
-    // Create all Tabby test accounts
-    log.info(`Creating ${TABBY_TEST_ACCOUNTS.length} official Tabby test accounts...\n`);
+    // Create the test account
+    log.info('Creating QA test account...\n');
     
-    const createdAccounts = [];
-    let successCount = 0;
-    let failedCount = 0;
-    
-    for (const account of TABBY_TEST_ACCOUNTS) {
-      const result = await createTestAccount(account, adminToken);
-      if (result.success) {
-        successCount++;
-        createdAccounts.push(account);
-      } else {
-        failedCount++;
-      }
-      console.log(''); // Add spacing
-    }
+    const result = await createTestAccount(TEST_ACCOUNT, adminToken);
     
     // Summary
     console.log('==========================================');
-    log.info('Tabby test account creation summary:');
-    log.success(`Successfully created: ${successCount} accounts`);
-    if (failedCount > 0) {
-      log.warning(`Failed to create: ${failedCount} accounts`);
-    }
-    console.log('==========================================\n');
-    
-    // Display created account credentials
-    if (createdAccounts.length > 0) {
-      log.info('Created Tabby Test Account Credentials:');
-      console.log('');
-      createdAccounts.forEach((account, index) => {
-        console.log(`${index + 1}. ${account.description}`);
-        console.log(`   Email: ${account.email}`);
-        console.log(`   Password: ${account.password}`);
-        console.log(`   Name: ${account.firstName} ${account.lastName}`);
-        console.log(`   Phone: ${account.mobileNumber}`);
-        console.log(`   Role: ${account.role}`);
-        console.log('');
-      });
+    if (result.success) {
+      log.success('QA test account created successfully!');
+      console.log('==========================================\n');
       
-      // Test login for first account
-      if (createdAccounts.length > 0) {
-        log.info('Testing login for first Tabby test account...');
-        await testLogin(createdAccounts[0].email, createdAccounts[0].password);
-      }
+      // Display created account credentials
+      log.info('Created QA Test Account Credentials:');
+      console.log('');
+      console.log(`1. ${TEST_ACCOUNT.description}`);
+      console.log(`   Email: ${TEST_ACCOUNT.email}`);
+      console.log(`   Password: ${TEST_ACCOUNT.password}`);
+      console.log(`   Name: ${TEST_ACCOUNT.firstName} ${TEST_ACCOUNT.lastName}`);
+      console.log(`   Phone: ${TEST_ACCOUNT.mobileNumber}`);
+      console.log(`   Role: ${TEST_ACCOUNT.role}`);
+      console.log('');
+      
+      // Test login
+      log.info('Testing login for QA test account...');
+      await testLogin(TEST_ACCOUNT.email, TEST_ACCOUNT.password);
+    } else {
+      log.warning('Failed to create QA test account');
+      console.log('==========================================\n');
     }
     
     console.log('');
-    log.success('Tabby test account creation completed!');
-    log.info('These accounts are ready for Tabby payment testing.');
-    log.info('Use OTP: 8888 for testing payments.');
+    log.success('QA test account creation completed!');
     
   } catch (error) {
     log.error(`Admin login failed: ${error.response?.data?.message || error.message}`);
