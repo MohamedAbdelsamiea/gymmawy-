@@ -42,7 +42,7 @@ return '';
 return imagePath;
 } // Already a full URL
         if (imagePath.startsWith('/uploads/')) {
-            return `${config.API_BASE_URL}${imagePath}`;
+            return `${config.STATIC_BASE_URL}${imagePath}`;
         }
         return imagePath; // Return as-is for other cases
     };

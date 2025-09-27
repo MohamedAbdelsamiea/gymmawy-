@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, X, Video, Loader2, Eye, Trash2, Play, Pause } from 'lucide-react';
-import adminApiService from '../../services/adminApiService';
+import { Upload, X, Video, Eye, Trash2, Play, Pause } from 'lucide-react';
 import { config } from '../../config';
 
 const AdminVideoUpload = ({ 
@@ -14,11 +13,11 @@ const AdminVideoUpload = ({
   showDetails = true,
 }) => {
   const [dragActive, setDragActive] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [preview, setPreview] = useState(initialVideo);
   const [showFullPreview, setShowFullPreview] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
 
@@ -43,19 +42,27 @@ const AdminVideoUpload = ({
   // Fetch video metadata from URL
   const fetchVideoMetadata = async(videoUrl) => {
     try {
-      console.log('🔍 AdminVideoUpload - fetchVideoMetadata called with:', videoUrl);
-      // Extract filename from URL to get the upload ID
-      const filename = videoUrl.split('/').pop();
-      const uploadId = filename.split('.')[0]; // Remove extension
-      console.log('🔍 AdminVideoUpload - Extracted uploadId:', uploadId);
-      
-      // For now, just use the URL directly since we don't have a getVideo endpoint
-      console.log('🔍 AdminVideoUpload - Using URL directly (no metadata)');
+      // For blob URLs or local URLs, just use them directly
+      if (videoUrl.startsWith('blob:') || videoUrl.includes('localhost:5173')) {
+        setPreview({ url: videoUrl });
+        return;
+      }
+
+      // Only try to fetch metadata for URLs that look like our upload system
+      if (!videoUrl.includes('/uploads/') && !videoUrl.includes('/content/')) {
+        setPreview({ url: videoUrl });
+        return;
+      }
+
+      // For newly uploaded videos, we might not have metadata yet
+      // Skip metadata fetching for now and just use the URL
       setPreview({ url: videoUrl });
+      
+      // TODO: Implement proper metadata fetching when the upload system is enhanced
+      // This would require the upload system to store metadata in a database
+      
     } catch (error) {
-      console.warn('Could not fetch video metadata:', error);
       // If we can't fetch metadata, just use the URL
-      console.log('🔍 AdminVideoUpload - Error, using URL directly');
       setPreview({ url: videoUrl });
     }
   };
@@ -80,7 +87,7 @@ const AdminVideoUpload = ({
     }
   }, []);
 
-  const handleFile = async(file) => {
+  const handleFile = (file) => {
     setError(null);
     
     // Validate file type
@@ -95,28 +102,28 @@ const AdminVideoUpload = ({
       return;
     }
 
-    setUploading(true);
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file);
     
-    try {
-      const formData = new FormData();
-      formData.append('video', file);
-      formData.append('module', 'videos');
-      
-      const response = await adminApiService.uploadVideo(formData);
-      
-      if (response.success) {
-        const uploadedVideo = response.upload;
-        setPreview(uploadedVideo);
-        onVideoUpload?.(uploadedVideo);
-      } else {
-        throw new Error(response.error?.message || 'Upload failed');
-      }
-    } catch (err) {
-      console.error('Upload error:', err);
-      setError(err.response?.data?.error?.message || err.message || 'Upload failed');
-    } finally {
-      setUploading(false);
-    }
+    // Store file and preview
+    setSelectedFile(file);
+    setPreview({
+      url: previewUrl,
+      originalName: file.name,
+      size: file.size,
+      type: file.type,
+      isLocal: true // Mark as local file
+    });
+    
+    // Notify parent component about the selected file
+    onVideoUpload?.({
+      file: file,
+      preview: previewUrl,
+      originalName: file.name,
+      size: file.size,
+      type: file.type,
+      isLocal: true
+    });
   };
 
   const handleFileInput = (e) => {
@@ -125,16 +132,13 @@ const AdminVideoUpload = ({
     }
   };
 
-  const handleRemove = async() => {
-    if (preview?.id) {
-      try {
-        await adminApiService.deleteVideo(preview.id);
-        console.log('Video removed from server');
-      } catch (err) {
-        console.error('Error removing video from server:', err);
-      }
+  const handleRemove = () => {
+    // Revoke blob URL to free memory
+    if (preview?.url && preview.isLocal) {
+      URL.revokeObjectURL(preview.url);
     }
     
+    setSelectedFile(null);
     setPreview(null);
     setError(null);
     onVideoRemove?.();
@@ -179,7 +183,7 @@ return '0 Bytes';
   };
 
   const getVideoUrl = (url) => {
-    return url.startsWith('http') ? url : `${config.API_BASE_URL}${url}`;
+    return url.startsWith('http') || url.startsWith('blob:') ? url : `${config.API_BASE_URL}${url}`;
   };
 
   return (
@@ -267,7 +271,7 @@ return '0 Bytes';
             dragActive
               ? 'border-blue-400 bg-blue-50'
               : 'border-gray-300 hover:border-gray-400'
-          } ${uploading ? 'pointer-events-none' : ''}`}
+          }`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
@@ -275,23 +279,18 @@ return '0 Bytes';
           onClick={openFileDialog}
         >
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            {uploading ? (
-              <div className="flex flex-col items-center">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
-                <p className="text-sm text-gray-600">Uploading video...</p>
-                <p className="text-xs text-gray-500">Please wait</p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <Video className="w-8 h-8 text-gray-400 mb-2" />
-                <p className="text-sm text-gray-600 mb-1">
-                  {dragActive ? 'Drop video here' : 'Click to upload or drag and drop'}
-                </p>
-                <p className="text-xs text-gray-500">
-                  MP4, AVI, MOV, WMV, FLV, WebM, MKV up to {Math.round(maxSize / 1024 / 1024)}MB
-                </p>
-              </div>
-            )}
+            <div className="flex flex-col items-center">
+              <Video className="w-8 h-8 text-gray-400 mb-2" />
+              <p className="text-sm text-gray-600 mb-1">
+                {dragActive ? 'Drop video here' : 'Click to upload or drag and drop'}
+              </p>
+              <p className="text-xs text-gray-500">
+                MP4, AVI, MOV, WMV, FLV, WebM, MKV up to {Math.round(maxSize / 1024 / 1024)}MB
+              </p>
+              <p className="text-xs text-blue-600 mt-1 font-medium">
+                Ready to upload on form submission
+              </p>
+            </div>
           </div>
         </div>
       )}

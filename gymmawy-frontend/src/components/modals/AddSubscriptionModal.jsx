@@ -5,6 +5,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import adminApiService from '../../services/adminApiService';
+import fileUploadService from '../../services/fileUploadService';
 import AdminImageUpload from '../common/AdminImageUpload';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -106,6 +107,7 @@ const AddSubscriptionModal = ({ isOpen, onClose, onSuccess, editData = null, isE
   const [editingBenefit, setEditingBenefit] = useState(null);
   const [editBenefit, setEditBenefit] = useState({ en: '', ar: '' });
   const [imageUrl, setImageUrl] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
   const [editingBenefitScope, setEditingBenefitScope] = useState(null); // 'plan-only' or 'global'
   
   const [loading, setLoading] = useState(false);
@@ -700,6 +702,31 @@ const AddSubscriptionModal = ({ isOpen, onClose, onSuccess, editData = null, isE
 
     try {
       // Debug logs removed for production
+      
+      // Upload image if a new file is selected
+      let finalImageUrl = imageUrl;
+      if (selectedImage?.file) {
+        try {
+          const uploadResult = await fileUploadService.uploadFile(
+            selectedImage.file, 
+            'subscription-plans', 
+            true
+          );
+          console.log('Upload result in AddSubscriptionModal:', uploadResult);
+          
+          if (uploadResult.success && uploadResult.upload) {
+            finalImageUrl = fileUploadService.getFileUrl(uploadResult.upload.url);
+          } else {
+            throw new Error('Invalid upload response');
+          }
+        } catch (uploadError) {
+          throw new Error(`Failed to upload image: ${uploadError.message}`);
+        }
+      } else if (isEdit && editData?.imageUrl) {
+        // When editing, preserve existing image if no new image is selected
+        finalImageUrl = editData.imageUrl;
+      }
+      
       // Prepare pricing data for submission
       const prices = [];
       
@@ -740,7 +767,7 @@ const AddSubscriptionModal = ({ isOpen, onClose, onSuccess, editData = null, isE
 
       const subscriptionData = {
         ...formData,
-        imageUrl: imageUrl || '', // Send empty string, backend will transform to undefined
+        imageUrl: finalImageUrl || '', // Send empty string, backend will transform to undefined
         benefits: benefitsData,
         prices: prices,
         // Include loyalty points fields (null when disabled, actual values when enabled)
@@ -1082,9 +1109,20 @@ return null;
               <h3 className="text-lg font-medium text-gray-900">Plan Image</h3>
               <AdminImageUpload
                 initialImage={imageUrl ? { url: imageUrl } : null}
-                onImageUpload={(uploadedImage) => setImageUrl(uploadedImage.url)}
-                onImageRemove={() => setImageUrl('')}
-                maxSize={5 * 1024 * 1024}
+                onImageUpload={(imageData) => {
+                  if (imageData.isLocal) {
+                    setSelectedImage(imageData);
+                    setImageUrl(imageData.preview);
+                  } else {
+                    setSelectedImage(null);
+                    setImageUrl(imageData.url);
+                  }
+                }}
+                onImageRemove={() => {
+                  setSelectedImage(null);
+                  setImageUrl('');
+                }}
+                maxSize={100 * 1024 * 1024}
                 showPreview={true}
                 showDetails={true}
               />

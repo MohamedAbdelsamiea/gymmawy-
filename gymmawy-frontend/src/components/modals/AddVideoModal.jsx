@@ -3,6 +3,7 @@ import { X, Upload, Play } from 'lucide-react';
 import AdminImageUpload from '../common/AdminImageUpload';
 import AdminVideoUpload from '../common/AdminVideoUpload';
 import adminApiService from '../../services/adminApiService';
+import fileUploadService from '../../services/fileUploadService';
 
 const AddVideoModal = ({ isOpen, onClose, onSuccess, editData = null }) => {
   const [formData, setFormData] = useState({
@@ -14,7 +15,7 @@ const AddVideoModal = ({ isOpen, onClose, onSuccess, editData = null }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [errors, setErrors] = useState({});
-  const [uploadedFiles, setUploadedFiles] = useState({
+  const [selectedFiles, setSelectedFiles] = useState({
     video: null,
     thumbnailAr: null,
     thumbnailEn: null,
@@ -78,26 +79,16 @@ const AddVideoModal = ({ isOpen, onClose, onSuccess, editData = null }) => {
     }
   };
 
-  const cleanupUploadedFile = async(fileId) => {
-    if (!fileId) {
-return;
-}
-    
-    try {
-      await adminApiService.deleteImage(fileId);
-      console.log('Successfully deleted uploaded file:', fileId);
-    } catch (err) {
-      console.error('Failed to delete uploaded file:', err);
-      // Don't throw error - just log it, as the file might already be deleted
+  const cleanupSelectedFile = (fileData) => {
+    if (fileData?.preview && fileData.isLocal) {
+      URL.revokeObjectURL(fileData.preview);
     }
   };
 
-  const cleanupAllUploadedFiles = async() => {
-    const cleanupPromises = Object.values(uploadedFiles)
-      .filter(file => file && file.id)
-      .map(file => cleanupUploadedFile(file.id));
-    
-    await Promise.all(cleanupPromises);
+  const cleanupAllSelectedFiles = () => {
+    Object.values(selectedFiles)
+      .filter(file => file && file.isLocal)
+      .forEach(file => cleanupSelectedFile(file));
   };
 
   const validateForm = () => {
@@ -130,10 +121,69 @@ return;
       setLoading(true);
       setError(null);
 
+      // Prepare final form data
+      const finalFormData = { ...formData };
+
+      // Upload video file if selected
+      if (selectedFiles.video?.file) {
+        try {
+          const uploadResult = await fileUploadService.uploadVideo(
+            selectedFiles.video.file, 
+            'videos'
+          );
+          
+          if (uploadResult.success && uploadResult.upload) {
+            finalFormData.videoUrl = fileUploadService.getFileUrl(uploadResult.upload.url);
+          } else {
+            throw new Error('Invalid upload response for video');
+          }
+        } catch (uploadError) {
+          throw new Error(`Failed to upload video: ${uploadError.message}`);
+        }
+      }
+
+      // Upload Arabic thumbnail if selected
+      if (selectedFiles.thumbnailAr?.file) {
+        try {
+          const uploadResult = await fileUploadService.uploadFile(
+            selectedFiles.thumbnailAr.file, 
+            'videos', 
+            true
+          );
+          
+          if (uploadResult.success && uploadResult.upload) {
+            finalFormData.thumbnailAr = fileUploadService.getFileUrl(uploadResult.upload.url);
+          } else {
+            throw new Error('Invalid upload response for Arabic thumbnail');
+          }
+        } catch (uploadError) {
+          throw new Error(`Failed to upload Arabic thumbnail: ${uploadError.message}`);
+        }
+      }
+
+      // Upload English thumbnail if selected
+      if (selectedFiles.thumbnailEn?.file) {
+        try {
+          const uploadResult = await fileUploadService.uploadFile(
+            selectedFiles.thumbnailEn.file, 
+            'videos', 
+            true
+          );
+          
+          if (uploadResult.success && uploadResult.upload) {
+            finalFormData.thumbnailEn = fileUploadService.getFileUrl(uploadResult.upload.url);
+          } else {
+            throw new Error('Invalid upload response for English thumbnail');
+          }
+        } catch (uploadError) {
+          throw new Error(`Failed to upload English thumbnail: ${uploadError.message}`);
+        }
+      }
+
       if (isEdit) {
-        await adminApiService.updateVideo(editData.id, formData);
+        await adminApiService.updateVideo(editData.id, finalFormData);
       } else {
-        await adminApiService.createVideo(formData);
+        await adminApiService.createVideo(finalFormData);
       }
 
       onSuccess();
@@ -145,9 +195,9 @@ return;
     }
   };
 
-  const handleClose = async() => {
-    // Clean up any uploaded files that weren't saved
-    await cleanupAllUploadedFiles();
+  const handleClose = () => {
+    // Clean up any selected files that weren't saved
+    cleanupAllSelectedFiles();
     onClose();
   };
 
@@ -225,18 +275,18 @@ return null;
             <AdminVideoUpload
               onVideoUpload={(videoData) => {
                 // Clean up previous video if exists
-                if (uploadedFiles.video) {
-                  cleanupUploadedFile(uploadedFiles.video.id);
+                if (selectedFiles.video) {
+                  cleanupSelectedFile(selectedFiles.video);
                 }
-                setFormData(prev => ({ ...prev, videoUrl: videoData.url }));
-                setUploadedFiles(prev => ({ ...prev, video: videoData }));
+                setFormData(prev => ({ ...prev, videoUrl: videoData.preview || videoData.url }));
+                setSelectedFiles(prev => ({ ...prev, video: videoData }));
               }}
-              onVideoRemove={async() => {
-                if (uploadedFiles.video) {
-                  await cleanupUploadedFile(uploadedFiles.video.id);
+              onVideoRemove={() => {
+                if (selectedFiles.video) {
+                  cleanupSelectedFile(selectedFiles.video);
                 }
                 setFormData(prev => ({ ...prev, videoUrl: '' }));
-                setUploadedFiles(prev => ({ ...prev, video: null }));
+                setSelectedFiles(prev => ({ ...prev, video: null }));
               }}
               initialVideo={formData.videoUrl ? { url: formData.videoUrl } : null}
               className="w-full"
@@ -255,18 +305,18 @@ return null;
             <AdminImageUpload
               onImageUpload={(imageData) => {
                 // Clean up previous thumbnail if exists
-                if (uploadedFiles.thumbnailAr) {
-                  cleanupUploadedFile(uploadedFiles.thumbnailAr.id);
+                if (selectedFiles.thumbnailAr) {
+                  cleanupSelectedFile(selectedFiles.thumbnailAr);
                 }
-                setFormData(prev => ({ ...prev, thumbnailAr: imageData.url }));
-                setUploadedFiles(prev => ({ ...prev, thumbnailAr: imageData }));
+                setFormData(prev => ({ ...prev, thumbnailAr: imageData.preview || imageData.url }));
+                setSelectedFiles(prev => ({ ...prev, thumbnailAr: imageData }));
               }}
-              onImageRemove={async() => {
-                if (uploadedFiles.thumbnailAr) {
-                  await cleanupUploadedFile(uploadedFiles.thumbnailAr.id);
+              onImageRemove={() => {
+                if (selectedFiles.thumbnailAr) {
+                  cleanupSelectedFile(selectedFiles.thumbnailAr);
                 }
                 setFormData(prev => ({ ...prev, thumbnailAr: '' }));
-                setUploadedFiles(prev => ({ ...prev, thumbnailAr: null }));
+                setSelectedFiles(prev => ({ ...prev, thumbnailAr: null }));
               }}
               initialImage={formData.thumbnailAr ? { url: formData.thumbnailAr } : null}
               className="w-full"
@@ -281,18 +331,18 @@ return null;
             <AdminImageUpload
               onImageUpload={(imageData) => {
                 // Clean up previous thumbnail if exists
-                if (uploadedFiles.thumbnailEn) {
-                  cleanupUploadedFile(uploadedFiles.thumbnailEn.id);
+                if (selectedFiles.thumbnailEn) {
+                  cleanupSelectedFile(selectedFiles.thumbnailEn);
                 }
-                setFormData(prev => ({ ...prev, thumbnailEn: imageData.url }));
-                setUploadedFiles(prev => ({ ...prev, thumbnailEn: imageData }));
+                setFormData(prev => ({ ...prev, thumbnailEn: imageData.preview || imageData.url }));
+                setSelectedFiles(prev => ({ ...prev, thumbnailEn: imageData }));
               }}
-              onImageRemove={async() => {
-                if (uploadedFiles.thumbnailEn) {
-                  await cleanupUploadedFile(uploadedFiles.thumbnailEn.id);
+              onImageRemove={() => {
+                if (selectedFiles.thumbnailEn) {
+                  cleanupSelectedFile(selectedFiles.thumbnailEn);
                 }
                 setFormData(prev => ({ ...prev, thumbnailEn: '' }));
-                setUploadedFiles(prev => ({ ...prev, thumbnailEn: null }));
+                setSelectedFiles(prev => ({ ...prev, thumbnailEn: null }));
               }}
               initialImage={formData.thumbnailEn ? { url: formData.thumbnailEn } : null}
               className="w-full"

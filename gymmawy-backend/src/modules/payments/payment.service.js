@@ -349,11 +349,7 @@ export async function approvePayment(paymentId, adminId) {
         include: {
           items: {
             include: {
-              productVariant: {
-                include: {
-                  product: true
-                }
-              }
+              product: true
             }
           }
         }
@@ -558,11 +554,7 @@ export async function rejectPayment(paymentId, adminId) {
         include: {
           items: {
             include: {
-              productVariant: {
-                include: {
-                  product: true
-                }
-              }
+              product: true
             }
           }
         }
@@ -706,6 +698,23 @@ export async function getPaymentById(paymentId) {
           mobileNumber: true
         } 
       }
+    }
+  });
+}
+
+export async function getRecentPayments(userId, limit = 5) {
+  return prisma.payment.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    select: {
+      id: true,
+      amount: true,
+      currency: true,
+      method: true,
+      status: true,
+      createdAt: true,
+      metadata: true
     }
   });
 }

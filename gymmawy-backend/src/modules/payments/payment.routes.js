@@ -6,6 +6,7 @@ const router = express.Router();
 
 // User routes
 router.post('/upload-proof', requireAuth, controller.uploadPaymentProof);
+router.get('/recent', requireAuth, controller.getRecentPayments);
 router.get('/:paymentId', requireAuth, controller.getPaymentById);
 
 // Admin routes

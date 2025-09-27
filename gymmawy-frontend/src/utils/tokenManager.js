@@ -208,7 +208,6 @@ return false;
           error.message.includes('Refresh token required')) {
         console.log('Authentication failed, clearing tokens');
         authService.removeToken();
-        authService.removeRefreshToken();
         window.dispatchEvent(new CustomEvent('tokenRefreshFailed'));
       } else {
         console.log('Token refresh failed due to network error, will retry later');

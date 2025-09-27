@@ -10,8 +10,7 @@ export async function createSingleProductOrder(userId, orderData = {}) {
   const product = await prisma.product.findUnique({
     where: { id: productId },
     include: {
-      images: true,
-      prices: true
+      images: true
     }
   });
   
@@ -87,6 +86,7 @@ export async function createSingleProductOrder(userId, orderData = {}) {
       data: {
         userId,
         orderNumber,
+        paymentMethod: paymentMethod || null,
         price: finalPrice,
         currency: currency,
         couponId: validatedCoupon?.id || null,
@@ -107,6 +107,7 @@ export async function createSingleProductOrder(userId, orderData = {}) {
         orderId: created.id,
         productId: product.id,
         quantity: quantity,
+        size: size || 'M',
         totalPrice: finalPrice,
       }
     });
@@ -274,6 +275,7 @@ export async function createOrderFromCart(userId, orderData = {}) {
       data: { 
         userId, 
         orderNumber,
+        paymentMethod: paymentMethod || null,
         price: finalPrice,
         currency: currency,
         couponId: validatedCoupon?.id || null,
@@ -288,22 +290,46 @@ export async function createOrderFromCart(userId, orderData = {}) {
       } 
     });
     
-    // Create order item for single product
-    await tx.orderItem.create({
-      data: {
-        orderId: created.id,
-        productId: product.id,
-        quantity: quantity,
-        totalPrice: discountedPrice,
-        discountPercentage: productDiscountPercentage,
-      },
-    });
-    
-    // Update product stock
-    await tx.product.update({ 
-      where: { id: product.id }, 
-      data: { stock: { decrement: quantity } } 
-    });
+    // Create order items for each cart item
+    for (const item of cart.items) {
+      // Get price for the specific currency
+      const price = await tx.price.findFirst({
+        where: {
+          purchasableId: item.product.id,
+          purchasableType: 'PRODUCT',
+          currency: currency
+        }
+      });
+
+      if (!price) {
+        throw new Error(`Price not found for product ${item.product.name?.en || item.product.id} in currency ${currency}`);
+      }
+
+      const itemPrice = parseFloat(price.amount);
+      const productDiscountPercentage = item.product.discountPercentage || 0;
+      const discountedPrice = productDiscountPercentage > 0 
+        ? itemPrice * (1 - productDiscountPercentage / 100) 
+        : itemPrice;
+      const totalItemPrice = discountedPrice * item.quantity;
+
+      // Create order item
+      await tx.orderItem.create({
+        data: {
+          orderId: created.id,
+          productId: item.product.id,
+          quantity: item.quantity,
+          size: item.size || 'M',
+          totalPrice: totalItemPrice,
+          discountPercentage: productDiscountPercentage,
+        },
+      });
+      
+      // Update product stock
+      await tx.product.update({ 
+        where: { id: item.product.id }, 
+        data: { stock: { decrement: item.quantity } } 
+      });
+    }
 
     // Redeem coupon if valid (within the same transaction)
     if (validatedCoupon) {
@@ -502,11 +528,7 @@ export async function adminUpdateStatus(id, status) {
       user: true,
       items: {
         include: {
-          productVariant: {
-            include: {
-              product: true
-            }
-          }
+          product: true
         }
       },
       coupon: true
@@ -532,51 +554,72 @@ export async function adminUpdateStatus(id, status) {
 
     // Handle status changes that affect loyalty points and coupons
     if (previousStatus !== status) {
-      // If changing from PAID to CANCELLED/REFUNDED, reverse loyalty points
-      if (previousStatus === 'PAID' && (status === 'CANCELLED' || status === 'REFUNDED')) {
-        let totalLoyaltyPoints = 0;
+      // If changing to CANCELLED/REFUNDED, restore stock and reverse loyalty points
+      if (status === 'CANCELLED' || status === 'REFUNDED') {
+        // Restore stock for all items in the order
         for (const item of currentOrder.items) {
-          const pointsPerItem = item.loyaltyPointsAwarded || 0;
-          const pointsForThisItem = pointsPerItem * item.quantity;
-          totalLoyaltyPoints += pointsForThisItem;
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } }
+          });
         }
+        console.log(`Restored stock for order ${currentOrder.id} status change to ${status}`);
 
-        if (totalLoyaltyPoints > 0) {
-          await tx.user.update({
-            where: { id: currentOrder.userId },
-            data: {
-              loyaltyPoints: {
-                decrement: totalLoyaltyPoints
+        // If changing from PAID to CANCELLED/REFUNDED, reverse loyalty points
+        if (previousStatus === 'PAID') {
+          let totalLoyaltyPoints = 0;
+          for (const item of currentOrder.items) {
+            const pointsPerItem = item.loyaltyPointsAwarded || 0;
+            const pointsForThisItem = pointsPerItem * item.quantity;
+            totalLoyaltyPoints += pointsForThisItem;
+          }
+
+          if (totalLoyaltyPoints > 0) {
+            await tx.user.update({
+              where: { id: currentOrder.userId },
+              data: {
+                loyaltyPoints: {
+                  decrement: totalLoyaltyPoints
+                }
               }
+            });
+
+            await tx.loyaltyTransaction.create({
+              data: {
+                userId: currentOrder.userId,
+                points: totalLoyaltyPoints,
+                type: 'SPENT',
+                source: 'ORDER_ITEM',
+                sourceId: currentOrder.id
+              }
+            });
+
+            console.log(`Reversed ${totalLoyaltyPoints} loyalty points for order status change from ${previousStatus} to ${status}`);
+          }
+
+          // Remove coupon usage if order had a coupon
+          if (currentOrder.couponId) {
+            try {
+              const { removeCouponUsage } = await import('../coupons/couponUsage.service.js');
+              await removeCouponUsage(currentOrder.userId, currentOrder.couponId, 'ORDER', currentOrder.id);
+              console.log('Coupon usage removed for order status change:', currentOrder.id);
+            } catch (error) {
+              console.error('Failed to remove coupon usage for order status change:', error);
             }
-          });
-
-          await tx.loyaltyTransaction.create({
-            data: {
-              userId: currentOrder.userId,
-              points: totalLoyaltyPoints,
-              type: 'SPENT',
-              source: 'ORDER_ITEM',
-              sourceId: currentOrder.id
-            }
-          });
-
-          console.log(`Reversed ${totalLoyaltyPoints} loyalty points for order status change from ${previousStatus} to ${status}`);
-        }
-
-        // Remove coupon usage if order had a coupon
-        if (currentOrder.couponId) {
-          try {
-            const { removeCouponUsage } = await import('../coupons/couponUsage.service.js');
-            await removeCouponUsage(currentOrder.userId, currentOrder.couponId, 'ORDER', currentOrder.id);
-            console.log('Coupon usage removed for order status change:', currentOrder.id);
-          } catch (error) {
-            console.error('Failed to remove coupon usage for order status change:', error);
           }
         }
       }
-      // If changing from CANCELLED/REFUNDED to PAID, award loyalty points
+      // If changing from CANCELLED/REFUNDED to PAID, subtract stock and award loyalty points
       else if ((previousStatus === 'CANCELLED' || previousStatus === 'REFUNDED') && status === 'PAID') {
+        // Subtract stock for all items in the order
+        for (const item of currentOrder.items) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { decrement: item.quantity } }
+          });
+        }
+        console.log(`Subtracted stock for order ${currentOrder.id} status change from ${previousStatus} to ${status}`);
+
         let totalLoyaltyPoints = 0;
         for (const item of currentOrder.items) {
           const pointsPerItem = item.loyaltyPointsAwarded || 0;
@@ -927,12 +970,16 @@ export async function adminListOrders(params = {}) {
         }
       },
       items: {
-        include: {
+        select: {
+          id: true,
+          quantity: true,
+          size: true,
+          totalPrice: true,
+          discountPercentage: true,
           product: {
             select: {
               id: true,
               name: true,
-              imageUrl: true,
               stock: true
             }
           }
@@ -1006,6 +1053,7 @@ export async function adminListOrders(params = {}) {
       items: order.items.map(item => ({
         id: item.id,
         quantity: item.quantity,
+        size: item.size,
         totalPrice: item.totalPrice,
         discountPercentage: item.discountPercentage,
         product: item.product

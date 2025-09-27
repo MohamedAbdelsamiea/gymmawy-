@@ -8,6 +8,7 @@ import { useLanguage } from '../../hooks/useLanguage';
 import { config } from '../../config';
 import checkoutService from '../../services/checkoutService';
 import imageUploadService from '../../services/imageUploadService';
+import tabbyService from '../../services/tabbyService';
 import { useSecureImage } from '../../hooks/useSecureImage';
 import { 
   CreditCard, 
@@ -33,6 +34,7 @@ const Checkout = () => {
   const { user, isAuthenticated } = useAuth();
   const { showError, showSuccess } = useToast();
   const { currency: detectedCurrency, isLoading: currencyLoading } = useCurrency();
+  
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -51,6 +53,13 @@ return fallback;
   
   // Get data from location state (plan, product, or cart items)
   const { plan, product, cartItems, type, currency: passedCurrency, buyNow, subtotal: cartSubtotal, shipping: cartShipping, total: cartTotal } = location.state || {};
+  
+  // Debug: Log currency detection
+  console.log('🔍 Checkout - Currency detection:', {
+    detectedCurrency,
+    currencyLoading,
+    plan: plan?.name
+  });
   
   // Use passed currency or fallback to detected currency
   const currency = passedCurrency || detectedCurrency || 'USD';
@@ -79,6 +88,13 @@ return fallback;
     }
   }, [plan, product, cartItems, navigate]);
 
+  // Check Tabby availability when currency changes
+  useEffect(() => {
+    if (currency && !currencyLoading) {
+      checkTabbyAvailability(currency);
+    }
+  }, [currency, currencyLoading]);
+
   // State management
   const [selectedDuration, setSelectedDuration] = useState('normal');
   const [couponCode, setCouponCode] = useState('');
@@ -96,6 +112,49 @@ return fallback;
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
   
+  // Tabby Testing Panel State
+  const [testCredentials, setTestCredentials] = useState(null);
+  const [testScenario, setTestScenario] = useState(null);
+  const [tabbyAvailable, setTabbyAvailable] = useState(false);
+
+  // Check Tabby availability based on currency
+  const checkTabbyAvailability = async (currency) => {
+    try {
+      const response = await fetch(`/api/tabby/availability?currency=${currency}`);
+      const data = await response.json();
+      setTabbyAvailable(data.available);
+      
+      if (!data.available) {
+        console.log(`Tabby not available for ${currency}:`, data.message);
+      }
+    } catch (error) {
+      console.error('Error checking Tabby availability:', error);
+      setTabbyAvailable(false);
+    }
+  };
+
+  // Handle test credentials selection
+  const handleTestCredentialsSelect = (credentials, scenario) => {
+    setTestCredentials(credentials);
+    setTestScenario(scenario);
+    
+    // Update form fields with test credentials
+    setShippingDetails(prev => ({
+      ...prev,
+      shippingEmail: credentials.email,
+      shippingPhone: credentials.phone
+    }));
+    
+    // Show success message based on scenario
+    if (scenario === 'background_reject') {
+      showError('Test credentials applied. Tabby should be hidden/unavailable.');
+    } else if (scenario === 'payment_failure') {
+      showError('Test credentials applied. Payment will be rejected by Tabby.');
+    } else {
+      showSuccess('Test credentials applied. Use OTP: 8888 for testing.');
+    }
+  };
+  
   // Shipping details state (matching database schema)
   const [shippingDetails, setShippingDetails] = useState({
     shippingBuilding: '',
@@ -109,6 +168,13 @@ return fallback;
   const { dataUrl: secureImageUrl, loading: imageLoading, error: imageError } = useSecureImage(
     typeof paymentProof === 'string' ? paymentProof : null
   );
+
+  // Reset payment option if cash on delivery is selected for non-physical orders
+  useEffect(() => {
+    if (paymentOption === 'cash_on_delivery' && type !== 'cart' && type !== 'product') {
+      setPaymentOption(''); // Reset to empty to force user to select a valid option
+    }
+  }, [type, paymentOption]);
 
   // Helper function to format subscription period
   const formatSubscriptionPeriod = (days) => {
@@ -543,7 +609,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
     }
     
     // Handle new price structure with objects (from backend) - prioritize by detected currency
-    if (currency === 'USD' && plan.priceUSD && typeof plan.priceUSD === 'object') {
+    if (detectedCurrency === 'USD' && plan.priceUSD && typeof plan.priceUSD === 'object') {
       return {
         amount: plan.priceUSD.amount || 0,
         currency: plan.priceUSD.currency || 'USD',
@@ -551,7 +617,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       };
     }
     
-    if (currency === 'SAR' && plan.priceSAR && typeof plan.priceSAR === 'object') {
+    if (detectedCurrency === 'SAR' && plan.priceSAR && typeof plan.priceSAR === 'object') {
       return {
         amount: plan.priceSAR.amount || 0,
         currency: plan.priceSAR.currency || 'SAR',
@@ -559,7 +625,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       };
     }
     
-    if (currency === 'AED' && plan.priceAED && typeof plan.priceAED === 'object') {
+    if (detectedCurrency === 'AED' && plan.priceAED && typeof plan.priceAED === 'object') {
       return {
         amount: plan.priceAED.amount || 0,
         currency: plan.priceAED.currency || 'AED',
@@ -614,7 +680,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
     let currencySymbol = 'L.E';
     
     // Select price based on detected currency
-    switch (currency) {
+    switch (detectedCurrency) {
       case 'EGP':
         if (plan.priceEGP !== undefined) {
           selectedPrice = convertDecimalToNumber(plan.priceEGP);
@@ -675,10 +741,12 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
     }
     
     console.log('🔍 Checkout - Programme price debug:', {
-      currency: currency,
+      detectedCurrency: detectedCurrency,
       selectedCurrency: selectedCurrency,
       selectedPrice: selectedPrice,
-      currencySymbol: currencySymbol
+      currencySymbol: currencySymbol,
+      planPriceSAR: plan?.priceSAR,
+      planPriceUSD: plan?.priceUSD
     });
     
     return { amount: selectedPrice, currency: selectedCurrency, currencySymbol: currencySymbol };
@@ -739,12 +807,19 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
     } else if (type === 'product') {
       originalPrice = product.price * (product.quantity || 1);
     } else {
-      // For subscriptions/programmes
-      originalPrice = plan?.priceUSD?.originalAmount || 
-                     plan?.priceEGP?.originalAmount || 
-                     plan?.priceSAR?.originalAmount || 
-                     plan?.priceAED?.originalAmount || 
-                     currentPrice?.amount || 0;
+      // For subscriptions/programmes - use the correct currency's original amount
+      if (detectedCurrency === 'SAR' && plan?.priceSAR?.originalAmount) {
+        originalPrice = plan.priceSAR.originalAmount;
+      } else if (detectedCurrency === 'USD' && plan?.priceUSD?.originalAmount) {
+        originalPrice = plan.priceUSD.originalAmount;
+      } else if (detectedCurrency === 'AED' && plan?.priceAED?.originalAmount) {
+        originalPrice = plan.priceAED.originalAmount;
+      } else if (detectedCurrency === 'EGP' && plan?.priceEGP?.originalAmount) {
+        originalPrice = plan.priceEGP.originalAmount;
+      } else {
+        // Fallback to current price if no original amount found
+        originalPrice = currentPrice?.amount || 0;
+      }
     }
     
     // Check for plan-level discount percentage (subscriptions and programmes)
@@ -781,16 +856,35 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
   } else if (type === 'product') {
     originalPrice = product.price * (product.quantity || 1);
   } else {
-    // For subscriptions/programmes
-    originalPrice = plan?.priceUSD?.originalAmount || 
-                   plan?.priceEGP?.originalAmount || 
-                   plan?.priceSAR?.originalAmount || 
-                   plan?.priceAED?.originalAmount || 
-                   currentPrice?.amount || 0;
+    // For subscriptions/programmes - use the correct currency's original amount
+    if (detectedCurrency === 'SAR' && plan?.priceSAR?.originalAmount) {
+      originalPrice = plan.priceSAR.originalAmount;
+    } else if (detectedCurrency === 'USD' && plan?.priceUSD?.originalAmount) {
+      originalPrice = plan.priceUSD.originalAmount;
+    } else if (detectedCurrency === 'AED' && plan?.priceAED?.originalAmount) {
+      originalPrice = plan.priceAED.originalAmount;
+    } else if (detectedCurrency === 'EGP' && plan?.priceEGP?.originalAmount) {
+      originalPrice = plan.priceEGP.originalAmount;
+    } else {
+      // Fallback to current price if no original amount found
+      originalPrice = currentPrice?.amount || 0;
+    }
   }
   
   const subtotal = originalPrice;
   const total = subtotal - discount.totalDiscount + shippingCost;
+  
+  // Debug: Log order summary calculation
+  console.log('🔍 Order Summary Debug:', {
+    detectedCurrency,
+    originalPrice,
+    subtotal,
+    discount: discount.totalDiscount,
+    shippingCost,
+    total,
+    planPriceSAR: plan?.priceSAR,
+    currentPrice
+  });
   
   // Debug: Log discount calculation
   // console.log('=== DISCOUNT DEBUG ===');
@@ -1024,10 +1118,18 @@ return;
           </div>
         )}
         
-        {/* Coupon discount only (for cart and product orders) */}
-        {(type === 'cart' || type === 'product') && couponValid && couponCode.trim() && discount.couponDiscount > 0 && (
+        {/* Coupon discount (for all order types) */}
+        {couponValid && couponCode.trim() && discount.couponDiscount > 0 && (
           <div className="flex justify-between text-sm text-green-600">
-            <span>{t('checkout.couponDiscount')} ({couponCode}):</span>
+            <span>
+              {t('checkout.couponDiscount')} ({couponCode})
+              {couponDiscountType === 'percentage' ? (
+                <span className={`text-green-600 ${i18n.language === 'ar' ? 'mr-1' : 'ml-1'}`}>({couponDiscount}%)</span>
+              ) : (
+                <span className={`text-green-600 ${i18n.language === 'ar' ? 'mr-1' : 'ml-1'}`}>({couponDiscount} {currentPrice?.currencySymbol || 'L.E'})</span>
+              )}
+              :
+            </span>
             <span>-{Number(discount.couponDiscount).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{currentPrice?.currencySymbol || 'L.E'}</span>
           </div>
         )}
@@ -1047,6 +1149,142 @@ return;
       </div>
     </div>
   );
+
+  // Handle Tabby payment
+  const handleTabbyPayment = async () => {
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      // Check for test scenarios
+      if (testScenario === 'background_reject') {
+        setError('Sorry, Tabby is unable to approve this purchase, please use an alternative payment method for your order.');
+        showError('Tabby payment method is not available for this test scenario.');
+        setSubmitting(false);
+        return;
+      }
+
+      // Generate a proper UUID for the order
+      const generateUUID = () => {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c == 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      };
+
+      // Debug: Log price information
+      console.log('🔍 Tabby payment price debug:', {
+        currentPrice,
+        total,
+        finalPrice,
+        type
+      });
+
+      // Prepare order data for Tabby
+      const orderData = {
+        id: generateUUID(),
+        amount: currentPrice?.amount || total,
+        currency: currentPrice?.currency || finalPrice?.currency || 'EGP',
+        description: `Payment for ${type === 'cart' ? 'cart items' : type}`,
+        user: {
+          firstName: user?.firstName || '',
+          lastName: user?.lastName || '',
+          email: user?.email || '',
+          mobileNumber: user?.mobileNumber || ''
+        },
+        items: getOrderItemsForTabby(),
+        shippingAddress: {
+          address: shippingDetails?.shippingStreet || '',
+          city: shippingDetails?.shippingCity || 'Cairo',
+          country: 'EG',
+          postalCode: shippingDetails?.shippingPostalCode || '00000'
+        }
+      };
+
+      // Create checkout data for Tabby
+      const checkoutData = tabbyService.createCheckoutData(orderData, type);
+
+      // Validate checkout data
+      const validation = tabbyService.validateCheckoutData(checkoutData);
+      if (!validation.isValid) {
+        throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+      }
+
+      // Create Tabby checkout session
+      console.log('🔍 About to call tabbyService.createCheckoutSession with:', checkoutData);
+      const result = await tabbyService.createCheckoutSession(checkoutData);
+      console.log('🔍 tabbyService.createCheckoutSession returned:', result);
+      
+      // Debug: Log the result structure
+      console.log('🔍 Tabby checkout result:', result);
+      console.log('🔍 Tabby checkout_session:', result?.checkout_session);
+      console.log('🔍 Tabby checkout_url:', result?.checkout_session?.checkout_url);
+
+      if (result?.checkout_session?.checkout_url) {
+        showSuccess('Redirecting to secure payment page...');
+        // Redirect to Tabby checkout
+        window.location.href = result.checkout_session.checkout_url;
+      } else {
+        throw new Error('No checkout URL received from Tabby');
+      }
+
+    } catch (error) {
+      console.error('Tabby payment failed:', error);
+      
+      // Handle background pre-scoring failure
+      if (error.response?.status === 400 && error.response?.data?.reason === 'Background pre-scoring failed') {
+        const errorMessage = error.response.data.message || 'Tabby payment is not available for this purchase.';
+        setError(errorMessage);
+        showError(errorMessage);
+        setTabbyAvailable(false); // Hide Tabby option for this session
+        console.log('❌ Tabby background pre-scoring failed - payment method not available');
+      } else {
+        const errorMessage = error.message || 'Payment initialization failed. Please try again.';
+        setError(errorMessage);
+        showError(errorMessage);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Helper function to get order items for Tabby
+  const getOrderItemsForTabby = () => {
+    // Helper function to extract string from name (handles both string and object formats)
+    const getNameString = (name) => {
+      if (typeof name === 'string') return name;
+      if (typeof name === 'object' && name !== null) {
+        // Handle object with language keys like {en: "Name", ar: "الاسم"}
+        return name.en || name.ar || Object.values(name)[0] || 'Item';
+      }
+      return 'Item';
+    };
+
+    if (type === 'cart') {
+      return cartItems?.map(item => ({
+        title: getNameString(item.name) || 'Product',
+        quantity: item.quantity || 1,
+        price: item.price || 0,
+        category: 'product'
+      })) || [];
+    } else if (type === 'product') {
+      return [{
+        title: getNameString(product?.name) || 'Product',
+        quantity: product?.quantity || 1,
+        price: product?.price || 0,
+        category: 'product'
+      }];
+    } else {
+      // For subscriptions/programmes
+      return [{
+        title: getNameString(plan?.name) || 'Subscription/Programme',
+        quantity: 1,
+        price: currentPrice?.amount || total,
+        category: type === 'subscription' ? 'subscription' : 'programme'
+      }];
+    }
+  };
 
   // Handle form submission
   const handleSubmit = async(e) => {
@@ -1079,8 +1317,14 @@ return;
       }
     }
 
-    // Prevent submission for Tabby and Tamara (not yet available)
-    if (paymentOption === 'tabby' || paymentOption === 'tamara') {
+    // Handle Tabby payment separately
+    if (paymentOption === 'tabby') {
+      await handleTabbyPayment();
+      return;
+    }
+
+    // Prevent submission for Tamara (not yet available)
+    if (paymentOption === 'tamara') {
       const errorMessage = i18n.language === 'ar' 
         ? 'هذا الخيار غير متاح حالياً' 
         : 'This payment option is currently unavailable';
@@ -1434,7 +1678,7 @@ return;
                             if (!imagePath) return '';
                             if (imagePath.startsWith('http')) return imagePath;
                             if (imagePath.startsWith('/uploads/')) {
-                              return `${config.API_BASE_URL}${imagePath}`;
+                              return `${config.STATIC_BASE_URL}${imagePath}`;
                             }
                             return imagePath;
                           })()} 
@@ -1458,7 +1702,21 @@ return;
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-gray-700">{i18n.language === 'ar' ? 'السعر الأصلي' : 'Original Price'}</span>
                         <span className="text-sm font-medium text-gray-900">
-                          {plan?.priceUSD?.originalAmount || plan?.priceEGP?.originalAmount || plan?.priceSAR?.originalAmount || plan?.priceAED?.originalAmount || currentPrice?.amount || 0} {currentPrice?.currencySymbol || 'L.E'}
+                          {(() => {
+                            // Use the correct currency's original amount based on detected currency
+                            if (detectedCurrency === 'SAR' && plan?.priceSAR?.originalAmount) {
+                              return `${plan.priceSAR.originalAmount} ${plan.priceSAR.currencySymbol || 'ر.س'}`;
+                            } else if (detectedCurrency === 'USD' && plan?.priceUSD?.originalAmount) {
+                              return `${plan.priceUSD.originalAmount} ${plan.priceUSD.currencySymbol || '$'}`;
+                            } else if (detectedCurrency === 'AED' && plan?.priceAED?.originalAmount) {
+                              return `${plan.priceAED.originalAmount} ${plan.priceAED.currencySymbol || 'د.إ'}`;
+                            } else if (detectedCurrency === 'EGP' && plan?.priceEGP?.originalAmount) {
+                              return `${plan.priceEGP.originalAmount} ${plan.priceEGP.currencySymbol || 'L.E'}`;
+                            } else {
+                              // Fallback to any available original amount
+                              return `${plan?.priceSAR?.originalAmount || plan?.priceUSD?.originalAmount || plan?.priceEGP?.originalAmount || plan?.priceAED?.originalAmount || currentPrice?.amount || 0} ${currentPrice?.currencySymbol || 'L.E'}`;
+                            }
+                          })()}
                         </span>
                       </div>
                       
@@ -1695,20 +1953,23 @@ return;
                         </div>
                       </label>
 
-                      <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input
-                          type="radio"
-                          name="paymentOption"
-                          value="cash_on_delivery"
-                          checked={paymentOption === 'cash_on_delivery'}
-                          onChange={(e) => setPaymentOption(e.target.value)}
-                          className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
-                        />
-                        <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
-                          <Package className={`h-8 w-8 text-gymmawy-primary ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                          <span className="text-sm font-medium text-gray-900">Cash on Delivery</span>
-                        </div>
-                      </label>
+                      {/* Cash on Delivery - Only for cart and product orders (physical items) */}
+                      {(type === 'cart' || type === 'product') && (
+                        <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                          <input
+                            type="radio"
+                            name="paymentOption"
+                            value="cash_on_delivery"
+                            checked={paymentOption === 'cash_on_delivery'}
+                            onChange={(e) => setPaymentOption(e.target.value)}
+                            className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
+                          />
+                          <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
+                            <Package className={`h-8 w-8 text-gymmawy-primary ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                            <span className="text-sm font-medium text-gray-900">Cash on Delivery</span>
+                          </div>
+                        </label>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1718,20 +1979,22 @@ return;
                     <h4 className="font-medium text-gray-900">{t('checkout.chooseInstallmentProvider')}</h4>
                     
                     <div className="grid grid-cols-2 gap-4">
-                      <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input
-                          type="radio"
-                          name="paymentOption"
-                          value="tabby"
-                          checked={paymentOption === 'tabby'}
-                          onChange={(e) => setPaymentOption(e.target.value)}
-                          className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
-                        />
-                        <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
-                          <img src="/assets/common/payments/tabby.png" alt="Tabby" className={`h-8 w-auto object-contain ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                          <span className="text-sm font-medium text-gray-900">{t('checkout.tabby')}</span>
-                        </div>
-                      </label>
+                      {tabbyAvailable && (
+                        <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                          <input
+                            type="radio"
+                            name="paymentOption"
+                            value="tabby"
+                            checked={paymentOption === 'tabby'}
+                            onChange={(e) => setPaymentOption(e.target.value)}
+                            className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
+                          />
+                          <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
+                            <img src="/assets/common/payments/tabby.png" alt="Tabby" className={`h-8 w-auto object-contain ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                            <span className="text-sm font-medium text-gray-900">{t('checkout.tabby')} (Pay in 4)</span>
+                          </div>
+                        </label>
+                      )}
 
                       <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
                         <input
@@ -1752,6 +2015,23 @@ return;
                 )}
 
                 {/* Payment Instructions */}
+                {paymentOption === 'tabby' && tabbyAvailable && (
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start">
+                      <Shield className="h-5 w-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
+                      <div className="flex-1">
+                        <h4 className="text-sm font-medium text-blue-900 mb-2">{t('checkout.tabbyInstructions')}</h4>
+                        <ul className="text-sm text-blue-800 space-y-1">
+                          <li>• {t('checkout.tabbyInstruction1')}</li>
+                          <li>• {t('checkout.tabbyInstruction2')}</li>
+                          <li>• {t('checkout.tabbyInstruction3')}</li>
+                        </ul>
+                      </div>
+                    </div>
+                    
+                  </div>
+                )}
+
                 {paymentOption === 'instapay' && (
                   <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
                     <h5 className="font-medium text-purple-900 mb-3">{t('checkout.instaPayInstructions.title')}</h5>
@@ -1800,8 +2080,8 @@ return;
                   </div>
                 )}
 
-                {/* Cash on Delivery Instructions */}
-                {paymentOption === 'cash_on_delivery' && (
+                {/* Cash on Delivery Instructions - Only for cart and product orders */}
+                {paymentOption === 'cash_on_delivery' && (type === 'cart' || type === 'product') && (
                   <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <h5 className="font-medium text-green-900 mb-3">Cash on Delivery</h5>
                     <div className="space-y-2 text-sm text-green-800">
@@ -1936,10 +2216,10 @@ return;
                 )}
 
                 {/* Tabby/Tamara Placeholder */}
-                {(paymentOption === 'tabby' || paymentOption === 'tamara') && (
+                {paymentOption === 'tamara' && (
                   <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <p className="text-sm text-yellow-800">
-                      {paymentOption === 'tabby' ? t('checkout.tabbyComingSoon') : t('checkout.tamaraComingSoon')}
+                      {t('checkout.tamaraComingSoon')}
                     </p>
                     <p className="text-xs text-yellow-600 mt-1">
                       {i18n.language === 'ar' ? 'هذا الخيار غير متاح حالياً' : 'This payment option is currently unavailable'}
@@ -1952,7 +2232,7 @@ return;
               <div className="flex justify-end pb-12 sm:pb-0">
                 <button
                   type="submit"
-                  disabled={submitting || !paymentOption || paymentOption === 'tabby' || paymentOption === 'tamara'}
+                  disabled={submitting || !paymentOption || paymentOption === 'tamara'}
                   className="px-8 py-3 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
                   {submitting ? (
@@ -1977,6 +2257,7 @@ return;
           </div>
         </div>
       </div>
+      
     </div>
   );
 };

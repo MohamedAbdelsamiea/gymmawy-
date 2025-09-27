@@ -135,10 +135,22 @@ const ProductPage = () => {
   };
 
   const transformedProduct = product ? transformProduct(product) : null;
+  
+  // Helper function to get image URL
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return '/assets/common/store/product1-1.png';
+    
+    if (imagePath.startsWith('/uploads/')) {
+      return `${config.STATIC_BASE_URL}${imagePath}`;
+    }
+    
+    // For local assets, we need to handle this differently since useAsset can't be called conditionally
+    // We'll use a fallback approach
+    return imagePath;
+  };
+  
   const currentImage = transformedProduct?.images?.[currentImageIndex] 
-    ? (transformedProduct.images[currentImageIndex].startsWith('/uploads/') 
-        ? `${config.API_BASE_URL.replace('/api', '')}${transformedProduct.images[currentImageIndex]}`
-        : useAsset(transformedProduct.images[currentImageIndex], "common"))
+    ? getImageUrl(transformedProduct.images[currentImageIndex])
     : '/assets/common/store/product1-1.png';
 
   // Helper functions
@@ -322,9 +334,7 @@ const ProductPage = () => {
             {transformedProduct.images.length > 1 && (
               <div className="flex gap-2 sm:gap-3 mt-4 sm:mt-6 justify-center">
                 {transformedProduct.images.map((image, index) => {
-                  const thumbnailSrc = image.startsWith('/uploads/') 
-                    ? `${config.API_BASE_URL.replace('/api', '')}${image}`
-                    : useAsset(image, "common");
+                  const thumbnailSrc = getImageUrl(image);
                   
                   return (
                     <button

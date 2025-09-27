@@ -58,6 +58,16 @@ export async function getPaymentById(req, res, next) {
   }
 }
 
+export async function getRecentPayments(req, res, next) {
+  try {
+    const { limit = 5 } = req.query;
+    const payments = await service.getRecentPayments(req.user.id, parseInt(limit));
+    res.json({ payments });
+  } catch (e) { 
+    next(e); 
+  }
+}
+
 export async function createPayment(req, res, next) {
   try {
     const schema = z.object({

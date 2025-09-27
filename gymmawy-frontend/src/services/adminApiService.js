@@ -585,22 +585,8 @@ class AdminApiService {
     });
   }
 
-  async uploadDocument(formData) {
-    return this.apiCall('/uploads/admin/documents', {
-      method: 'POST',
-      body: formData
-      // Don't set Content-Type for FormData - browser will set it with boundary
-    });
-  }
-
   async getImages() {
     return this.apiCall('/uploads/admin/images', {
-      method: 'GET'
-    });
-  }
-
-  async getDocuments() {
-    return this.apiCall('/uploads/admin/documents', {
       method: 'GET'
     });
   }

@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, AlertCircle } from 'lucide-react';
 import AdminImageUpload from '../common/AdminImageUpload';
 import adminApiService from '../../services/adminApiService';
+import fileUploadService from '../../services/fileUploadService';
 import { useToast } from '../../contexts/ToastContext';
+import { config } from '../../config';
 
 const AddProductModal = ({ isOpen, onClose, onSave }) => {
   const { showSuccess, showError } = useToast();
@@ -24,6 +26,8 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
   
   const [imageUrl, setImageUrl] = useState('');
   const [carouselImages, setCarouselImages] = useState([]);
+  const [selectedMainImage, setSelectedMainImage] = useState(null);
+  const [selectedCarouselImages, setSelectedCarouselImages] = useState([]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
@@ -47,6 +51,8 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
       });
       setImageUrl('');
       setCarouselImages([]);
+      setSelectedMainImage(null);
+      setSelectedCarouselImages([]);
       setErrors({});
       setEnableLoyaltyPoints(false);
     }
@@ -85,35 +91,38 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
     }));
   };
 
-  const handleCarouselImageUpload = async (file) => {
+  const handleCarouselImageUpload = (file) => {
     try {
-      setUploadingImages(true);
-      console.log('AddModal - Uploading carousel image:', file);
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('module', 'products');
       
-      const response = await adminApiService.uploadImage(formData);
-      console.log('AddModal - Upload response:', response);
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
       
-      const uploadedImage = {
-        url: response.upload.url,
+      const imageData = {
+        file: file,
+        preview: previewUrl,
+        url: previewUrl, // For display purposes
         name: file.name,
         size: file.size,
-        type: file.type
+        type: file.type,
+        isLocal: true
       };
       
-      setCarouselImages(prev => [...prev, uploadedImage]);
+      setSelectedCarouselImages(prev => [...prev, imageData]);
+      setCarouselImages(prev => [...prev, imageData]);
     } catch (error) {
-      console.error('AddModal - Upload error:', error);
-      showError('Failed to upload image. Please try again.');
-    } finally {
-      setUploadingImages(false);
+      console.error('AddModal - Error adding carousel image:', error);
+      showError(error.message || 'Failed to add carousel image');
     }
   };
 
   const handleCarouselImageRemove = (imageToRemove) => {
+    // Clean up preview URL if it's a local file
+    if (imageToRemove.isLocal && imageToRemove.preview) {
+      URL.revokeObjectURL(imageToRemove.preview);
+    }
+    
     setCarouselImages(prev => prev.filter(img => img.url !== imageToRemove.url));
+    setSelectedCarouselImages(prev => prev.filter(img => img.url !== imageToRemove.url));
   };
 
   const validateForm = () => {
@@ -156,7 +165,58 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
     }
 
     setLoading(true);
+    setUploadingImages(true);
+    
     try {
+      let uploadedImageUrl = imageUrl;
+      let uploadedCarouselImages = [...carouselImages];
+
+      // Upload main image if a new file is selected
+      if (selectedMainImage?.file) {
+        try {
+          const uploadResult = await fileUploadService.uploadFile(
+            selectedMainImage.file, 
+            'products', 
+            true
+          );
+          
+          if (uploadResult.success && uploadResult.upload) {
+            uploadedImageUrl = fileUploadService.getFileUrl(uploadResult.upload.url);
+          } else {
+            throw new Error('Invalid upload response for main image');
+          }
+        } catch (uploadError) {
+          throw new Error(`Failed to upload main image: ${uploadError.message}`);
+        }
+      }
+
+      // Upload carousel images if new files are selected
+      if (selectedCarouselImages.length > 0) {
+        try {
+          const carouselUploadPromises = selectedCarouselImages.map(async (imageData) => {
+            if (imageData.file) {
+              const uploadResult = await fileUploadService.uploadFile(
+                imageData.file, 
+                'products', 
+                true
+              );
+              
+              if (uploadResult.success && uploadResult.upload) {
+                return fileUploadService.getFileUrl(uploadResult.upload.url);
+              } else {
+                throw new Error('Invalid upload response for carousel image');
+              }
+            }
+            return imageData.url; // Keep existing URL if no new file
+          });
+          
+          const uploadedCarouselUrls = await Promise.all(carouselUploadPromises);
+          uploadedCarouselImages = uploadedCarouselUrls.map(url => ({ url }));
+        } catch (uploadError) {
+          throw new Error(`Failed to upload carousel images: ${uploadError.message}`);
+        }
+      }
+
       // Extract loyalty points fields from formData to avoid spreading them
       const { loyaltyPointsAwarded, loyaltyPointsRequired, ...restFormData } = formData;
       
@@ -177,8 +237,8 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
         // Ensure numeric fields are properly converted
         stock: parseInt(formData.stock) || 0,
         discountPercentage: parseInt(formData.discountPercentage) || 0,
-        imageUrl: imageUrl || '', // Send empty string, backend will transform to undefined
-        carouselImages: carouselImages.map(img => img.url), // Send array of carousel image URLs
+        imageUrl: uploadedImageUrl || '', // Send empty string, backend will transform to undefined
+        carouselImages: uploadedCarouselImages.map(img => img.url), // Send array of carousel image URLs
         prices: prices,
         // Always include loyalty points - set to 0 if disabled
         loyaltyPointsAwarded: enableLoyaltyPoints ? (parseFloat(loyaltyPointsAwarded) || 0) : 0,
@@ -197,6 +257,7 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
       showError(error.message || 'Failed to save product. Please try again.');
     } finally {
       setLoading(false);
+      setUploadingImages(false);
     }
   };
 
@@ -387,9 +448,20 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
               <p className="text-sm text-gray-600">Upload the primary image that will be displayed in the product listing</p>
               <AdminImageUpload
                 initialImage={imageUrl ? { url: imageUrl } : null}
-                onImageUpload={(uploadedImage) => setImageUrl(uploadedImage.url)}
-                onImageRemove={() => setImageUrl('')}
-                maxSize={10 * 1024 * 1024}
+                onImageUpload={(imageData) => {
+                  if (imageData.isLocal) {
+                    setSelectedMainImage(imageData);
+                    setImageUrl(imageData.preview);
+                  } else {
+                    setImageUrl(imageData.url);
+                    setSelectedMainImage(null);
+                  }
+                }}
+                onImageRemove={() => {
+                  setImageUrl('');
+                  setSelectedMainImage(null);
+                }}
+                maxSize={100 * 1024 * 1024}
                 showPreview={true}
                 showDetails={true}
               />
@@ -409,10 +481,10 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
                   onChange={(e) => {
                     const files = Array.from(e.target.files);
                     files.forEach(file => {
-                      if (file.size <= 10 * 1024 * 1024) { // 10MB limit
+                      if (file.size <= 100 * 1024 * 1024) { // 100MB limit
                         handleCarouselImageUpload(file);
                       } else {
-                        showError('File size must be less than 10MB');
+                        showError('File size must be less than 100MB');
                       }
                     });
                     e.target.value = ''; // Reset input
@@ -436,7 +508,7 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
                       <span className="font-medium text-blue-600 hover:text-blue-500">Click to upload</span>
                     )} or drag and drop
                   </div>
-                  <div className="text-xs text-gray-500">Multiple images allowed (max 10MB each)</div>
+                  <div className="text-xs text-gray-500">Multiple images allowed (max 100MB each)</div>
                 </label>
               </div>
               
@@ -445,22 +517,30 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
                 <div className="space-y-3">
                   <h4 className="text-sm font-medium text-gray-700">Uploaded Carousel Images ({carouselImages.length})</h4>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {carouselImages.map((image, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={image.url && image.url.startsWith('http') ? image.url : `http://localhost:3000${image.url || ''}`}
-                          alt={`Carousel ${index + 1}`}
-                          className="w-full h-20 object-cover rounded-lg border border-gray-200"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleCarouselImageRemove(image)}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
+                    {carouselImages.map((image, index) => {
+                      // Construct proper image URL
+                      let imageSrc = image.url;
+                      if (image.url && !image.url.startsWith('http') && !image.url.startsWith('blob:')) {
+                        imageSrc = image.url.startsWith('/') ? `${config.STATIC_BASE_URL}${image.url}` : `${config.STATIC_BASE_URL}/${image.url}`;
+                      }
+                      
+                      return (
+                        <div key={index} className="relative group">
+                          <img
+                            src={imageSrc}
+                            alt={`Carousel ${index + 1}`}
+                            className="w-full h-20 object-cover rounded-lg border border-gray-200"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleCarouselImageRemove(image)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

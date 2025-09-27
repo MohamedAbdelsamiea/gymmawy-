@@ -146,13 +146,27 @@ export async function createProduct(data) {
 }
 
 export async function updateProduct(id, data) {
-  const { variants, ...rest } = data;
+  const { variants, carouselImages, ...rest } = data;
   const updated = await prisma.product.update({ where: { id }, data: rest });
+  
   if (Array.isArray(variants)) {
     // naive sync: delete and recreate
     await prisma.productVariant.deleteMany({ where: { productId: id } });
     await prisma.productVariant.createMany({ data: variants.map(v => ({ ...v, productId: id })) });
   }
+  
+  if (Array.isArray(carouselImages)) {
+    // Handle carousel images: delete and recreate
+    await prisma.productImage.deleteMany({ where: { productId: id } });
+    await prisma.productImage.createMany({ 
+      data: carouselImages.map((url, index) => ({ 
+        productId: id, 
+        url, 
+        isPrimary: false 
+      })) 
+    });
+  }
+  
   return getProductById(id);
 }
 

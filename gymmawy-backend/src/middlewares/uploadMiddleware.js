@@ -12,9 +12,7 @@ const createUploadDirs = () => {
     'uploads/content/programmes',
     'uploads/content/transformations',
     'uploads/content/videos',
-    'uploads/content/documents',
-    'uploads/payment-proofs',
-    'uploads/temp'
+    'uploads/payment-proofs'
   ];
   
   dirs.forEach(dir => {
@@ -64,7 +62,7 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fileSize: 100 * 1024 * 1024, // 100MB limit
     files: 1 // Only one file at a time
   }
 });
@@ -87,7 +85,7 @@ export const handleMulterErrors = (multerMiddleware) => {
         if (err instanceof multer.MulterError) {
           if (err.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({ 
-              error: { message: 'File too large. Maximum size is 10MB.' } 
+              error: { message: 'File too large. Maximum size is 100MB.' } 
             });
           }
           if (err.code === 'LIMIT_FILE_COUNT') {
@@ -192,72 +190,6 @@ export const processImage = async (req, res, next) => {
   }
 };
 
-// Middleware to process uploaded documents (non-images)
-export const processDocument = async (req, res, next) => {
-  try {
-    if (!req.file) {
-      return next();
-    }
-
-    const { originalname, buffer, mimetype } = req.file;
-    const fileId = uuidv4();
-    const fileExtension = path.extname(originalname).toLowerCase();
-    const fileName = `${fileId}${fileExtension}`;
-    
-    // Determine upload type and category based on route
-    const isPaymentProof = req.path.includes('/payment-proof');
-    const category = req.body.category || 'documents'; // Default to documents
-    
-    let uploadDir;
-    if (isPaymentProof) {
-      uploadDir = 'uploads/payment-proofs';
-    } else {
-      // All other uploads go to content with specified category
-      uploadDir = `uploads/content/${category}`;
-    }
-    
-    const filePath = path.join(uploadDir, fileName);
-    
-    // Ensure directory exists
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    
-    // Write file to disk
-    fs.writeFileSync(filePath, buffer);
-
-    // Generate URL based on upload type
-    let url;
-    if (isPaymentProof) {
-      url = `/uploads/payment-proofs/${fileName}`;
-    } else {
-      url = `/uploads/content/${category}/${fileName}`;
-    }
-
-    // Store file information in request
-    req.uploadedFile = {
-      id: fileId,
-      originalName: originalname,
-      fileName,
-      filePath,
-      url,
-      size: buffer.length,
-      mimetype,
-      isPublic: !isPaymentProof, // Content uploads are public, payment proofs are private
-      category: category
-    };
-
-    next();
-  } catch (error) {
-    console.error('Error processing document:', error);
-    res.status(400).json({ 
-      error: { 
-        message: 'Failed to process document', 
-        details: error.message 
-      } 
-    });
-  }
-};
 
 // Process video file
 export const processVideo = async (req, res, next) => {

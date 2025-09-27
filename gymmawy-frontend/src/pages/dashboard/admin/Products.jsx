@@ -57,7 +57,7 @@ const SortableRow = ({ product, onEdit, onDelete, onToggleStatus, onAddStock }) 
           <div className="flex-shrink-0">
             {product.images?.[0] ? (
               <img
-                src={product.images[0].url.startsWith('http') ? product.images[0].url : `${config.API_BASE_URL.replace('/api', '')}${product.images[0].url}`}
+                src={product.images[0].url.startsWith('http') ? product.images[0].url : `${config.STATIC_BASE_URL}${product.images[0].url}`}
                 alt="Product"
                 className="w-12 h-12 object-cover rounded-lg border border-gray-200"
               />
@@ -224,6 +224,9 @@ const AdminProducts = () => {
       
       const data = await response.json();
       const productsArray = data.products?.items || data.products || data.items || [];
+      console.log('Products API response:', data);
+      console.log('Products array:', productsArray);
+      console.log('Active products count:', productsArray.filter(p => p.isActive === true).length);
       setProducts(productsArray);
     } catch (err) {
       setError(err.message);
@@ -248,6 +251,11 @@ const AdminProducts = () => {
   };
 
   const handleEditProduct = (product) => {
+    console.log('Products - Editing product:', product);
+    console.log('Products - Product images:', product.images);
+    console.log('Products - Product images type:', typeof product.images);
+    console.log('Products - Product images length:', product.images?.length);
+    console.log('Products - Product images array check:', Array.isArray(product.images));
     setEditingProduct(product);
     setShowEditModal(true);
   };
@@ -682,7 +690,7 @@ const AdminProducts = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Active Products</p>
               <p className="text-2xl font-bold text-gray-900">
-                {Array.isArray(products) ? products.filter(p => p.status === 'active').length : 0}
+                {Array.isArray(products) ? products.filter(p => p.isActive === true).length : 0}
               </p>
             </div>
           </div>

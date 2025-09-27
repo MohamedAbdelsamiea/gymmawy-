@@ -5,7 +5,7 @@ import { config } from '../config';
 
 class CurrencyService {
   constructor() {
-    this.currentCurrency = 'USD';
+    this.currentCurrency = 'SAR'; // Changed to SAR for Tabby testing
     this.currencyRates = {};
     // Use API URL from config
     this.baseUrl = config.API_BASE_URL;
@@ -38,12 +38,12 @@ class CurrencyService {
       throw new Error(data.error?.message || 'Currency detection failed');
     } catch (error) {
       console.error('Currency detection error:', error);
-      // Fallback to USD
-      this.currentCurrency = 'USD';
-      this.saveCurrencyToStorage('USD');
+      // Fallback to SAR for Tabby testing
+      this.currentCurrency = 'SAR';
+      this.saveCurrencyToStorage('SAR');
       return {
         success: false,
-        currency: 'USD',
+        currency: 'SAR',
         error: error.message
       };
     }

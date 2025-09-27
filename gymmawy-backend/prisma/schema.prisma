@@ -169,6 +169,7 @@ model Order {
   id               String      @id @default(uuid())
   userId           String
   status           OrderStatus @default(PENDING)
+  paymentMethod    String?
   couponId         String?
   shippingBuilding String?
   shippingStreet   String?
@@ -202,6 +203,7 @@ model OrderItem {
   id                 String         @id @default(uuid())
   orderId            String
   quantity           Int            @default(1)
+  size               String?        @default("M")
   discountPercentage Int            @default(0)
   productId          String
   totalPrice         Decimal        @db.Decimal(10, 2)

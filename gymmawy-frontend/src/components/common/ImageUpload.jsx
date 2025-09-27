@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
-import apiClient from '../../services/apiClient';
 
 const ImageUpload = ({ 
   onImageUpload, 
@@ -8,13 +7,13 @@ const ImageUpload = ({
   initialImage = null, 
   isPublic = false, 
   className = '',
-  maxSize = 10 * 1024 * 1024, // 10MB
+  maxSize = 100 * 1024 * 1024, // 100MB
   acceptedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
 }) => {
   const [dragActive, setDragActive] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [preview, setPreview] = useState(initialImage);
+  const [selectedFile, setSelectedFile] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleDrag = useCallback((e) => {
@@ -37,7 +36,7 @@ const ImageUpload = ({
     }
   }, []);
 
-  const handleFile = async(file) => {
+  const handleFile = (file) => {
     setError(null);
     
     // Validate file type
@@ -52,32 +51,28 @@ const ImageUpload = ({
       return;
     }
 
-    setUploading(true);
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file);
     
-    try {
-      const formData = new FormData();
-      formData.append('image', file);
-      
-      const endpoint = isPublic ? '/api/uploads/public/upload' : '/api/uploads/admin/upload';
-      const response = await apiClient.post(endpoint, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
-      if (response.data.success) {
-        const uploadedImage = response.data.upload;
-        setPreview(uploadedImage);
-        onImageUpload?.(uploadedImage);
-      } else {
-        throw new Error(response.data.error?.message || 'Upload failed');
-      }
-    } catch (err) {
-      console.error('Upload error:', err);
-      setError(err.response?.data?.error?.message || err.message || 'Upload failed');
-    } finally {
-      setUploading(false);
-    }
+    // Store file and preview
+    setSelectedFile(file);
+    setPreview({
+      url: previewUrl,
+      originalName: file.name,
+      size: file.size,
+      type: file.type,
+      isLocal: true // Mark as local file
+    });
+    
+    // Notify parent component about the selected file
+    onImageUpload?.({
+      file: file,
+      preview: previewUrl,
+      originalName: file.name,
+      size: file.size,
+      type: file.type,
+      isLocal: true
+    });
   };
 
   const handleFileInput = (e) => {
@@ -86,17 +81,14 @@ const ImageUpload = ({
     }
   };
 
-  const handleRemove = async() => {
-    if (preview?.id) {
-      try {
-        await apiClient.delete(`/uploads/${preview.id}`);
-        console.log('Image removed from server');
-      } catch (err) {
-        console.error('Error removing image from server:', err);
-      }
+  const handleRemove = () => {
+    // Clean up preview URL if it's a local file
+    if (preview?.isLocal && preview?.url) {
+      URL.revokeObjectURL(preview.url);
     }
     
     setPreview(null);
+    setSelectedFile(null);
     setError(null);
     onImageRemove?.();
     
@@ -141,6 +133,9 @@ const ImageUpload = ({
           <div className="mt-2 text-sm text-gray-600">
             <p className="font-medium">{preview.originalName}</p>
             <p className="text-xs">{(preview.size / 1024 / 1024).toFixed(2)} MB</p>
+            {preview.isLocal && (
+              <p className="text-xs text-blue-600 font-medium">Ready to upload</p>
+            )}
           </div>
         </div>
       ) : (
@@ -149,7 +144,7 @@ const ImageUpload = ({
             dragActive
               ? 'border-blue-400 bg-blue-50'
               : 'border-gray-300 hover:border-gray-400'
-          } ${uploading ? 'pointer-events-none' : ''}`}
+          }`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
@@ -157,22 +152,15 @@ const ImageUpload = ({
           onClick={openFileDialog}
         >
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            {uploading ? (
-              <div className="flex flex-col items-center">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
-                <p className="text-sm text-gray-600">Uploading...</p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                <p className="text-sm text-gray-600 mb-1">
-                  {dragActive ? 'Drop image here' : 'Click to upload or drag and drop'}
-                </p>
-                <p className="text-xs text-gray-500">
-                  PNG, JPG, GIF, WebP up to {Math.round(maxSize / 1024 / 1024)}MB
-                </p>
-              </div>
-            )}
+            <div className="flex flex-col items-center">
+              <Upload className="w-8 h-8 text-gray-400 mb-2" />
+              <p className="text-sm text-gray-600 mb-1">
+                {dragActive ? 'Drop image here' : 'Click to select or drag and drop'}
+              </p>
+              <p className="text-xs text-gray-500">
+                PNG, JPG, GIF, WebP up to {Math.round(maxSize / 1024 / 1024)}MB
+              </p>
+            </div>
           </div>
         </div>
       )}

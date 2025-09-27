@@ -438,7 +438,12 @@ export async function getOrders(query = {}) {
           }
         },
         items: {
-          include: {
+          select: {
+            id: true,
+            quantity: true,
+            size: true,
+            totalPrice: true,
+            discountPercentage: true,
             product: {
               select: {
                 id: true,
@@ -499,6 +504,7 @@ export async function getOrders(query = {}) {
       items: order.items.map(item => ({
         id: item.id,
         quantity: item.quantity,
+        size: item.size,
         totalPrice: item.totalPrice,
         discountPercentage: item.discountPercentage,
         product: item.product
@@ -557,9 +563,13 @@ export async function getProducts(query = {}) {
   const { page = 1, pageSize = 10, search } = query;
   const skip = (page - 1) * pageSize;
   
-  const where = search ? {
-    name: { contains: search, mode: 'insensitive' }
-  } : {};
+  const where = {
+    deletedAt: null, // Exclude soft-deleted products
+    isActive: true, // Only show active products in admin
+    ...(search ? {
+      name: { contains: search, mode: 'insensitive' }
+    } : {})
+  };
 
   const [products, total] = await Promise.all([
     prisma.product.findMany({
@@ -690,7 +700,10 @@ export async function createProduct(data) {
 
 export async function getProductById(id) {
   const product = await prisma.product.findUnique({
-    where: { id },
+    where: { 
+      id,
+      deletedAt: null // Exclude soft-deleted products
+    },
     include: {
       images: true,
       _count: {
@@ -755,12 +768,31 @@ export async function updateProduct(id, data) {
 
   // Handle images if provided
   if (data.imageUrl !== undefined || data.carouselImages !== undefined) {
+    // Get existing images before deleting them
+    const existingImages = await prisma.productImage.findMany({
+      where: {
+        productId: id
+      },
+      select: { url: true }
+    });
+
     // Delete existing images for this product
     await prisma.productImage.deleteMany({
       where: {
         productId: id
       }
     });
+
+    // Delete old images from filesystem
+    for (const image of existingImages) {
+      try {
+        const { deleteProductImage } = await import('../uploads/upload.service.js');
+        await deleteProductImage(image.url);
+      } catch (error) {
+        console.error('Error deleting old product image:', error);
+        // Don't throw error here - we still want to update the product even if image deletion fails
+      }
+    }
 
     // Create new main image if provided
     if (data.imageUrl && data.imageUrl.trim() !== '') {
@@ -803,7 +835,51 @@ export async function updateProduct(id, data) {
 }
 
 export async function deleteProduct(id) {
-  return prisma.product.delete({ where: { id } });
+  // Get the product with images before soft-deleting
+  const product = await prisma.product.findUnique({ 
+    where: { id }, 
+    select: { 
+      imageUrl: true,
+      images: {
+        select: { url: true }
+      }
+    } 
+  });
+  
+  if (!product) {
+    throw new Error('Product not found');
+  }
+  
+  // Delete the main product image if it exists
+  if (product.imageUrl) {
+    try {
+      const { deleteProductImage } = await import('../uploads/upload.service.js');
+      await deleteProductImage(product.imageUrl);
+    } catch (error) {
+      console.error('Error deleting product main image:', error);
+      // Don't throw error here - we still want to delete the product even if image deletion fails
+    }
+  }
+  
+  // Delete all product images
+  for (const image of product.images) {
+    try {
+      const { deleteProductImage } = await import('../uploads/upload.service.js');
+      await deleteProductImage(image.url);
+    } catch (error) {
+      console.error('Error deleting product image:', error);
+      // Don't throw error here - we still want to delete the product even if image deletion fails
+    }
+  }
+  
+  // Use soft deletion instead of hard deletion to avoid foreign key constraint violations
+  return prisma.product.update({ 
+    where: { id }, 
+    data: { 
+      deletedAt: new Date(),
+      isActive: false 
+    } 
+  });
 }
 
 export async function updateProductOrder(productOrders) {
@@ -859,7 +935,7 @@ export async function getSubscriptionStats() {
   // Calculate monthly revenue
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   
-  // Get revenue for all currencies from payments
+  // Get monthly revenue for all currencies from payments
   const [monthlyRevenueEGP, monthlyRevenueSAR, monthlyRevenueAED, monthlyRevenueUSD] = await Promise.all([
     prisma.payment.aggregate({
       _sum: { amount: true },
@@ -899,6 +975,42 @@ export async function getSubscriptionStats() {
     })
   ]);
 
+  // Calculate total revenue for all currencies from payments
+  const [totalRevenueEGP, totalRevenueSAR, totalRevenueAED, totalRevenueUSD] = await Promise.all([
+    prisma.payment.aggregate({
+      _sum: { amount: true },
+      where: {
+        status: 'SUCCESS',
+        currency: 'EGP',
+        paymentableType: 'SUBSCRIPTION'
+      }
+    }),
+    prisma.payment.aggregate({
+      _sum: { amount: true },
+      where: {
+        status: 'SUCCESS',
+        currency: 'SAR',
+        paymentableType: 'SUBSCRIPTION'
+      }
+    }),
+    prisma.payment.aggregate({
+      _sum: { amount: true },
+      where: {
+        status: 'SUCCESS',
+        currency: 'AED',
+        paymentableType: 'SUBSCRIPTION'
+      }
+    }),
+    prisma.payment.aggregate({
+      _sum: { amount: true },
+      where: {
+        status: 'SUCCESS',
+        currency: 'USD',
+        paymentableType: 'SUBSCRIPTION'
+      }
+    })
+  ]);
+
   return {
     totalSubscriptions,
     activeSubscriptions,
@@ -909,6 +1021,12 @@ export async function getSubscriptionStats() {
       SAR: Number(monthlyRevenueSAR._sum.amount || 0),
       AED: Number(monthlyRevenueAED._sum.amount || 0),
       USD: Number(monthlyRevenueUSD._sum.amount || 0)
+    },
+    totalRevenue: {
+      EGP: Number(totalRevenueEGP._sum.amount || 0),
+      SAR: Number(totalRevenueSAR._sum.amount || 0),
+      AED: Number(totalRevenueAED._sum.amount || 0),
+      USD: Number(totalRevenueUSD._sum.amount || 0)
     }
   };
 }
@@ -1138,6 +1256,26 @@ export async function updateSubscriptionPlan(id, data) {
   
   // Debug logs removed for production
   
+  // Check if image is being replaced and delete old image
+  if (cleanPlanData.imageUrl !== undefined) {
+    // Get current plan to access old image URL
+    const currentPlan = await prisma.subscriptionPlan.findUnique({
+      where: { id },
+      select: { imageUrl: true }
+    });
+
+    // If there's an old image and it's different from the new one, delete the old image
+    if (currentPlan?.imageUrl && currentPlan.imageUrl !== cleanPlanData.imageUrl) {
+      try {
+        const { deleteSubscriptionPlanImage } = await import('../uploads/upload.service.js');
+        await deleteSubscriptionPlanImage(currentPlan.imageUrl);
+      } catch (error) {
+        console.error('Error deleting old subscription plan image:', error);
+        // Don't throw error here - we still want to update the plan even if old image deletion fails
+      }
+    }
+  }
+  
   // Update the subscription plan
   const plan = await prisma.subscriptionPlan.update({ 
     where: { id }, 
@@ -1219,6 +1357,28 @@ export async function updateSubscriptionPlan(id, data) {
 }
 
 export async function deleteSubscriptionPlan(id) {
+  // First, get the plan to access its image URL
+  const plan = await prisma.subscriptionPlan.findUnique({
+    where: { id },
+    select: { imageUrl: true }
+  });
+
+  if (!plan) {
+    throw new Error('Subscription plan not found');
+  }
+
+  // Delete the associated image file if it exists
+  if (plan.imageUrl) {
+    try {
+      const { deleteSubscriptionPlanImage } = await import('../uploads/upload.service.js');
+      await deleteSubscriptionPlanImage(plan.imageUrl);
+    } catch (error) {
+      console.error('Error deleting subscription plan image:', error);
+      // Don't throw error here - we still want to delete the plan even if image deletion fails
+    }
+  }
+
+  // Soft delete the subscription plan
   return prisma.subscriptionPlan.update({ 
     where: { id }, 
     data: { deletedAt: new Date() } 
@@ -1594,6 +1754,24 @@ export async function updateProgramme(id, data) {
   // Extract prices from data if provided and map to individual price fields
   const { prices, ...programmeData } = data;
   
+  // Handle image replacement - delete old image if new one is provided
+  if (programmeData.imageUrl !== undefined) {
+    const currentProgramme = await prisma.programme.findUnique({ 
+      where: { id }, 
+      select: { imageUrl: true } 
+    });
+    
+    if (currentProgramme?.imageUrl && currentProgramme.imageUrl !== programmeData.imageUrl) {
+      try {
+        const { deleteProgrammeImage } = await import('../uploads/upload.service.js');
+        await deleteProgrammeImage(currentProgramme.imageUrl);
+      } catch (error) {
+        console.error('Error deleting old programme image:', error);
+        // Don't throw error here - we still want to update the programme even if image deletion fails
+      }
+    }
+  }
+  
   // Map prices to individual currency fields
   if (prices && Array.isArray(prices) && prices.length > 0) {
     prices.forEach(price => {
@@ -1618,6 +1796,27 @@ export async function updateProgramme(id, data) {
 }
 
 export async function deleteProgramme(id) {
+  // Get the programme with imageUrl before soft-deleting
+  const programme = await prisma.programme.findUnique({ 
+    where: { id }, 
+    select: { imageUrl: true } 
+  });
+  
+  if (!programme) {
+    throw new Error('Programme not found');
+  }
+  
+  // Delete the programme image if it exists
+  if (programme.imageUrl) {
+    try {
+      const { deleteProgrammeImage } = await import('../uploads/upload.service.js');
+      await deleteProgrammeImage(programme.imageUrl);
+    } catch (error) {
+      console.error('Error deleting programme image:', error);
+      // Don't throw error here - we still want to delete the programme even if image deletion fails
+    }
+  }
+  
   return prisma.programme.update({ 
     where: { id }, 
     data: { 

@@ -282,6 +282,7 @@ export async function getProgrammeStats() {
     monthlyPurchases: activePurchases, // For consistency with frontend
     pendingPurchases,
     totalRevenue: totalRevenue._sum.price || 0,
+    monthlyRevenue: totalRevenue._sum.price || 0, // Use total revenue as monthly revenue for now
     recentPurchases
   };
 }

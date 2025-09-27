@@ -8,15 +8,15 @@ const AdminImageUpload = ({
   onImageRemove, 
   initialImage = null, 
   className = '',
-  maxSize = 10 * 1024 * 1024, // 10MB
+  maxSize = 100 * 1024 * 1024, // 100MB
   acceptedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
   showPreview = true,
   showDetails = true,
 }) => {
   const [dragActive, setDragActive] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [preview, setPreview] = useState(initialImage);
+  const [selectedFile, setSelectedFile] = useState(null);
   const [showFullPreview, setShowFullPreview] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -35,26 +35,32 @@ const AdminImageUpload = ({
   }, [initialImage]);
 
   // Fetch image metadata from URL
-  const fetchImageMetadata = async(imageUrl) => {
-    try {
-      // Extract filename from URL to get the upload ID
-      const filename = imageUrl.split('/').pop();
-      const uploadId = filename.split('.')[0]; // Remove .webp extension
-      
-      // Fetch upload details from server
-      const response = await adminApiService.getImage(uploadId);
-      if (response.success) {
-        setPreview(response.upload);
-      } else {
+    const fetchImageMetadata = async(imageUrl) => {
+      try {
+        // For blob URLs or local URLs, just use them directly
+        if (imageUrl.startsWith('blob:') || imageUrl.includes('localhost:5173')) {
+          setPreview({ url: imageUrl });
+          return;
+        }
+
+        // Only try to fetch metadata for URLs that look like our upload system
+        if (!imageUrl.includes('/uploads/') && !imageUrl.includes('/content/')) {
+          setPreview({ url: imageUrl });
+          return;
+        }
+
+        // For newly uploaded images, we might not have metadata yet
+        // Skip metadata fetching for now and just use the URL
+        setPreview({ url: imageUrl });
+        
+        // TODO: Implement proper metadata fetching when the upload system is enhanced
+        // This would require the upload system to store metadata in a database
+        
+      } catch (error) {
         // If we can't fetch metadata, just use the URL
         setPreview({ url: imageUrl });
       }
-    } catch (error) {
-      console.warn('Could not fetch image metadata:', error);
-      // If we can't fetch metadata, just use the URL
-      setPreview({ url: imageUrl });
-    }
-  };
+    };
 
   const handleDrag = useCallback((e) => {
     e.preventDefault();
@@ -76,7 +82,7 @@ const AdminImageUpload = ({
     }
   }, []);
 
-  const handleFile = async(file) => {
+  const handleFile = (file) => {
     setError(null);
     
     // Validate file type
@@ -91,28 +97,28 @@ const AdminImageUpload = ({
       return;
     }
 
-    setUploading(true);
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file);
     
-    try {
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('category', 'images'); // Specify category
-      
-      const response = await adminApiService.uploadImage(formData);
-      
-      if (response.success) {
-        const uploadedImage = response.upload;
-        setPreview(uploadedImage);
-        onImageUpload?.(uploadedImage);
-      } else {
-        throw new Error(response.error?.message || 'Upload failed');
-      }
-    } catch (err) {
-      console.error('Upload error:', err);
-      setError(err.response?.data?.error?.message || err.message || 'Upload failed');
-    } finally {
-      setUploading(false);
-    }
+    // Store file and preview
+    setSelectedFile(file);
+    setPreview({
+      url: previewUrl,
+      originalName: file.name,
+      size: file.size,
+      type: file.type,
+      isLocal: true // Mark as local file
+    });
+    
+    // Notify parent component about the selected file
+    onImageUpload?.({
+      file: file,
+      preview: previewUrl,
+      originalName: file.name,
+      size: file.size,
+      type: file.type,
+      isLocal: true
+    });
   };
 
   const handleFileInput = (e) => {
@@ -121,17 +127,14 @@ const AdminImageUpload = ({
     }
   };
 
-  const handleRemove = async() => {
-    if (preview?.id) {
-      try {
-        await adminApiService.deleteImage(preview.id);
-        console.log('Image removed from server');
-      } catch (err) {
-        console.error('Error removing image from server:', err);
-      }
+  const handleRemove = () => {
+    // Clean up preview URL if it's a local file
+    if (preview?.isLocal && preview?.url) {
+      URL.revokeObjectURL(preview.url);
     }
     
     setPreview(null);
+    setSelectedFile(null);
     setError(null);
     onImageRemove?.();
     
@@ -174,7 +177,7 @@ const AdminImageUpload = ({
             <div className="relative group">
               <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
                 <img
-                  src={preview.url.startsWith('http') ? preview.url : `${config.API_BASE_URL}${preview.url}`}
+                  src={preview.url.startsWith('http') || preview.url.startsWith('blob:') ? preview.url : `${config.STATIC_BASE_URL}${preview.url}`}
                   alt="Preview"
                   className="w-full h-full object-cover"
                   onError={(e) => {
@@ -227,7 +230,7 @@ const AdminImageUpload = ({
             dragActive
               ? 'border-blue-400 bg-blue-50'
               : 'border-gray-300 hover:border-gray-400'
-          } ${uploading ? 'pointer-events-none' : ''}`}
+          }`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
@@ -235,26 +238,18 @@ const AdminImageUpload = ({
           onClick={openFileDialog}
         >
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            {uploading ? (
-              <div className="flex flex-col items-center">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
-                <p className="text-sm text-gray-600">Converting to WebP...</p>
-                <p className="text-xs text-gray-500">Maintaining highest quality</p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                <p className="text-sm text-gray-600 mb-1">
-                  {dragActive ? 'Drop image here' : 'Click to upload or drag and drop'}
-                </p>
-                <p className="text-xs text-gray-500">
-                  PNG, JPG, GIF, WebP up to {Math.round(maxSize / 1024 / 1024)}MB
-                </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  Will be converted to WebP with highest quality
-                </p>
-              </div>
-            )}
+            <div className="flex flex-col items-center">
+              <Upload className="w-8 h-8 text-gray-400 mb-2" />
+              <p className="text-sm text-gray-600 mb-1">
+                {dragActive ? 'Drop image here' : 'Click to select or drag and drop'}
+              </p>
+              <p className="text-xs text-gray-500">
+                PNG, JPG, GIF, WebP up to {Math.round(maxSize / 1024 / 1024)}MB
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                Ready to upload on form submission
+              </p>
+            </div>
           </div>
         </div>
       )}
@@ -273,7 +268,7 @@ const AdminImageUpload = ({
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
           <div className="relative max-w-4xl max-h-full">
             <img
-              src={preview.url.startsWith('http') ? preview.url : `${config.API_BASE_URL}${preview.url}`}
+              src={preview.url.startsWith('http') || preview.url.startsWith('blob:') ? preview.url : `${config.API_BASE_URL}${preview.url}`}
               alt="Full size preview"
               className="max-w-full max-h-full object-contain rounded-lg"
               onError={(e) => {

@@ -785,7 +785,7 @@ return '';
                   <div className="w-14 h-14 mb-4">
                     {plan.imageUrl ? (
                       <img
-                        src={plan.imageUrl.startsWith('http') ? plan.imageUrl : `${config.API_BASE_URL}${plan.imageUrl}`}
+                        src={plan.imageUrl.startsWith('http') ? plan.imageUrl : `${config.STATIC_BASE_URL}${plan.imageUrl}`}
                         alt={planName}
                         className="w-full h-full object-cover rounded-lg"
                         onError={(e) => {

@@ -89,7 +89,7 @@ export const generateShippingLabelService = async (orderId, shippingMethodId) =>
       address: order.shippingAddress || 'Address not provided'
     },
     items: order.items.map(item => ({
-      name: item.productVariant?.product?.name || 'Product',
+      name: item.product?.name?.en || 'Product',
       quantity: item.quantity
     })),
     labelUrl: `${process.env.LABELS_BASE_URL || 'https://labels.gymmawy.com'}/${order.id}.pdf`
@@ -103,7 +103,7 @@ export const getShippingInfoService = async (orderId) => {
     where: { id: orderId },
     include: { 
       user: true, 
-      items: { include: { productVariant: { include: { product: true } } } },
+      items: { include: { product: true } },
       shippingMethod: true
     }
   });
@@ -124,9 +124,9 @@ export const getShippingInfoService = async (orderId) => {
     estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
     shippingAddress: order.shippingAddress,
     items: order.items.map(item => ({
-      name: item.productVariant?.product?.name || 'Product',
+      name: item.product?.name?.en || 'Product',
       quantity: item.quantity,
-      weight: item.productVariant?.weight || 0
+      weight: 0 // Default weight since we don't have weight field in Product model
     }))
   };
 

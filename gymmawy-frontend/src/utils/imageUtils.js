@@ -8,7 +8,7 @@ import { config } from '../config';
  * @param {string} baseUrl - The base URL (defaults to current backend URL)
  * @returns {string} - The full image URL
  */
-export function getFullImageUrl(imageUrl, baseUrl = config.API_BASE_URL.replace('/api', '')) {
+export function getFullImageUrl(imageUrl, baseUrl = config.STATIC_BASE_URL) {
   if (!imageUrl) return '';
   
   // If already a full URL, return as is

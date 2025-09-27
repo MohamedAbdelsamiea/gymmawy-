@@ -77,7 +77,11 @@
       "step3": "سيتم التواصل معك في أقرب وقت ممكن لتأكيد التحويل وبدء الاشتراك"
     },
     "tabbyComingSoon": "تكامل تابي قريباً.",
-    "tamaraComingSoon": "تكامل تمارا قريباً."
+    "tamaraComingSoon": "تكامل تمارا قريباً.",
+    "tabbyInstructions": "تعليمات دفع تابي",
+    "tabbyInstruction1": "ادفع على 4 أقساط بدون فوائد",
+    "tabbyInstruction2": "معالجة آمنة للدفع بواسطة تابي",
+    "tabbyInstruction3": "بدون رسوم إضافية أو تكاليف"
   },
   "common": {
     "weeks": "{{count}} أسبوع",

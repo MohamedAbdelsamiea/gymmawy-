@@ -71,7 +71,7 @@ const AdminProgrammes = () => {
     if (!imagePath) return '';
     if (imagePath.startsWith('http')) return imagePath;
     if (imagePath.startsWith('/uploads/')) {
-      return `${config.API_BASE_URL}${imagePath}`;
+      return `${config.STATIC_BASE_URL}${imagePath}`;
     }
     return imagePath;
   };
@@ -813,13 +813,6 @@ const AdminProgrammes = () => {
                 <div className="text-xs text-gray-500 line-through">
                   {originalPrice ? `${originalPrice} ${row.currency || 'EGP'}` : ''}
                 </div>
-                <div className="text-xs text-red-600 font-medium">
-                  {programmeDiscount > 0 && couponDiscount > 0 ? 
-                    `-${programmeDiscount}% plan, -${Number(couponDiscount / originalPrice * 100).toFixed(1)}% coupon` :
-                    programmeDiscount > 0 ? `-${programmeDiscount}% off` :
-                    couponDiscount > 0 ? `-${Number(couponDiscount / originalPrice * 100).toFixed(1)}% coupon` : ''
-                  }
-                </div>
               </div>
             ) : (
               <div className="font-medium text-green-600">
@@ -1107,7 +1100,7 @@ const AdminProgrammes = () => {
                 <TrendingUp className="h-6 w-6 text-purple-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
+                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {currency} {Number(programmeStats?.monthlyRevenue?.[currency] || 0).toFixed(2)}
                 </p>
@@ -1118,25 +1111,41 @@ const AdminProgrammes = () => {
               <div className="bg-white border border-gray-200 rounded-lg p-1 flex gap-1 shadow-sm">
                 <button
                   onClick={() => setCurrency('EGP')}
-                  className="px-2 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                    currency === 'EGP'
+                      ? 'bg-gymmawy-primary text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
                 >
                   EGP
                 </button>
                 <button
                   onClick={() => setCurrency('SAR')}
-                  className="px-2 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                    currency === 'SAR'
+                      ? 'bg-gymmawy-primary text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
                 >
                   SAR
                 </button>
                 <button
                   onClick={() => setCurrency('AED')}
-                  className="px-2 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                    currency === 'AED'
+                      ? 'bg-gymmawy-primary text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
                 >
                   AED
                 </button>
                 <button
                   onClick={() => setCurrency('USD')}
-                  className="px-2 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                    currency === 'USD'
+                      ? 'bg-gymmawy-primary text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
                 >
                   USD
                 </button>

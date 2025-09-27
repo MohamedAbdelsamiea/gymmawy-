@@ -38,6 +38,11 @@ const ProductCard = ({
   const getImageSrc = (imagePath) => {
     if (!imagePath) return '/assets/common/store/product1-1.png';
     
+    // If it's already a full URL, use it directly
+    if (imagePath.startsWith('http')) {
+      return imagePath;
+    }
+    
     // If it's an API URL (starts with /uploads/), prepend the backend base URL
     if (imagePath.startsWith('/uploads/')) {
       // Extract the base URL from API_BASE_URL (remove /api)
@@ -50,7 +55,7 @@ const ProductCard = ({
   };
 
   // Use useAsset for local assets, direct URL for API images
-  const isApiImage = product.image && product.image.startsWith('/uploads/');
+  const isApiImage = product.image && (product.image.startsWith('/uploads/') || product.image.startsWith('http'));
   const productImage = isApiImage ? getImageSrc(product.image) : useAsset(product.image, "common");
   
   // Debug logging (remove in production)

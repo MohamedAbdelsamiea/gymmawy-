@@ -5,7 +5,7 @@ import currencyService from '../services/currencyService.js';
  * Custom hook for currency management
  */
 export const useCurrency = () => {
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState('SAR'); // Changed to SAR for Tabby testing
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [availableCurrencies, setAvailableCurrencies] = useState([]);

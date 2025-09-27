@@ -77,7 +77,11 @@
       "step3": "You will be contacted as soon as possible to confirm the transfer and start the subscription"
     },
     "tabbyComingSoon": "Tabby integration coming soon.",
-    "tamaraComingSoon": "Tamara integration coming soon."
+    "tamaraComingSoon": "Tamara integration coming soon.",
+    "tabbyInstructions": "Tabby Payment Instructions",
+    "tabbyInstruction1": "Pay in 4 interest-free installments",
+    "tabbyInstruction2": "Secure payment processing by Tabby",
+    "tabbyInstruction3": "No additional fees or charges"
   },
   "common": {
     "weeks": "{{count}} week",

@@ -74,7 +74,7 @@ return null;
   }
 
   // Validate file before upload
-  validateFile(file, maxSizeMB = 10) {
+  validateFile(file, maxSizeMB = 100) {
     const maxSize = maxSizeMB * 1024 * 1024; // Convert MB to bytes
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
     

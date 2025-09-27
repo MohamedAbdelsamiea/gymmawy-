@@ -32,8 +32,6 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
 
   useEffect(() => {
     if (isOpen && product) {
-      console.log('Loading product for edit:', product);
-      console.log('Product images:', product.images);
       
       // Populate form with product data
       setFormData({
@@ -70,15 +68,13 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
       const mainImage = existingImages.find(img => img.isPrimary) || existingImages[0];
       const carouselImgs = existingImages.filter(img => !img.isPrimary);
       
-      console.log('EditModal - Existing images:', existingImages);
-      console.log('EditModal - Main image:', mainImage);
-      console.log('EditModal - Carousel images:', carouselImgs);
       
       // Set main image URL
       setImageUrl(mainImage?.url || '');
       
       // Set carousel images
-      setCarouselImages(carouselImgs.map(img => ({ url: img.url, id: img.id, isExisting: true })));
+      const mappedCarouselImages = carouselImgs.map(img => ({ url: img.url, id: img.id, isExisting: true }));
+      setCarouselImages(mappedCarouselImages);
       
       setEnableLoyaltyPoints((product.loyaltyPointsAwarded || 0) > 0 || (product.loyaltyPointsRequired || 0) > 0);
       setErrors({});
@@ -121,13 +117,11 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
   const handleCarouselImageUpload = async (file) => {
     try {
       setUploadingImages(true);
-      console.log('EditModal - Uploading carousel image:', file);
       const formData = new FormData();
       formData.append('image', file);
       formData.append('module', 'products');
       
       const response = await adminApiService.uploadImage(formData);
-      console.log('EditModal - Upload response:', response);
       
       const uploadedImage = {
         url: response.upload.url,
@@ -147,7 +141,6 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
   };
 
   const handleCarouselImageRemove = (imageToRemove) => {
-    console.log('EditModal - Carousel image removed:', imageToRemove);
     setCarouselImages(prev => prev.filter(img => img.url !== imageToRemove.url));
   };
 
@@ -220,9 +213,6 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
         loyaltyPointsRequired: enableLoyaltyPoints ? (parseFloat(loyaltyPointsRequired) || 0) : 0,
       };
       
-      console.log('EditProductModal - Sending product data:', productData);
-      console.log('EditProductModal - Stock:', productData.stock, 'Type:', typeof productData.stock);
-      console.log('EditProductModal - Discount:', productData.discountPercentage, 'Type:', typeof productData.discountPercentage);
       
       await onSave(productData);
       showSuccess('Product updated successfully!');
@@ -428,7 +418,7 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
                 onImageRemove={() => {
                   setImageUrl('');
                 }}
-                maxSize={10 * 1024 * 1024}
+                maxSize={100 * 1024 * 1024}
                 showPreview={true}
                 showDetails={true}
               />
@@ -448,10 +438,10 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
                   onChange={(e) => {
                     const files = Array.from(e.target.files);
                     files.forEach(file => {
-                      if (file.size <= 10 * 1024 * 1024) { // 10MB limit
+                      if (file.size <= 100 * 1024 * 1024) { // 100MB limit
                         handleCarouselImageUpload(file);
                       } else {
-                        showError('File size must be less than 10MB');
+                        showError('File size must be less than 100MB');
                       }
                     });
                     e.target.value = ''; // Reset input
@@ -475,7 +465,7 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
                       <span className="font-medium text-blue-600 hover:text-blue-500">Click to upload</span>
                     )} or drag and drop
                   </div>
-                  <div className="text-xs text-gray-500">Multiple images allowed (max 10MB each)</div>
+                  <div className="text-xs text-gray-500">Multiple images allowed (max 100MB each)</div>
                 </label>
               </div>
               
@@ -484,22 +474,35 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
                 <div className="space-y-3">
                   <h4 className="text-sm font-medium text-gray-700">Uploaded Carousel Images ({carouselImages.length})</h4>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {carouselImages.map((image, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={image.url && image.url.startsWith('http') ? image.url : `${config.API_BASE_URL.replace('/api', '')}${image.url || ''}`}
-                          alt={`Carousel ${index + 1}`}
-                          className="w-full h-20 object-cover rounded-lg border border-gray-200"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleCarouselImageRemove(image)}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
+                    {carouselImages.map((image, index) => {
+                      // Simplified URL construction
+                      let imageSrc = image.url;
+                      if (image.url && !image.url.startsWith('http')) {
+                        imageSrc = image.url.startsWith('/') ? `${config.STATIC_BASE_URL}${image.url}` : `${config.STATIC_BASE_URL}/${image.url}`;
+                      }
+                      
+                      
+                      return (
+                        <div key={index} className="relative group">
+                          <img
+                            src={imageSrc}
+                            alt={`Carousel ${index + 1}`}
+                            className="w-full h-20 object-cover rounded-lg border border-gray-200"
+                            onError={(e) => {
+                              console.error('Carousel image load error:', e, 'URL:', imageSrc, 'Original URL:', image.url);
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleCarouselImageRemove(image)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

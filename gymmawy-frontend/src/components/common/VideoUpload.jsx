@@ -16,7 +16,6 @@ const VideoUpload = ({
 }) => {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(value);
-  const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
   const [dragActive, setDragActive] = useState(false);
@@ -74,7 +73,7 @@ return null;
   };
 
   // Handle file selection
-  const handleFileSelect = async(selectedFile) => {
+  const handleFileSelect = (selectedFile) => {
     if (!selectedFile) {
 return;
 }
@@ -82,75 +81,28 @@ return;
     try {
       setError('');
       
-      // Delete old video from server if exists
-      if (uploadedFilename) {
-        console.log('Deleting old video before uploading new one:', uploadedFilename);
-        try {
-          await adminApiService.apiCall(`/videos/${uploadedFilename}?module=${module}`, {
-            method: 'DELETE',
-          });
-          console.log('Old video deleted successfully from server');
-        } catch (deleteError) {
-          console.warn('Failed to delete old video from server:', deleteError.message);
-          // Continue with upload even if deletion fails
-        }
-      } else if (preview && isUploadedVideo(preview)) {
-        // Try to extract filename from the current preview URL
-        const filename = extractFilenameFromUrl(preview);
-        if (filename) {
-          console.log('Deleting old video from preview URL before uploading new one:', filename);
-          try {
-            await adminApiService.apiCall(`/videos/${filename}?module=${module}`, {
-              method: 'DELETE',
-            });
-            console.log('Old video deleted successfully from server');
-          } catch (deleteError) {
-            console.warn('Failed to delete old video from server:', deleteError.message);
-            // Continue with upload even if deletion fails
-          }
-        }
-      }
-      
       // Validate file
       validateFile(selectedFile);
       
       // Create preview
-      const previewUrl = await createPreview(selectedFile);
+      const previewUrl = URL.createObjectURL(selectedFile);
       setPreview(previewUrl);
       setFile(selectedFile);
       
-      // Upload file
-      setUploading(true);
-      console.log('Uploading video:', selectedFile.name, 'to module:', module);
-      const result = await adminApiService.uploadVideo(selectedFile, module);
-      console.log('Upload result:', result);
-      
-      if (result.success) {
-        // Use the uploaded URL - convert relative URL to full URL
-        const baseURL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || config.API_BASE_URL;
-        const videoUrl = result.data.url.startsWith('http') 
-          ? result.data.url 
-          : `${baseURL}${result.data.url}`;
-        
-        console.log('Final video URL:', videoUrl);
-        
-        // Store the uploaded filename for deletion
-        setUploadedFilename(result.data.filename);
-        
-        // Update both preview and parent component
-        setPreview(videoUrl);
-        onChange(videoUrl);
-        setError('');
-      } else {
-        throw new Error('Upload failed');
-      }
+      // Notify parent component about the selected file
+      onChange?.({
+        file: selectedFile,
+        preview: previewUrl,
+        originalName: selectedFile.name,
+        size: selectedFile.size,
+        type: selectedFile.type,
+        isLocal: true
+      });
     } catch (err) {
-      console.error('Upload error:', err);
+      console.error('File selection error:', err);
       setError(err.message);
       setPreview('');
       setFile(null);
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -202,66 +154,30 @@ return;
   };
 
   // Remove video
-  const handleRemove = async() => {
+  const handleRemove = () => {
     try {
-      setDeleting(true);
       setError('');
       
-      console.log('Starting video removal process...');
-      console.log('uploadedFilename:', uploadedFilename);
-      console.log('preview:', preview);
-      console.log('module:', module);
+      // Clean up preview URL if it's a local file
+      if (preview && file) {
+        URL.revokeObjectURL(preview);
+      }
       
-      // If we have an uploaded filename, delete it from the server
-      if (uploadedFilename) {
-        console.log('Deleting uploaded video:', uploadedFilename, 'from module:', module);
-        try {
-          const result = await adminApiService.apiCall(`/videos/${uploadedFilename}?module=${module}`, {
-            method: 'DELETE',
-          });
-          console.log('Video deleted successfully from server:', result);
-        } catch (deleteError) {
-          console.error('Failed to delete video from server:', deleteError);
-          console.warn('Video might not exist on server, continuing with local cleanup');
-        }
-      } else if (preview && isUploadedVideo(preview)) {
-        // Try to extract filename from the current preview URL
-        const filename = extractFilenameFromUrl(preview);
-        if (filename) {
-          console.log('Deleting video from preview URL:', filename, 'from module:', module);
-          try {
-            const result = await adminApiService.apiCall(`/videos/${filename}?module=${module}`, {
-              method: 'DELETE',
-            });
-            console.log('Video deleted successfully from server:', result);
-          } catch (deleteError) {
-            console.error('Failed to delete video from server:', deleteError);
-            console.warn('Video might not exist on server, continuing with local cleanup');
-          }
-        } else {
-          console.log('Could not extract filename from preview URL:', preview);
-        }
-      } else {
-        console.log('No uploaded video to delete from server');
+      // Clear local state
+      setFile(null);
+      setPreview('');
+      setUploadedFilename(null);
+      onChange(''); // Notify parent component that video was removed
+      setError('');
+      
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
     } catch (err) {
       console.error('Error in remove process:', err);
-      // Don't show error to user for deletion failures, just log it
-    } finally {
-      setDeleting(false);
+      setError('Failed to remove video');
     }
-    
-    // Always clear the local state regardless of server deletion result
-    console.log('Clearing local state...');
-    setFile(null);
-    setPreview('');
-    setUploadedFilename(null);
-    onChange(''); // Notify parent component that video was removed
-    setError('');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-    console.log('Video removal process completed');
   };
 
   // Open file dialog
@@ -320,19 +236,13 @@ return;
               </div>
             </div>
             <div className="flex items-center justify-center space-x-2">
-              {uploading && (
-                <div className="flex items-center text-sm text-blue-600">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                  Uploading...
-                </div>
-              )}
               {deleting && (
                 <div className="flex items-center text-sm text-orange-600">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2"></div>
                   Deleting...
                 </div>
               )}
-              {!disabled && !uploading && !deleting && (
+              {!disabled && !deleting && (
                 <button
                   type="button"
                   onClick={(e) => {

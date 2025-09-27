@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import adminApiService from '../../services/adminApiService';
+import fileUploadService from '../../services/fileUploadService';
 import AdminImageUpload from '../common/AdminImageUpload';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -22,6 +23,7 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
     USD: ''
   });
   const [imageUrl, setImageUrl] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [enableLoyaltyPoints, setEnableLoyaltyPoints] = useState(false);
@@ -63,6 +65,7 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
         
         setEnableLoyaltyPoints((editData.loyaltyPointsAwarded > 0) || (editData.loyaltyPointsRequired > 0));
         setImageUrl(editData.imageUrl || '');
+        setSelectedImage(null);
       } else {
         // Reset form when modal opens for new programme
         setFormData({
@@ -83,6 +86,7 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
         
         setEnableLoyaltyPoints(false);
         setImageUrl('');
+        setSelectedImage(null);
       }
       
       setError(null);
@@ -141,6 +145,7 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
       // Update image URL only if it's different
       const newImageUrl = editData.imageUrl || '';
       setImageUrl(prev => prev !== newImageUrl ? newImageUrl : prev);
+      setSelectedImage(null);
     }
   }, [editData]); // Only depend on editData
 
@@ -222,6 +227,30 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
     }
 
     try {
+      // Upload image if a new file is selected
+      let finalImageUrl = imageUrl;
+      if (selectedImage?.file) {
+        try {
+          const uploadResult = await fileUploadService.uploadFile(
+            selectedImage.file, 
+            'programmes', 
+            true
+          );
+          console.log('Upload result in AddProgrammeModal:', uploadResult);
+          
+          if (uploadResult.success && uploadResult.upload) {
+            finalImageUrl = fileUploadService.getFileUrl(uploadResult.upload.url);
+          } else {
+            throw new Error('Invalid upload response');
+          }
+        } catch (uploadError) {
+          throw new Error(`Failed to upload image: ${uploadError.message}`);
+        }
+      } else if (isEdit && editData?.imageUrl) {
+        // When editing, preserve existing image if no new image is selected
+        finalImageUrl = editData.imageUrl;
+      }
+
       // Extract loyalty points fields from formData to avoid spreading them
       const { loyaltyPointsAwarded, loyaltyPointsRequired, ...restFormData } = formData;
       
@@ -239,7 +268,7 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
       
       const programmeData = {
         ...restFormData,
-        imageUrl: imageUrl || '', // Send empty string, backend will transform to undefined
+        imageUrl: finalImageUrl || '', // Use the uploaded image URL
         prices: prices,
         // Only include loyalty points if enabled, otherwise set to null
         ...(enableLoyaltyPoints ? {
@@ -451,9 +480,20 @@ return null;
               <h3 className="text-lg font-medium text-gray-900">Programme Image</h3>
               <AdminImageUpload
                 initialImage={imageUrl ? { url: imageUrl } : null}
-                onImageUpload={(uploadedImage) => setImageUrl(uploadedImage.url)}
-                onImageRemove={() => setImageUrl('')}
-                maxSize={10 * 1024 * 1024}
+                onImageUpload={(imageData) => {
+                  if (imageData.isLocal) {
+                    setSelectedImage(imageData);
+                    setImageUrl(imageData.preview);
+                  } else {
+                    setSelectedImage(null);
+                    setImageUrl(imageData.url);
+                  }
+                }}
+                onImageRemove={() => {
+                  setSelectedImage(null);
+                  setImageUrl('');
+                }}
+                maxSize={100 * 1024 * 1024}
                 showPreview={true}
                 showDetails={true}
               />

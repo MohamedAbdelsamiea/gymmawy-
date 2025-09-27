@@ -18,6 +18,7 @@ import categoryRoutes from "./modules/categories/category.routes.js";
 import cartRoutes from "./modules/cart/cart.routes.js";
 import orderRoutes from "./modules/orders/order.routes.js";
 import paymentRoutes from "./modules/payments/payment.routes.js";
+import tabbyRoutes from "./modules/payments/tabby.routes.js";
 import couponRoutes from "./modules/coupons/coupon.routes.js";
 import leadRoutes from "./modules/leads/lead.routes.js";
 import subscriptionRoutes from "./modules/subscriptions/subscription.routes.js";
@@ -97,6 +98,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/tabby", tabbyRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/leads", leadRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
@@ -135,6 +137,7 @@ app.use("/uploads", (req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Cross-Origin-Resource-Policy', 'cross-origin');
   res.header('Cross-Origin-Embedder-Policy', 'unsafe-none');
+  res.header('Cross-Origin-Opener-Policy', 'same-origin');
   
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
@@ -150,7 +153,25 @@ app.use("/uploads", (req, res, next) => {
   }
   
   next();
-}, express.static("uploads"));
+}, express.static("uploads", {
+  setHeaders: (res, path) => {
+    // Set additional headers for static files
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    
+    // Set proper content type for images
+    if (path.endsWith('.webp')) {
+      res.setHeader('Content-Type', 'image/webp');
+    } else if (path.endsWith('.jpg') || path.endsWith('.jpeg')) {
+      res.setHeader('Content-Type', 'image/jpeg');
+    } else if (path.endsWith('.png')) {
+      res.setHeader('Content-Type', 'image/png');
+    } else if (path.endsWith('.gif')) {
+      res.setHeader('Content-Type', 'image/gif');
+    }
+  }
+}));
 
 
 // Error handling (must be last)

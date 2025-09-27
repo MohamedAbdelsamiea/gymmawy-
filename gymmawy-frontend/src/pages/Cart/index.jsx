@@ -201,11 +201,11 @@ const CartPage = () => {
                     <div key={item.id} className="bg-white border border-gray-200 p-4 sm:p-6">
                       <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                         {/* Product Image */}
-                        <div className="w-full sm:w-32 h-32 sm:h-40 flex-shrink-0">
+                        <div className="w-full sm:w-32 h-32 sm:h-40 flex-shrink-0 bg-gray-50 flex items-center justify-center">
                           <img
                             src={item.image}
                             alt={item.name}
-                            className="w-full h-full object-cover"
+                            className="max-w-full max-h-full object-contain"
                             onError={(e) => {
                               e.target.src = '/assets/common/store/product1-1.png';
                             }}

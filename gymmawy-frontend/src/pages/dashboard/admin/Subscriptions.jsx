@@ -70,7 +70,7 @@ const AdminSubscriptions = () => {
     if (!imagePath) return '';
     if (imagePath.startsWith('http')) return imagePath;
     if (imagePath.startsWith('/uploads/')) {
-      return `${config.API_BASE_URL}${imagePath}`;
+      return `${config.STATIC_BASE_URL}${imagePath}`;
     }
     return imagePath;
   };
@@ -596,7 +596,7 @@ params.plan = filterPlan;
     let totalUSD = 0;
     
     currencies.forEach(curr => {
-      const revenue = subscriptionStats.monthlyRevenue?.[curr] || 0;
+      const revenue = subscriptionStats.totalRevenue?.[curr] || 0;
       const rate = exchangeRates[curr];
       totalUSD += revenue * rate;
     });
@@ -762,13 +762,6 @@ params.plan = filterPlan;
                 </div>
                 <div className="text-xs text-gray-500 line-through">
                   {originalPrice ? `${originalPrice} ${row.currency || 'EGP'}` : ''}
-                </div>
-                <div className="text-xs text-red-600 font-medium">
-                  {planDiscount > 0 && couponDiscount > 0 ? 
-                    `-${planDiscount}% plan, -${Number(couponDiscount / originalPrice * 100).toFixed(1)}% coupon` :
-                    planDiscount > 0 ? `-${planDiscount}% off` :
-                    couponDiscount > 0 ? `-${Number(couponDiscount / originalPrice * 100).toFixed(1)}% coupon` : ''
-                  }
                 </div>
               </div>
             ) : (
@@ -1011,7 +1004,7 @@ return 'Expires tomorrow';
           <div className="w-10 h-10 flex-shrink-0">
             {row.imageUrl ? (
               <img
-                src={row.imageUrl.startsWith('http') ? row.imageUrl : `${config.API_BASE_URL}${row.imageUrl}`}
+                src={row.imageUrl.startsWith('http') ? row.imageUrl : `${config.STATIC_BASE_URL}${row.imageUrl}`}
                 alt={value?.en || row?.name?.en || 'Plan'}
                 className="w-full h-full object-cover rounded-lg"
                 onError={(e) => {
@@ -1470,9 +1463,9 @@ return null;
               <TrendingUp className="h-6 w-6 text-purple-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
+              <p className="text-sm font-medium text-gray-600">Total Revenue</p>
               <p className="text-2xl font-bold text-gray-900">
-                {currency} {subscriptionStats?.monthlyRevenue?.[currency]?.toFixed(2) || '0.00'}
+                {currency} {subscriptionStats?.totalRevenue?.[currency]?.toFixed(2) || '0.00'}
               </p>
             </div>
           </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Upload, Image } from 'lucide-react';
 import AdminImageUpload from '../common/AdminImageUpload';
 import adminApiService from '../../services/adminApiService';
+import fileUploadService from '../../services/fileUploadService';
 
 const AddTransformationModal = ({ isOpen, onClose, onSuccess, editData = null }) => {
   const [formData, setFormData] = useState({
@@ -9,6 +10,7 @@ const AddTransformationModal = ({ isOpen, onClose, onSuccess, editData = null })
     imageUrl: '',
     isActive: true,
   });
+  const [selectedImage, setSelectedImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [errors, setErrors] = useState({});
@@ -29,6 +31,7 @@ const AddTransformationModal = ({ isOpen, onClose, onSuccess, editData = null })
           imageUrl: '',
           isActive: true,
         });
+        setSelectedImage(null);
       }
       setError(null);
       setErrors({});
@@ -72,7 +75,7 @@ const AddTransformationModal = ({ isOpen, onClose, onSuccess, editData = null })
       newErrors.titleAr = 'Arabic title is required';
     }
 
-    if (!formData.imageUrl.trim()) {
+    if (!formData.imageUrl || !formData.imageUrl.trim()) {
       newErrors.imageUrl = 'Transformation image is required';
     }
 
@@ -91,10 +94,33 @@ const AddTransformationModal = ({ isOpen, onClose, onSuccess, editData = null })
       setLoading(true);
       setError(null);
 
+      let finalFormData = { ...formData };
+
+      // Upload image if a new file is selected
+      if (selectedImage?.file) {
+        try {
+          const uploadResult = await fileUploadService.uploadFile(
+            selectedImage.file, 
+            'transformations', 
+            true
+          );
+          console.log('Upload result in AddTransformationModal:', uploadResult);
+          console.log('Upload result.upload:', uploadResult.upload);
+          
+          if (uploadResult.success && uploadResult.upload) {
+            finalFormData.imageUrl = fileUploadService.getFileUrl(uploadResult.upload.url);
+          } else {
+            throw new Error('Invalid upload response');
+          }
+        } catch (uploadError) {
+          throw new Error(`Failed to upload image: ${uploadError.message}`);
+        }
+      }
+
       if (isEdit) {
-        await adminApiService.updateTransformation(editData.id, formData);
+        await adminApiService.updateTransformation(editData.id, finalFormData);
       } else {
-        await adminApiService.createTransformation(formData);
+        await adminApiService.createTransformation(finalFormData);
       }
 
       onSuccess();
@@ -179,9 +205,20 @@ return null;
             </label>
             <AdminImageUpload
               initialImage={formData.imageUrl ? { url: formData.imageUrl } : null}
-              onImageUpload={(uploadedImage) => setFormData(prev => ({ ...prev, imageUrl: uploadedImage.url }))}
-              onImageRemove={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
-              maxSize={5 * 1024 * 1024}
+              onImageUpload={(imageData) => {
+                if (imageData.isLocal) {
+                  setSelectedImage(imageData);
+                  setFormData(prev => ({ ...prev, imageUrl: imageData.preview }));
+                } else {
+                  setSelectedImage(null);
+                  setFormData(prev => ({ ...prev, imageUrl: imageData.url }));
+                }
+              }}
+              onImageRemove={() => {
+                setSelectedImage(null);
+                setFormData(prev => ({ ...prev, imageUrl: '' }));
+              }}
+              maxSize={100 * 1024 * 1024}
               showPreview={true}
               showDetails={true}
             />

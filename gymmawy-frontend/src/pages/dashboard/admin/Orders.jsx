@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Edit, Download, Truck, Package, Search, Filter, Plus, ShoppingBag, Clock, CheckCircle, DollarSign, X } from 'lucide-react';
+import { Eye, Edit, Download, Truck, Package, Search, Filter, Plus, ShoppingBag, Clock, CheckCircle, DollarSign, X, TrendingUp, RefreshCw } from 'lucide-react';
 import { DataTable, StatusBadge, TableWithFilters } from '../../../components/dashboard';
 import PaymentProofModal from '../../../components/modals/PaymentProofModal';
 import adminApiService from '../../../services/adminApiService';
@@ -16,10 +16,79 @@ const AdminOrders = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [currency, setCurrency] = useState('EGP');
+  const [exchangeRates, setExchangeRates] = useState({
+    EGP: 0.032,
+    SAR: 0.27,
+    AED: 0.27,
+    USD: 1
+  });
+  const [ratesLoading, setRatesLoading] = useState(false);
+  const [ratesLastUpdated, setRatesLastUpdated] = useState(null);
+
+  // Debug orders state
+  console.log('Orders state:', orders);
+  console.log('Orders length:', orders?.length);
 
   useEffect(() => {
     fetchOrders();
+    fetchExchangeRates();
   }, [searchTerm, filterStatus, filterDate]);
+
+  // Fetch live exchange rates using ExchangeRate-API.com (supports EGP, SAR, AED)
+  const fetchExchangeRates = async () => {
+    try {
+      setRatesLoading(true);
+      const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch exchange rates');
+      }
+      
+      const data = await response.json();
+      
+      // ExchangeRate-API.com returns rates as USD to other currencies, so we invert them
+      const newRates = {
+        EGP: data.rates.EGP ? 1 / data.rates.EGP : 0.032, // USD to EGP, then invert to get EGP to USD
+        SAR: data.rates.SAR ? 1 / data.rates.SAR : 0.27,  // USD to SAR, then invert to get SAR to USD
+        AED: data.rates.AED ? 1 / data.rates.AED : 0.27,  // USD to AED, then invert to get AED to USD
+        USD: 1
+      };
+      
+      setExchangeRates(newRates);
+      setRatesLastUpdated(new Date());
+      console.log('Live exchange rates updated (ExchangeRate-API.com):', newRates);
+      console.log('Current exchange rates state:', exchangeRates);
+    } catch (error) {
+      console.error('Failed to fetch exchange rates, using fallback:', error);
+      // Keep the fallback rates if API fails
+    } finally {
+      setRatesLoading(false);
+    }
+  };
+
+  // Calculate total revenue in USD (only delivered orders)
+  const calculateTotalRevenueUSD = () => {
+    if (!Array.isArray(orders)) return 0;
+    
+    console.log('Orders for revenue calculation:', orders);
+    console.log('Delivered orders:', orders.filter(order => order.status === 'DELIVERED'));
+    
+    let totalUSD = 0;
+    
+    orders
+      .filter(order => order.status === 'DELIVERED')
+      .forEach(order => {
+        const orderPrice = parseFloat(order.price) || 0;
+        const orderCurrency = order.currency || 'EGP';
+        const rate = exchangeRates[orderCurrency] || 1;
+        console.log(`Order ${order.id}: price=${orderPrice}, currency=${orderCurrency}, rate=${rate}, contribution=${orderPrice * rate}`);
+        totalUSD += orderPrice * rate;
+      });
+    
+    console.log('Total USD revenue:', totalUSD);
+    return totalUSD;
+  };
 
   const fetchOrders = async() => {
     try {
@@ -38,8 +107,11 @@ params.date = filterDate;
 }
       
       const response = await adminApiService.getOrders(params);
+      console.log('Orders API response:', response);
       // Handle the response format: { orders: { items: [...] } }
       const ordersData = response?.orders?.items || response?.data?.orders?.items || response?.data || response || [];
+      console.log('Extracted orders data:', ordersData);
+      console.log('Sample order payment method:', ordersData[0]?.paymentMethod);
       setOrders(Array.isArray(ordersData) ? ordersData : []);
     } catch (err) {
       setError(err.message);
@@ -187,7 +259,9 @@ params.date = filterDate;
                 <div className="font-medium text-gray-900">
                   {item.product?.name?.en || item.product?.name || 'Unknown Product'}
                 </div>
-                <div className="text-gray-500">Qty: {item.quantity}</div>
+                <div className="text-gray-500">
+                  Qty: {item.quantity} • Size: {item.size || 'N/A'}
+                </div>
               </div>
             ))}
             {items.length > 2 && (
@@ -477,31 +551,99 @@ params.date = filterDate;
 
       {/* Revenue Cards Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 relative">
           <div className="flex items-center">
             <div className="p-2 bg-purple-100 rounded-lg">
-              <DollarSign className="h-6 w-6 text-purple-600" />
+              <TrendingUp className="h-6 w-6 text-purple-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Revenue</p>
               <p className="text-2xl font-bold text-gray-900">
-                {Array.isArray(orders) ? orders.reduce((sum, o) => sum + (parseFloat(o.price) || 0), 0).toFixed(2) : '0.00'} EGP
+                {currency} {Array.isArray(orders) ? (() => {
+                  const deliveredOrdersInCurrency = orders.filter(o => o.currency === currency && o.status === 'DELIVERED');
+                  console.log(`Currency ${currency} delivered orders:`, deliveredOrdersInCurrency);
+                  const total = deliveredOrdersInCurrency.reduce((sum, o) => sum + (parseFloat(o.price) || 0), 0);
+                  console.log(`Total revenue in ${currency}:`, total);
+                  return total.toFixed(2);
+                })() : '0.00'}
               </p>
+            </div>
+          </div>
+          {/* Currency Toggle - Attached to top of card frame */}
+          <div className="absolute -top-2 right-3">
+            <div className="bg-white border border-gray-200 rounded-lg p-1 flex gap-1 shadow-sm">
+              <button
+                onClick={() => setCurrency('EGP')}
+                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                  currency === 'EGP'
+                    ? 'bg-gymmawy-primary text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                EGP
+              </button>
+              <button
+                onClick={() => setCurrency('SAR')}
+                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                  currency === 'SAR'
+                    ? 'bg-gymmawy-primary text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                SAR
+              </button>
+              <button
+                onClick={() => setCurrency('AED')}
+                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                  currency === 'AED'
+                    ? 'bg-gymmawy-primary text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                AED
+              </button>
+              <button
+                onClick={() => setCurrency('USD')}
+                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                  currency === 'USD'
+                    ? 'bg-gymmawy-primary text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                USD
+              </button>
             </div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        
+        {/* Total Revenue USD Card */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 relative">
           <div className="flex items-center">
             <div className="p-2 bg-emerald-100 rounded-lg">
-              <Package className="h-6 w-6 text-emerald-600" />
+              <TrendingUp className="h-6 w-6 text-emerald-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Items</p>
+              <p className="text-sm font-medium text-gray-600">Total Revenue (USD)</p>
               <p className="text-2xl font-bold text-gray-900">
-                {Array.isArray(orders) ? orders.reduce((sum, o) => sum + (o.items?.length || 0), 0) : 0}
+                ${calculateTotalRevenueUSD().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
           </div>
+          <div className="absolute -top-2 right-3">
+            <button
+              onClick={fetchExchangeRates}
+              disabled={ratesLoading}
+              className="bg-white border border-gray-200 rounded-lg p-1 flex gap-1 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+              title="Refresh exchange rates"
+            >
+              <RefreshCw className={`w-3 h-3 text-gray-600 ${ratesLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+          {ratesLastUpdated && (
+            <div className="absolute -bottom-1 right-3 text-xs text-gray-500 bg-white px-2 py-1 rounded shadow-sm">
+              Updated: {ratesLastUpdated.toLocaleTimeString()}
+            </div>
+          )}
         </div>
       </div>
 
@@ -696,6 +838,10 @@ params.date = filterDate;
                             <div>
                               <span className="text-gray-600">Quantity:</span>
                               <span className="ml-2 font-medium">{item.quantity}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Size:</span>
+                              <span className="ml-2 font-medium">{item.size || 'N/A'}</span>
                             </div>
                             <div>
                               <span className="text-gray-600">Unit Price:</span>

@@ -12,6 +12,9 @@ import ContactUs from './pages/ContactUs';
 import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Checkout from './pages/Checkout';
+import PaymentSuccess from './pages/PaymentSuccess.jsx';
+import PaymentFailure from './pages/PaymentFailure.jsx';
+import PaymentCancel from './pages/PaymentCancel.jsx';
 
 
 import { ProtectedRoute } from './components/auth';
@@ -27,6 +30,9 @@ export const publicRoutes = [
   { path: '/join-us', element: <MainLayout><JoinUs /></MainLayout> },
   { path: '/contact', element: <MainLayout><ContactUs /></MainLayout> },
   { path: '/auth/*', element: <MainLayout><Auth /></MainLayout> },
+  { path: '/payment/success', element: <MainLayout><PaymentSuccess /></MainLayout> },
+  { path: '/payment/failure', element: <MainLayout><PaymentFailure /></MainLayout> },
+  { path: '/payment/cancel', element: <MainLayout><PaymentCancel /></MainLayout> },
 
 ];
 

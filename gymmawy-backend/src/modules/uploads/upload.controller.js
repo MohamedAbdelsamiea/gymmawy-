@@ -8,6 +8,9 @@ import {
   getAdminUploads, 
   deleteUpload, 
   cleanupOrphanedFiles, 
+  cleanupOrphanedSubscriptionPlanImages,
+  cleanupOrphanedProgrammeImages,
+  cleanupOrphanedProductImages,
   getUploadStats,
   getUploadsByCategory,
   getPaymentProofs,
@@ -92,83 +95,6 @@ export const uploadAdminImage = async (req, res, next) => {
   }
 };
 
-// Upload document (public)
-export const uploadPublicDocument = async (req, res, next) => {
-  try {
-    if (!req.uploadedFile) {
-      return res.status(400).json({ 
-        error: { message: 'No file uploaded' } 
-      });
-    }
-
-    const uploadData = {
-      ...req.uploadedFile,
-      isPublic: true,
-      uploadedBy: req.user?.id || null
-    };
-
-    const upload = await createUploadRecord(uploadData);
-    
-    res.status(201).json({
-      success: true,
-      upload: {
-        id: upload.id,
-        originalName: upload.originalName,
-        fileName: upload.fileName,
-        url: upload.url,
-        size: upload.size,
-        mimetype: upload.mimetype,
-        category: upload.category,
-        isPublic: upload.isPublic,
-        createdAt: upload.createdAt
-      }
-    });
-  } catch (error) {
-    console.error('Error uploading public document:', error);
-    res.status(500).json({ 
-      error: { message: 'Failed to upload document' } 
-    });
-  }
-};
-
-// Upload document (admin)
-export const uploadAdminDocument = async (req, res, next) => {
-  try {
-    if (!req.uploadedFile) {
-      return res.status(400).json({ 
-        error: { message: 'No file uploaded' } 
-      });
-    }
-
-    const uploadData = {
-      ...req.uploadedFile,
-      isPublic: false,
-      uploadedBy: req.user?.id || null
-    };
-
-    const upload = await createUploadRecord(uploadData);
-    
-    res.status(201).json({
-      success: true,
-      upload: {
-        id: upload.id,
-        originalName: upload.originalName,
-        fileName: upload.fileName,
-        url: upload.url,
-        size: upload.size,
-        mimetype: upload.mimetype,
-        category: upload.category,
-        isPublic: upload.isPublic,
-        createdAt: upload.createdAt
-      }
-    });
-  } catch (error) {
-    console.error('Error uploading admin document:', error);
-    res.status(500).json({ 
-      error: { message: 'Failed to upload document' } 
-    });
-  }
-};
 
 // Upload video (admin)
 export const uploadAdminVideo = async (req, res, next) => {
@@ -219,9 +145,7 @@ export const getUpload = async (req, res, next) => {
     const uploadDirs = [
       'uploads/content/images',
       'uploads/content/videos', 
-      'uploads/content/documents',
       'uploads/admin/images',
-      'uploads/admin/documents',
       'uploads/payment-proofs'
     ];
     
@@ -272,7 +196,6 @@ export const getUpload = async (req, res, next) => {
     // Determine category from directory
     let category = 'images';
     if (uploadDir.includes('videos')) category = 'videos';
-    else if (uploadDir.includes('documents')) category = 'documents';
     else if (uploadDir.includes('payment-proofs')) category = 'payment-proof';
     
     // Determine mimetype from file extension
@@ -568,6 +491,58 @@ export const servePaymentProof = async (req, res, next) => {
     console.error('Error serving payment proof:', error);
     res.status(500).json({ 
       error: { message: 'Failed to serve payment proof' } 
+    });
+  }
+};
+
+// Clean up orphaned subscription plan images
+export const cleanupOrphanedSubscriptionPlanImagesController = async (req, res, next) => {
+  try {
+    const result = await cleanupOrphanedSubscriptionPlanImages();
+    
+    res.json({
+      success: true,
+      message: result.message,
+      cleanedFiles: result.cleanedFiles
+    });
+  } catch (error) {
+    console.error('Error cleaning up orphaned subscription plan images:', error);
+    res.status(500).json({ 
+      error: { message: 'Failed to clean up orphaned subscription plan images' } 
+    });
+  }
+};
+
+export const cleanupOrphanedProgrammeImagesController = async (req, res, next) => {
+  try {
+    const result = await cleanupOrphanedProgrammeImages();
+    
+    res.json({
+      success: true,
+      message: result.message,
+      cleanedFiles: result.cleanedFiles
+    });
+  } catch (error) {
+    console.error('Error cleaning up orphaned programme images:', error);
+    res.status(500).json({ 
+      error: { message: 'Failed to clean up orphaned programme images' } 
+    });
+  }
+};
+
+export const cleanupOrphanedProductImagesController = async (req, res, next) => {
+  try {
+    const result = await cleanupOrphanedProductImages();
+    
+    res.json({
+      success: true,
+      message: result.message,
+      cleanedFiles: result.cleanedFiles
+    });
+  } catch (error) {
+    console.error('Error cleaning up orphaned product images:', error);
+    res.status(500).json({ 
+      error: { message: 'Failed to clean up orphaned product images' } 
     });
   }
 };

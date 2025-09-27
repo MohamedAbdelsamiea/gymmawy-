@@ -72,7 +72,36 @@ export const getTransformationById = async (req, res) => {
 export const updateTransformation = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Get the old transformation to check if imageUrl changed
+    const oldTransformation = await getTransformationByIdService(id);
+    if (!oldTransformation) {
+      return res.status(404).json({ error: { message: 'Transformation not found' } });
+    }
+    
+    // Update the transformation
     const transformation = await updateTransformationService(id, req.body);
+    
+    // If imageUrl changed, delete the old file
+    if (oldTransformation.imageUrl && oldTransformation.imageUrl !== req.body.imageUrl) {
+      try {
+        // Extract file ID from the old imageUrl
+        const oldImageUrl = oldTransformation.imageUrl;
+        if (oldImageUrl.includes('/uploads/content/')) {
+          const fileName = oldImageUrl.split('/').pop();
+          const fileId = fileName.split('.')[0]; // Remove extension
+          
+          // Delete the old file
+          const { deleteUpload } = await import('../uploads/upload.service.js');
+          await deleteUpload(fileId, 'transformations');
+          console.log(`Deleted old transformation image: ${fileId}`);
+        }
+      } catch (deleteError) {
+        console.error('Error deleting old transformation image:', deleteError);
+        // Don't fail the update if file deletion fails
+      }
+    }
+    
     res.json({ transformation });
   } catch (error) {
     res.status(400).json({ error: { message: error.message } });
@@ -82,7 +111,35 @@ export const updateTransformation = async (req, res) => {
 export const deleteTransformation = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Get the transformation before deleting to access the imageUrl
+    const transformation = await getTransformationByIdService(id);
+    if (!transformation) {
+      return res.status(404).json({ error: { message: 'Transformation not found' } });
+    }
+    
+    // Delete the transformation from database
     await deleteTransformationService(id);
+    
+    // Delete the associated image file
+    if (transformation.imageUrl) {
+      try {
+        const imageUrl = transformation.imageUrl;
+        if (imageUrl.includes('/uploads/content/')) {
+          const fileName = imageUrl.split('/').pop();
+          const fileId = fileName.split('.')[0]; // Remove extension
+          
+          // Delete the file
+          const { deleteUpload } = await import('../uploads/upload.service.js');
+          await deleteUpload(fileId, 'transformations');
+          console.log(`Deleted transformation image: ${fileId}`);
+        }
+      } catch (deleteError) {
+        console.error('Error deleting transformation image:', deleteError);
+        // Don't fail the deletion if file deletion fails
+      }
+    }
+    
     res.status(204).send();
   } catch (error) {
     res.status(400).json({ error: { message: error.message } });
@@ -122,7 +179,68 @@ export const getVideoById = async (req, res) => {
 export const updateVideo = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Get the old video to check if URLs changed
+    const oldVideo = await getVideoByIdService(id);
+    if (!oldVideo) {
+      return res.status(404).json({ error: { message: 'Video not found' } });
+    }
+    
+    // Update the video
     const video = await updateVideoService(id, req.body);
+    
+    // If videoUrl changed, delete the old video file
+    if (oldVideo.videoUrl && oldVideo.videoUrl !== req.body.videoUrl) {
+      try {
+        const oldVideoUrl = oldVideo.videoUrl;
+        if (oldVideoUrl.includes('/uploads/content/videos/')) {
+          const fileName = oldVideoUrl.split('/').pop();
+          const fileId = fileName.split('.')[0]; // Remove extension
+          
+          // Delete the old video file
+          const { deleteUpload } = await import('../uploads/upload.service.js');
+          await deleteUpload(fileId, 'videos');
+          console.log(`Deleted old video file: ${fileId}`);
+        }
+      } catch (deleteError) {
+        console.error('Error deleting old video file:', deleteError);
+        // Don't fail the update if file deletion fails
+      }
+    }
+    
+    // Handle thumbnail changes
+    const oldThumbnails = [oldVideo.thumbnailAr, oldVideo.thumbnailEn].filter(Boolean);
+    const newThumbnails = [req.body.thumbnailAr, req.body.thumbnailEn].filter(Boolean);
+    
+    // Find thumbnails that were removed
+    const removedThumbnails = oldThumbnails.filter(oldThumb => 
+      !newThumbnails.includes(oldThumb)
+    );
+    
+    // Delete removed thumbnails
+    for (const thumbnailUrl of removedThumbnails) {
+      try {
+        if (thumbnailUrl.includes('/uploads/content/')) {
+          const fileName = thumbnailUrl.split('/').pop();
+          const fileId = fileName.split('.')[0]; // Remove extension
+          
+          // Determine category from URL
+          let category = 'videos';
+          if (thumbnailUrl.includes('/transformations/')) category = 'transformations';
+          else if (thumbnailUrl.includes('/products/')) category = 'products';
+          else if (thumbnailUrl.includes('/programmes/')) category = 'programmes';
+          
+          // Delete the thumbnail file
+          const { deleteUpload } = await import('../uploads/upload.service.js');
+          await deleteUpload(fileId, category);
+          console.log(`Deleted old video thumbnail: ${fileId}`);
+        }
+      } catch (deleteError) {
+        console.error('Error deleting old video thumbnail:', deleteError);
+        // Continue with other thumbnails even if one fails
+      }
+    }
+    
     res.json({ video });
   } catch (error) {
     res.status(400).json({ error: { message: error.message } });
@@ -132,7 +250,60 @@ export const updateVideo = async (req, res) => {
 export const deleteVideo = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Get the video before deleting to access the file URLs
+    const video = await getVideoByIdService(id);
+    if (!video) {
+      return res.status(404).json({ error: { message: 'Video not found' } });
+    }
+    
+    // Delete the video from database
     await deleteVideoService(id);
+    
+    // Delete the video file
+    if (video.videoUrl) {
+      try {
+        const videoUrl = video.videoUrl;
+        if (videoUrl.includes('/uploads/content/videos/')) {
+          const fileName = videoUrl.split('/').pop();
+          const fileId = fileName.split('.')[0]; // Remove extension
+          
+          // Delete the video file
+          const { deleteUpload } = await import('../uploads/upload.service.js');
+          await deleteUpload(fileId, 'videos');
+          console.log(`Deleted video file: ${fileId}`);
+        }
+      } catch (deleteError) {
+        console.error('Error deleting video file:', deleteError);
+        // Don't fail the deletion if file deletion fails
+      }
+    }
+    
+    // Delete thumbnail files
+    const thumbnails = [video.thumbnailAr, video.thumbnailEn].filter(Boolean);
+    for (const thumbnailUrl of thumbnails) {
+      try {
+        if (thumbnailUrl.includes('/uploads/content/')) {
+          const fileName = thumbnailUrl.split('/').pop();
+          const fileId = fileName.split('.')[0]; // Remove extension
+          
+          // Determine category from URL
+          let category = 'videos';
+          if (thumbnailUrl.includes('/transformations/')) category = 'transformations';
+          else if (thumbnailUrl.includes('/products/')) category = 'products';
+          else if (thumbnailUrl.includes('/programmes/')) category = 'programmes';
+          
+          // Delete the thumbnail file
+          const { deleteUpload } = await import('../uploads/upload.service.js');
+          await deleteUpload(fileId, category);
+          console.log(`Deleted video thumbnail: ${fileId}`);
+        }
+      } catch (deleteError) {
+        console.error('Error deleting video thumbnail:', deleteError);
+        // Continue with other thumbnails even if one fails
+      }
+    }
+    
     res.status(204).send();
   } catch (error) {
     res.status(400).json({ error: { message: error.message } });
