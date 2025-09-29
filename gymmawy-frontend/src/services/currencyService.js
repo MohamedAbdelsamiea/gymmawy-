@@ -1,14 +1,12 @@
 /**
  * Currency detection and management service for frontend
  */
-import { config } from '../config';
+import apiClient from './apiClient';
 
 class CurrencyService {
   constructor() {
     this.currentCurrency = 'SAR'; // Changed to SAR for Tabby testing
     this.currencyRates = {};
-    // Use API URL from config
-    this.baseUrl = config.API_BASE_URL;
   }
 
   /**
@@ -16,18 +14,7 @@ class CurrencyService {
    */
   async detectCurrency() {
     try {
-      const response = await fetch(`${this.baseUrl}/currency/detect`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to detect currency');
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get('/currency/detect');
       
       if (data.success) {
         this.currentCurrency = data.currency;
@@ -54,19 +41,7 @@ class CurrencyService {
    */
   async getAvailableCurrencies() {
     try {
-      const response = await fetch(`${this.baseUrl}/currency/available`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch currencies');
-      }
-
-      const data = await response.json();
-      return data;
+      return await apiClient.get('/currency/available');
     } catch (error) {
       console.error('Error fetching currencies:', error);
       throw error;
@@ -78,18 +53,7 @@ class CurrencyService {
    */
   async getCurrencyRates(baseCurrency = 'USD') {
     try {
-      const response = await fetch(`${this.baseUrl}/currency/rates?base=${baseCurrency}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch currency rates');
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get(`/currency/rates?base=${baseCurrency}`);
       
       if (data.success) {
         this.currencyRates = data.data.rates;
@@ -108,20 +72,7 @@ class CurrencyService {
    */
   async updatePreferredCurrency(currency, token) {
     try {
-      const response = await fetch(`${this.baseUrl}/currency/preferred`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ currency }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update preferred currency');
-      }
-
-      const data = await response.json();
+      const data = await apiClient.patch('/currency/preferred', { currency });
       
       if (data.success) {
         this.currentCurrency = currency;
@@ -147,19 +98,7 @@ class CurrencyService {
         ...(purchasableId && { purchasableId }),
       });
 
-      const response = await fetch(`${this.baseUrl}/currency/prices?${params}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch prices');
-      }
-
-      const data = await response.json();
-      return data;
+      return await apiClient.get(`/currency/prices?${params}`);
     } catch (error) {
       console.error('Error fetching prices:', error);
       throw error;
@@ -267,9 +206,7 @@ class CurrencyService {
   /**
    * Set base URL for API calls
    */
-  setBaseUrl(url) {
-    this.baseUrl = url;
-  }
+  // setBaseUrl method removed - using apiClient now
 
   /**
    * Set current currency

@@ -3,10 +3,7 @@ import apiClient from './apiClient';
 class UserService {
   async getProfile() {
     try {
-      const response = await apiClient.request('/users/me', {
-        method: 'GET',
-      });
-      return response;
+      return await apiClient.get('/users/me');
     } catch (error) {
       throw new Error(`Profile fetch error: ${error.message}`);
     }
@@ -14,11 +11,7 @@ class UserService {
 
   async updateProfile(profileData) {
     try {
-      const response = await apiClient.request('/users/me', {
-        method: 'PATCH',
-        body: JSON.stringify(profileData),
-      });
-      return response;
+      return await apiClient.patch('/users/me', profileData);
     } catch (error) {
       // Re-throw the error to preserve the original error response
       throw error;
@@ -27,11 +20,7 @@ class UserService {
 
   async changePassword(passwordData) {
     try {
-      const response = await apiClient.request('/users/change-password', {
-        method: 'PUT',
-        body: JSON.stringify(passwordData),
-      });
-      return response;
+      return await apiClient.put('/users/change-password', passwordData);
     } catch (error) {
       throw new Error(`Password change error: ${error.message}`);
     }
@@ -39,11 +28,7 @@ class UserService {
 
   async changeEmail(newEmail) {
     try {
-      const response = await apiClient.request('/users/change-email', {
-        method: 'POST',
-        body: JSON.stringify({ email: newEmail }),
-      });
-      return response;
+      return await apiClient.post('/users/change-email', { email: newEmail });
     } catch (error) {
       throw new Error(`Email change error: ${error.message}`);
     }
@@ -51,10 +36,7 @@ class UserService {
 
   async deleteAccount() {
     try {
-      const response = await apiClient.request('/users/account', {
-        method: 'DELETE',
-      });
-      return response;
+      return await apiClient.delete('/users/account');
     } catch (error) {
       throw new Error(`Account deletion error: ${error.message}`);
     }
@@ -62,10 +44,7 @@ class UserService {
 
   async getSubscriptions() {
     try {
-      const response = await apiClient.request('/subscriptions', {
-        method: 'GET',
-      });
-      return response;
+      return await apiClient.get('/subscriptions');
     } catch (error) {
       throw new Error(`Subscriptions fetch error: ${error.message}`);
     }
@@ -73,10 +52,7 @@ class UserService {
 
   async getOrders() {
     try {
-      const response = await apiClient.request('/orders', {
-        method: 'GET',
-      });
-      return response;
+      return await apiClient.get('/orders');
     } catch (error) {
       throw new Error(`Orders fetch error: ${error.message}`);
     }

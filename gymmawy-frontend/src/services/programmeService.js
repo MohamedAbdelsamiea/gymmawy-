@@ -1,22 +1,11 @@
-import { config } from '../config';
-import authService from './authService';
-
-const API_BASE_URL = config.API_BASE_URL;
+import apiClient from './apiClient';
 
 class ProgrammeService {
   async getProgrammes(filters = {}) {
     try {
       const queryParams = new URLSearchParams(filters).toString();
-      const response = await fetch(`${API_BASE_URL}/programmes?${queryParams}`, {
-        method: 'GET',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch programmes');
-      }
-      
-      const data = await response.json();
-      return data;
+      const endpoint = `/programmes${queryParams ? `?${queryParams}` : ''}`;
+      return await apiClient.get(endpoint);
     } catch (error) {
       throw new Error(`Programmes fetch error: ${error.message}`);
     }
@@ -24,16 +13,7 @@ class ProgrammeService {
 
   async getProgramme(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/programmes/${id}`, {
-        method: 'GET',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch programme');
-      }
-      
-      const data = await response.json();
-      return data;
+      return await apiClient.get(`/programmes/${id}`);
     } catch (error) {
       throw new Error(`Programme fetch error: ${error.message}`);
     }
@@ -41,21 +21,10 @@ class ProgrammeService {
 
   async purchaseProgramme(id, country = 'EG', purchaseData = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/programmes/${id}/purchase-with-payment`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ...purchaseData, country }),
+      return await apiClient.post(`/programmes/${id}/purchase-with-payment`, {
+        ...purchaseData,
+        country,
       });
-      
-      if (!response.ok) {
-        throw new Error('Programme purchase failed');
-      }
-      
-      const data = await response.json();
-      return data;
     } catch (error) {
       throw new Error(`Programme purchase error: ${error.message}`);
     }
@@ -63,19 +32,7 @@ class ProgrammeService {
 
   async getUserProgrammes() {
     try {
-      const response = await fetch(`${API_BASE_URL}/programmes/user/my-programmes`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`,
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch user programmes');
-      }
-      
-      const data = await response.json();
-      return data;
+      return await apiClient.get('/programmes/user/my-programmes');
     } catch (error) {
       throw new Error(`User programmes fetch error: ${error.message}`);
     }
@@ -84,21 +41,7 @@ class ProgrammeService {
   // Admin methods
   async createProgramme(programmeData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/programmes`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(programmeData),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Programme creation failed');
-      }
-      
-      const data = await response.json();
-      return data;
+      return await apiClient.post('/programmes', programmeData);
     } catch (error) {
       throw new Error(`Programme creation error: ${error.message}`);
     }
@@ -106,21 +49,7 @@ class ProgrammeService {
 
   async updateProgramme(id, programmeData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/programmes/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(programmeData),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Programme update failed');
-      }
-      
-      const data = await response.json();
-      return data;
+      return await apiClient.patch(`/programmes/${id}`, programmeData);
     } catch (error) {
       throw new Error(`Programme update error: ${error.message}`);
     }
@@ -128,17 +57,7 @@ class ProgrammeService {
 
   async deleteProgramme(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/programmes/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`,
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Programme deletion failed');
-      }
-      
+      await apiClient.delete(`/programmes/${id}`);
       return true;
     } catch (error) {
       throw new Error(`Programme deletion error: ${error.message}`);
@@ -147,19 +66,7 @@ class ProgrammeService {
 
   async getProgrammeStats() {
     try {
-      const response = await fetch(`${API_BASE_URL}/programmes/stats/overview`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`,
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch programme stats');
-      }
-      
-      const data = await response.json();
-      return data;
+      return await apiClient.get('/programmes/stats/overview');
     } catch (error) {
       throw new Error(`Programme stats fetch error: ${error.message}`);
     }

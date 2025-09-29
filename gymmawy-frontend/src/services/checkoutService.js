@@ -1,31 +1,11 @@
-import { config } from '../config';
-
-const API_BASE_URL = config.API_BASE_URL;
+import apiClient from './apiClient';
 
 class CheckoutService {
-  // Get authentication headers
-  getAuthHeaders() {
-    const token = localStorage.getItem('accessToken');
-    return {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-    };
-  }
 
   // ==================== COUPONS ====================
   async validateCoupon(couponCode) {
     try {
-      const response = await fetch(`${API_BASE_URL}/coupons/validate/${couponCode}`, {
-        method: 'GET',
-        headers: this.getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || errorData.message || 'Failed to validate coupon');
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get(`/coupons/validate/${couponCode}`);
       return {
         valid: true,
         coupon: data.coupon,
@@ -44,21 +24,10 @@ class CheckoutService {
 
   async applyCoupon(couponCode, amount) {
     try {
-      const response = await fetch(`${API_BASE_URL}/coupons/apply`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({
-          couponCode,
-          amount,
-        }),
+      return await apiClient.post('/coupons/apply', {
+        couponCode,
+        amount,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to apply coupon');
-      }
-
-      return await response.json();
     } catch (error) {
       console.error('Coupon application error:', error);
       throw error;
@@ -68,27 +37,16 @@ class CheckoutService {
   // ==================== PAYMENTS ====================
   async createPaymentIntent(amount, currency, planId, planType) {
     try {
-      const response = await fetch(`${API_BASE_URL}/payments/intent`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({
-          amount,
-          currency,
+      return await apiClient.post('/payments/intent', {
+        amount,
+        currency,
+        planId,
+        planType,
+        metadata: {
           planId,
           planType,
-          metadata: {
-            planId,
-            planType,
-          },
-        }),
+        },
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create payment intent');
-      }
-
-      return await response.json();
     } catch (error) {
       console.error('Payment intent creation error:', error);
       throw error;
@@ -97,18 +55,7 @@ class CheckoutService {
 
   async processPayment(paymentData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/payments/process`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify(paymentData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Payment processing failed');
-      }
-
-      return await response.json();
+      return await apiClient.post('/payments/process', paymentData);
     } catch (error) {
       console.error('Payment processing error:', error);
       throw error;
@@ -117,17 +64,7 @@ class CheckoutService {
 
   async verifyPayment(paymentId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/payments/${paymentId}/verify`, {
-        method: 'GET',
-        headers: this.getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Payment verification failed');
-      }
-
-      return await response.json();
+      return await apiClient.get(`/payments/${paymentId}/verify`);
     } catch (error) {
       console.error('Payment verification error:', error);
       throw error;
@@ -136,17 +73,7 @@ class CheckoutService {
 
   async getPaymentMethods() {
     try {
-      const response = await fetch(`${API_BASE_URL}/payments/methods`, {
-        method: 'GET',
-        headers: this.getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch payment methods');
-      }
-
-      return await response.json();
+      return await apiClient.get('/payments/methods');
     } catch (error) {
       console.error('Payment methods fetch error:', error);
       throw error;
@@ -156,18 +83,7 @@ class CheckoutService {
   // ==================== SUBSCRIPTIONS ====================
   async createSubscription(subscriptionData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/subscriptions/with-payment`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify(subscriptionData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Subscription creation failed');
-      }
-
-      return await response.json();
+      return await apiClient.post('/subscriptions/with-payment', subscriptionData);
     } catch (error) {
       console.error('Subscription creation error:', error);
       throw error;
@@ -176,17 +92,7 @@ class CheckoutService {
 
   async getSubscriptionPlans() {
     try {
-      const response = await fetch(`${API_BASE_URL}/subscriptions/plans`, {
-        method: 'GET',
-        headers: this.getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch subscription plans');
-      }
-
-      return await response.json();
+      return await apiClient.get('/subscriptions/plans');
     } catch (error) {
       console.error('Subscription plans fetch error:', error);
       throw error;
@@ -196,23 +102,7 @@ class CheckoutService {
   // ==================== PROGRAMMES ====================
   async purchaseProgramme(programmeId, paymentData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/programmes/${programmeId}/purchase-with-payment`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify(paymentData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Programme purchase API error:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorData
-        });
-        throw new Error(errorData.error?.message || errorData.message || 'Programme purchase failed');
-      }
-
-      return await response.json();
+      return await apiClient.post(`/programmes/${programmeId}/purchase-with-payment`, paymentData);
     } catch (error) {
       console.error('Programme purchase error:', error);
       throw error;
@@ -222,18 +112,7 @@ class CheckoutService {
   // ==================== ORDERS ====================
   async createOrder(orderData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify(orderData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Order creation failed');
-      }
-
-      return await response.json();
+      return await apiClient.post('/orders', orderData);
     } catch (error) {
       console.error('Order creation error:', error);
       throw error;
@@ -242,18 +121,7 @@ class CheckoutService {
 
   async createOrderFromCart(orderData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/from-cart`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify(orderData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Order creation from cart failed');
-      }
-
-      return await response.json();
+      return await apiClient.post('/orders/from-cart', orderData);
     } catch (error) {
       console.error('Order creation from cart error:', error);
       throw error;
@@ -262,17 +130,7 @@ class CheckoutService {
 
   async getOrderById(orderId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
-        method: 'GET',
-        headers: this.getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch order');
-      }
-
-      return await response.json();
+      return await apiClient.get(`/orders/${orderId}`);
     } catch (error) {
       console.error('Order fetch error:', error);
       throw error;
@@ -286,20 +144,7 @@ class CheckoutService {
       formData.append('file', file);
       formData.append('type', 'payment-proof');
 
-      const response = await fetch(`${API_BASE_URL}/uploads/payment-proof`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'File upload failed');
-      }
-
-      return await response.json();
+      return await apiClient.post('/uploads/payment-proof', formData);
     } catch (error) {
       console.error('File upload error:', error);
       throw error;
@@ -328,22 +173,10 @@ class CheckoutService {
   // ==================== PAYMENT PROOF UPLOAD ====================
   async uploadPaymentProof(paymentId, proofUrl) {
     try {
-      const response = await fetch(`${API_BASE_URL}/payments/upload-proof`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({
-          paymentId,
-          proofUrl,
-        }),
+      return await apiClient.post('/payments/upload-proof', {
+        paymentId,
+        proofUrl,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || errorData.message || 'Failed to upload payment proof');
-      }
-
-      const data = await response.json();
-      return data;
     } catch (error) {
       console.error('Payment proof upload error:', error);
       throw error;

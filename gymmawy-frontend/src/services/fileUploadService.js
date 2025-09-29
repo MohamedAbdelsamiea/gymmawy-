@@ -77,8 +77,7 @@ class FileUploadService {
    */
   async deleteFile(fileId) {
     try {
-      const response = await apiClient.delete(`/uploads/${fileId}`);
-      return response.data;
+      return await apiClient.delete(`/uploads/${fileId}`);
     } catch (error) {
       console.error('File deletion error:', error);
       throw new Error(error.response?.data?.error?.message || 'File deletion failed');

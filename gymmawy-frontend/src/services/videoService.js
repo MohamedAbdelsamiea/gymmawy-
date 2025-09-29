@@ -1,25 +1,11 @@
-import { config } from '../config';
-
-const API_BASE_URL = config.API_BASE_URL;
+import apiClient from './apiClient';
 
 class VideoService {
   async getVideos(filters = {}) {
     try {
       const queryParams = new URLSearchParams(filters).toString();
-      const url = `${API_BASE_URL}/videos?${queryParams}`;
-      
-      const response = await fetch(url, {
-        method: 'GET',
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('🎥 Videos API error response:', errorText);
-        throw new Error(`Failed to fetch videos: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      return data;
+      const endpoint = `/videos${queryParams ? `?${queryParams}` : ''}`;
+      return await apiClient.get(endpoint);
     } catch (error) {
       console.error('🎥 Videos fetch error:', error);
       throw new Error(`Videos fetch error: ${error.message}`);
@@ -28,16 +14,7 @@ class VideoService {
 
   async getVideo(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/videos/${id}`, {
-        method: 'GET',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch video');
-      }
-      
-      const data = await response.json();
-      return data;
+      return await apiClient.get(`/videos/${id}`);
     } catch (error) {
       throw new Error(`Video fetch error: ${error.message}`);
     }

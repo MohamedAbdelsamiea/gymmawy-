@@ -1,25 +1,11 @@
-import { config } from '../config';
-import authService from './authService';
-
-const API_BASE_URL = config.API_BASE_URL;
+import apiClient from './apiClient';
 
 class OrderService {
   async getOrders(filters = {}) {
     try {
       const queryParams = new URLSearchParams(filters).toString();
-      const response = await fetch(`${API_BASE_URL}/orders?${queryParams}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`,
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch orders');
-      }
-      
-      const data = await response.json();
-      return data;
+      const endpoint = `/orders${queryParams ? `?${queryParams}` : ''}`;
+      return await apiClient.get(endpoint);
     } catch (error) {
       throw new Error(`Orders fetch error: ${error.message}`);
     }
@@ -27,19 +13,7 @@ class OrderService {
 
   async getOrder(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${id}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`,
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch order');
-      }
-      
-      const data = await response.json();
-      return data;
+      return await apiClient.get(`/orders/${id}`);
     } catch (error) {
       throw new Error(`Order fetch error: ${error.message}`);
     }
@@ -47,21 +21,7 @@ class OrderService {
 
   async createOrder(orderData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Order creation failed');
-      }
-      
-      const data = await response.json();
-      return data;
+      return await apiClient.post('/orders', orderData);
     } catch (error) {
       throw new Error(`Order creation error: ${error.message}`);
     }
@@ -69,21 +29,7 @@ class OrderService {
 
   async updateOrder(id, orderData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Order update failed');
-      }
-      
-      const data = await response.json();
-      return data;
+      return await apiClient.patch(`/orders/${id}`, orderData);
     } catch (error) {
       throw new Error(`Order update error: ${error.message}`);
     }
@@ -91,19 +37,7 @@ class OrderService {
 
   async cancelOrder(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${id}/cancel`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`,
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Order cancellation failed');
-      }
-      
-      const data = await response.json();
-      return data;
+      return await apiClient.patch(`/orders/${id}/cancel`);
     } catch (error) {
       throw new Error(`Order cancellation error: ${error.message}`);
     }
@@ -111,19 +45,7 @@ class OrderService {
 
   async getOrderTracking(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${id}/tracking`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`,
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch order tracking');
-      }
-      
-      const data = await response.json();
-      return data;
+      return await apiClient.get(`/orders/${id}/tracking`);
     } catch (error) {
       throw new Error(`Order tracking fetch error: ${error.message}`);
     }

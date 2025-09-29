@@ -93,8 +93,7 @@ class TabbyService {
    */
   async getPaymentStatus(paymentId) {
     try {
-      const response = await apiClient.get(`${this.baseURL}/payment/${paymentId}/status`);
-      return response.data;
+      return await apiClient.get(`${this.baseURL}/payment/${paymentId}/status`);
     } catch (error) {
       console.error('Failed to get Tabby payment status:', error);
       throw error;
@@ -109,8 +108,7 @@ class TabbyService {
    */
   async capturePayment(paymentId, captureData) {
     try {
-      const response = await apiClient.post(`${this.baseURL}/payment/${paymentId}/capture`, captureData);
-      return response.data;
+      return await apiClient.post(`${this.baseURL}/payment/${paymentId}/capture`, captureData);
     } catch (error) {
       console.error('Failed to capture Tabby payment:', error);
       throw error;
@@ -125,8 +123,7 @@ class TabbyService {
    */
   async refundPayment(paymentId, refundData) {
     try {
-      const response = await apiClient.post(`${this.baseURL}/payment/${paymentId}/refund`, refundData);
-      return response.data;
+      return await apiClient.post(`${this.baseURL}/payment/${paymentId}/refund`, refundData);
     } catch (error) {
       console.error('Failed to refund Tabby payment:', error);
       throw error;
@@ -140,8 +137,7 @@ class TabbyService {
    */
   async closePayment(paymentId) {
     try {
-      const response = await apiClient.post(`${this.baseURL}/payment/${paymentId}/close`);
-      return response.data;
+      return await apiClient.post(`${this.baseURL}/payment/${paymentId}/close`);
     } catch (error) {
       console.error('Failed to close Tabby payment:', error);
       throw error;
@@ -155,8 +151,7 @@ class TabbyService {
    */
   async setupWebhook(webhookData) {
     try {
-      const response = await apiClient.post(`${this.baseURL}/webhook/setup`, webhookData);
-      return response.data;
+      return await apiClient.post(`${this.baseURL}/webhook/setup`, webhookData);
     } catch (error) {
       console.error('Failed to setup Tabby webhook:', error);
       throw error;

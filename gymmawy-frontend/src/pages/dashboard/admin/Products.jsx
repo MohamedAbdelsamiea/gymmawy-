@@ -201,28 +201,7 @@ const AdminProducts = () => {
         params.status = filterStatus;
       }
       
-      const queryParams = new URLSearchParams(params).toString();
-      const url = `${config.API_BASE_URL}/admin/products?${queryParams}`;
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('API Error Response:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorData
-        });
-        throw new Error(`Failed to fetch products: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
+      const data = await adminApiService.getProducts(params);
       const productsArray = data.products?.items || data.products || data.items || [];
       console.log('Products API response:', data);
       console.log('Products array:', productsArray);

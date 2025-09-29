@@ -1,7 +1,4 @@
-import { config } from '../config';
 import apiClient from './apiClient';
-
-const API_BASE_URL = config.API_BASE_URL;
 
 class AuthService {
   async login(credentials) {
@@ -51,15 +48,9 @@ class AuthService {
 
   async logout() {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.getToken()}`,
-        },
-      });
-      
+      await apiClient.post('/auth/logout');
       this.removeToken();
-      return response.ok;
+      return true;
     } catch (error) {
       console.error('Logout error:', error);
       this.removeToken();
@@ -68,34 +59,10 @@ class AuthService {
 
   async refreshToken() {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          refreshToken: this.getRefreshToken(),
-        }),
+      const data = await apiClient.post('/auth/refresh', {
+        refreshToken: this.getRefreshToken(),
       });
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = 'Token refresh failed';
-        
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || errorMessage;
-        } catch (parseError) {
-          // If JSON parsing fails, use the status text
-          errorMessage = response.statusText || errorMessage;
-        }
-        
-        // Add status code to error message for better debugging
-        errorMessage += ` (${response.status})`;
-        throw new Error(errorMessage);
-      }
-      
-      const data = await response.json();
       this.setToken(data.accessToken);
       
       // Store the new refresh token if provided

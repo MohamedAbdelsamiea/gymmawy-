@@ -1,11 +1,8 @@
-import { config } from '../config';
 import apiClient from './apiClient';
-
-const API_BASE_URL = config.API_BASE_URL;
 
 class ImageUploadService {
   constructor() {
-    this.baseURL = API_BASE_URL;
+    this.baseURL = ''; // Will be set by apiClient
   }
 
   // Upload image file
@@ -15,28 +12,7 @@ class ImageUploadService {
       formData.append('file', file);
       formData.append('module', module);
 
-      const response = await fetch(`${this.baseURL}/uploads/payment-proof`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        let errorMessage = `Upload failed: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (e) {
-          // If response is not JSON, use status text
-          errorMessage = response.statusText || errorMessage;
-        }
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-      return data;
+      return await apiClient.post('/uploads/payment-proof', formData);
     } catch (error) {
       console.error('Image upload error:', error);
       throw error;
@@ -70,7 +46,8 @@ class ImageUploadService {
     if (!filename) {
 return null;
 }
-    return `${this.baseURL}/images/images/${module}/${filename}`;
+    // This will be handled by the backend URL construction
+    return `/images/images/${module}/${filename}`;
   }
 
   // Validate file before upload
