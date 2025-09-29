@@ -19,9 +19,9 @@ class TabbyService {
       console.log('💰 Currency:', orderData.currency);
       console.log('🌍 Shipping Country:', orderData.shipping_address?.country || 'No shipping address');
       console.log('🏙️ Shipping City:', orderData.shipping_address?.city || 'No shipping address');
-      console.log('🔗 API Endpoint: /api/tabby/prescoring');
+      console.log('🔗 API Endpoint: /tabby/prescoring');
       
-      const response = await apiClient.post('/api/tabby/prescoring', {
+      const response = await apiClient.post('/tabby/prescoring', {
         orderData,
         type
       });

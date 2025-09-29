@@ -3,7 +3,7 @@ import apiClient from './apiClient';
 class UserService {
   async getProfile() {
     try {
-      const response = await apiClient.request('/api/users/me', {
+      const response = await apiClient.request('/users/me', {
         method: 'GET',
       });
       return response;
@@ -14,7 +14,7 @@ class UserService {
 
   async updateProfile(profileData) {
     try {
-      const response = await apiClient.request('/api/users/me', {
+      const response = await apiClient.request('/users/me', {
         method: 'PATCH',
         body: JSON.stringify(profileData),
       });
@@ -27,7 +27,7 @@ class UserService {
 
   async changePassword(passwordData) {
     try {
-      const response = await apiClient.request('/api/users/change-password', {
+      const response = await apiClient.request('/users/change-password', {
         method: 'PUT',
         body: JSON.stringify(passwordData),
       });
@@ -39,7 +39,7 @@ class UserService {
 
   async changeEmail(newEmail) {
     try {
-      const response = await apiClient.request('/api/users/change-email', {
+      const response = await apiClient.request('/users/change-email', {
         method: 'POST',
         body: JSON.stringify({ email: newEmail }),
       });
@@ -51,7 +51,7 @@ class UserService {
 
   async deleteAccount() {
     try {
-      const response = await apiClient.request('/api/users/account', {
+      const response = await apiClient.request('/users/account', {
         method: 'DELETE',
       });
       return response;
@@ -62,7 +62,7 @@ class UserService {
 
   async getSubscriptions() {
     try {
-      const response = await apiClient.request('/api/subscriptions', {
+      const response = await apiClient.request('/subscriptions', {
         method: 'GET',
       });
       return response;
@@ -73,7 +73,7 @@ class UserService {
 
   async getOrders() {
     try {
-      const response = await apiClient.request('/api/orders', {
+      const response = await apiClient.request('/orders', {
         method: 'GET',
       });
       return response;

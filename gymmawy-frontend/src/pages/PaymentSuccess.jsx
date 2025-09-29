@@ -38,7 +38,7 @@ const PaymentSuccess = () => {
       if (id.startsWith('temp-')) {
         console.log('🔍 Detected temporary ID, searching for actual payment record...');
         // Search for the most recent payment record for this user
-        const response = await fetch('/api/payments/recent', {
+        const response = await fetch('/payments/recent', {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             'Content-Type': 'application/json'

@@ -6,7 +6,7 @@ const API_BASE_URL = config.API_BASE_URL;
 class AnalyticsService {
   async getMonthlyTrends(months = 12) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/analytics/monthly-trends?months=${months}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/analytics/monthly-trends?months=${months}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -27,7 +27,7 @@ class AnalyticsService {
 
   async getAnalytics(period = '30d') {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/analytics?period=${period}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/analytics?period=${period}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,

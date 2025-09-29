@@ -82,7 +82,9 @@ class ApiClient {
   async request(endpoint, options = {}) {
     // Ensure endpoint starts with / if it doesn't already
     const apiEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = `${this.baseURL}${apiEndpoint}`;
+    // Remove trailing slash from baseURL to prevent double slashes
+    const baseURL = this.baseURL.endsWith('/') ? this.baseURL.slice(0, -1) : this.baseURL;
+    const url = `${baseURL}${apiEndpoint}`;
     const isFormData = options.body instanceof FormData;
     const config = {
       headers: this.getAuthHeaders(options.headers || {}, isFormData),

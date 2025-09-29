@@ -196,7 +196,7 @@ class StoreService {
 
   async getCart() {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/cart`, {
+      const response = await fetch(`${API_BASE_URL}/cart`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -216,7 +216,7 @@ class StoreService {
 
   async addToCart(productId, quantity = 1, size = "M") {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/cart/add`, {
+      const response = await fetch(`${API_BASE_URL}/cart/add`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -238,7 +238,7 @@ class StoreService {
 
   async removeFromCart(itemId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/cart/remove/${itemId}`, {
+      const response = await fetch(`${API_BASE_URL}/cart/remove/${itemId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -257,7 +257,7 @@ class StoreService {
 
   async updateCartItem(productId, quantity, size = "M") {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/cart/update`, {
+      const response = await fetch(`${API_BASE_URL}/cart/update`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -279,7 +279,7 @@ class StoreService {
 
   async clearCart() {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/cart/clear`, {
+      const response = await fetch(`${API_BASE_URL}/cart/clear`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
