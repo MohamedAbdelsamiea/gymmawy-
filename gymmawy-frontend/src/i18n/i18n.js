@@ -31,6 +31,8 @@ i18n
     },
     load: 'languageOnly',
     preload: ['en', 'ar'],
+    ns: ['translation', 'common', 'header', 'footer', 'checkout', 'currency'],
+    defaultNS: 'translation',
   });
 
 export default i18n;

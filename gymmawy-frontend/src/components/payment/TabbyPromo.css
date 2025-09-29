@@ -1,0 +1,142 @@
+/* Tabby Promo Component Styles */
+
+.tabby-promo-container {
+  width: 100%;
+  max-width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive styling for Tabby promo snippets */
+.tabby-promo-container #TabbyProductPromo,
+.tabby-promo-container #TabbyCartPromo {
+  width: 100%;
+  max-width: 100%;
+  min-height: 40px;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  .tabby-promo-container {
+    padding: 0 8px;
+    margin: 0 auto;
+  }
+  
+  .tabby-promo-container #TabbyProductPromo,
+  .tabby-promo-container #TabbyCartPromo {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  
+  /* Ensure Tabby promo content fits mobile screen */
+  .tabby-promo-container .tabby-promo,
+  .tabby-promo-container .tabby-widget {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* Desktop-specific styles */
+@media (min-width: 769px) {
+  .tabby-promo-container {
+    padding: 0 16px;
+  }
+  
+  .tabby-promo-container #TabbyProductPromo,
+  .tabby-promo-container #TabbyCartPromo {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+}
+
+/* Loading and error states */
+.tabby-promo-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.tabby-promo-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background-color: #fef2f2;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+}
+
+/* RTL support for Arabic */
+[dir="rtl"] .tabby-promo-container {
+  text-align: right;
+}
+
+[dir="rtl"] .tabby-promo-container #TabbyProductPromo,
+[dir="rtl"] .tabby-promo-container #TabbyCartPromo {
+  direction: rtl;
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  .tabby-promo-loading {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #d1d5db;
+  }
+  
+  .tabby-promo-error {
+    background-color: #7f1d1d;
+    border-color: #dc2626;
+    color: #fca5a5;
+  }
+}
+
+/* Ensure Tabby widgets inherit proper styling */
+.tabby-promo-container .tabby-promo {
+  font-family: inherit;
+  color: inherit;
+}
+
+.tabby-promo-container .tabby-promo * {
+  box-sizing: border-box;
+}
+
+/* Override any potential Tabby styles that might break layout */
+.tabby-promo-container .tabby-promo {
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Product page specific styling */
+.product-page .tabby-promo-container {
+  margin-bottom: 24px;
+}
+
+/* Cart page specific styling */
+.cart-page .tabby-promo-container {
+  margin-bottom: 16px;
+}
+
+/* Ensure proper spacing in different contexts */
+.tabby-promo-container + button,
+.tabby-promo-container + .btn {
+  margin-top: 16px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .tabby-promo-loading {
+    border-width: 2px;
+  }
+  
+  .tabby-promo-error {
+    border-width: 2px;
+  }
+}

@@ -214,11 +214,14 @@ export async function createTabbyCheckout(req, res, next) {
         items: checkoutData.items
       },
       order_history: [],
-      shipping_address: {
-        city: checkoutData.shipping_address?.city || (currency === 'AED' ? 'Dubai' : 'Riyadh'),
-        address: checkoutData.shipping_address?.line1 || 'N/A',
-        zip: checkoutData.shipping_address?.zip || '00000'
-      },
+      // Only include shipping_address if provided (for physical items)
+      ...(checkoutData.shipping_address ? {
+        shipping_address: {
+          city: checkoutData.shipping_address.city || (currency === 'AED' ? 'Dubai' : 'Riyadh'),
+          address: checkoutData.shipping_address.line1 || 'N/A',
+          zip: checkoutData.shipping_address.zip || '00000'
+        }
+      } : {}),
       items: checkoutData.items,
       meta: {
         order_id: checkoutData.paymentableId,
@@ -235,6 +238,19 @@ export async function createTabbyCheckout(req, res, next) {
 
     // Create payment object for Tabby
     const payment = tabbyService.createPaymentObject(orderData);
+    
+    // Debug: Log the final payment object being sent to Tabby API
+    console.log('🔍 FINAL PAYMENT OBJECT FOR TABBY API:');
+    console.log('📦 Payment Object:', JSON.stringify(payment, null, 2));
+    console.log('📱 Buyer Phone:', payment.buyer?.phone);
+    console.log('💰 Currency:', payment.currency);
+    console.log('🌍 Shipping Country:', payment.shipping_address?.country || 'No shipping address');
+    console.log('🏙️ Shipping City:', payment.shipping_address?.city || 'No shipping address');
+    console.log('📧 Buyer Email:', payment.buyer?.email);
+    console.log('👤 Buyer Name:', payment.buyer?.name);
+    console.log('🏠 Shipping Address:', payment.shipping_address);
+    console.log('📦 Order Items:', payment.items);
+    console.log('💵 Amount:', payment.amount);
 
     // Create merchant URLs with a temporary ID - we'll update them after getting the real session ID
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -261,7 +277,15 @@ export async function createTabbyCheckout(req, res, next) {
 
       // Handle background pre-scoring results
       if (checkoutSession.status === 'rejected') {
-        console.log('❌ Tabby background pre-scoring failed - payment method not available');
+        console.log('❌ TABBY REJECTION - Background pre-scoring failed');
+        console.log('📦 Rejected Session Data:', JSON.stringify(checkoutSession, null, 2));
+        console.log('🔧 Configuration:', checkoutSession.configuration);
+        console.log('❌ Rejection Reason:', checkoutSession.configuration?.products?.installments?.rejection_reason);
+        console.log('📱 Buyer Phone Sent:', payment.buyer?.phone);
+        console.log('💰 Currency Sent:', payment.currency);
+        console.log('🌍 Country Sent:', payment.shipping_address?.country || 'No shipping address');
+        console.log('🏙️ City Sent:', payment.shipping_address?.city || 'No shipping address');
+        
         const isArabic = checkoutData.lang === 'ar';
         const errorMessage = isArabic 
           ? 'نأسف، تابي غير قادرة على الموافقة على هذه العملية. الرجاء استخدام طريقة دفع أخرى.'
@@ -273,6 +297,7 @@ export async function createTabbyCheckout(req, res, next) {
           message: errorMessage,
           reason: 'Background pre-scoring failed',
           tabby_status: checkoutSession.status,
+          tabby_rejection_reason: checkoutSession.configuration?.products?.installments?.rejection_reason,
           test_scenario: scenario,
           test_country: country
         });
@@ -511,6 +536,117 @@ async function handlePaymentAuthorized(webhookData) {
 }
 
 /**
+ * Manual capture of AUTHORIZED payment
+ */
+export async function manualCapturePayment(req, res, next) {
+  try {
+    const { paymentId } = req.params;
+    const userId = req.user.id;
+
+    // Find the payment
+    const payment = await prisma.payment.findFirst({
+      where: {
+        transactionId: paymentId,
+        userId: userId
+      }
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Payment not found'
+      });
+    }
+
+    // Check if payment is AUTHORIZED
+    if (payment.metadata?.tabby_status !== 'AUTHORIZED') {
+      return res.status(400).json({
+        success: false,
+        error: 'Payment is not in AUTHORIZED status',
+        current_status: payment.metadata?.tabby_status
+      });
+    }
+
+    // Attempt to capture the payment
+    const captureResult = await tabbyService.capturePayment(paymentId, {
+      amount: payment.amount,
+      reference_id: `manual-capture-${payment.paymentReference}`
+    });
+
+    // Update payment status
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        metadata: {
+          ...payment.metadata,
+          tabby_status: 'CLOSED',
+          captured_at: new Date().toISOString(),
+          capture_id: captureResult.id,
+          manual_capture: true
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Payment captured successfully',
+      capture_id: captureResult.id
+    });
+
+  } catch (error) {
+    console.error('Manual capture error:', error);
+    next(error);
+  }
+}
+
+/**
+ * Get payment status from Tabby API
+ */
+export async function getTabbyPaymentStatus(req, res, next) {
+  try {
+    const { paymentId } = req.params;
+    const userId = req.user.id;
+
+    // Find the payment in our database
+    const payment = await prisma.payment.findFirst({
+      where: {
+        transactionId: paymentId,
+        userId: userId
+      }
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Payment not found'
+      });
+    }
+
+    // Get status from Tabby API
+    const tabbyStatus = await tabbyService.getPaymentStatus(paymentId);
+
+    res.json({
+      success: true,
+      payment: {
+        id: paymentId,
+        status: tabbyStatus.status,
+        amount: tabbyStatus.amount,
+        currency: tabbyStatus.currency,
+        created_at: tabbyStatus.created_at,
+        updated_at: tabbyStatus.updated_at,
+        captures: tabbyStatus.captures || []
+      },
+      local_status: payment.status,
+      local_metadata: payment.metadata
+    });
+
+  } catch (error) {
+    console.error('Get payment status error:', error);
+    next(error);
+  }
+}
+
+/**
  * Handle payment closed webhook
  */
 async function handlePaymentClosed(webhookData) {
@@ -643,86 +779,6 @@ async function handlePaymentRejected(webhookData) {
   }
 }
 
-/**
- * Get Tabby payment status
- */
-export async function getTabbyPaymentStatus(req, res, next) {
-  try {
-    const { paymentId } = req.params;
-
-    console.log(`🔍 Getting payment status for Tabby payment ID: ${paymentId}`);
-
-    // First, try to find payment by Tabby transaction ID (payment ID)
-    let payment = await prisma.payment.findFirst({
-      where: { transactionId: paymentId }
-    });
-
-    console.log(`🔍 Search by transactionId (${paymentId}):`, payment ? 'Found' : 'Not found');
-
-    // If not found, try to find by session ID in metadata
-    if (!payment) {
-      payment = await prisma.payment.findFirst({
-        where: { 
-          metadata: {
-            path: ['tabby_session_id'],
-            equals: paymentId
-          }
-        }
-      });
-      console.log(`🔍 Search by sessionId in metadata (${paymentId}):`, payment ? 'Found' : 'Not found');
-    }
-
-    // If still not found, try to find by payment reference
-    if (!payment) {
-      payment = await prisma.payment.findFirst({
-        where: { paymentReference: paymentId }
-      });
-      console.log(`🔍 Search by paymentReference (${paymentId}):`, payment ? 'Found' : 'Not found');
-    }
-
-    // Debug: List all payments in database
-    const allPayments = await prisma.payment.findMany({
-      select: {
-        id: true,
-        paymentReference: true,
-        transactionId: true,
-        method: true,
-        status: true,
-        createdAt: true
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 5
-    });
-    console.log('🔍 Recent payments in database:', allPayments);
-
-    if (!payment) {
-      console.log(`❌ Payment not found in database for Tabby payment ID: ${paymentId}`);
-      return res.status(404).json({ 
-        error: 'Payment not found',
-        message: 'Payment record not found in database. This might be a new payment that hasn\'t been processed yet.',
-        paymentId: paymentId
-      });
-    }
-
-    console.log(`✅ Payment found: ${payment.id}, status: ${payment.status}`);
-
-    // Return the payment status from our database
-    res.json({
-      payment_id: paymentId,
-      status: payment.status,
-      amount: payment.amount,
-      currency: payment.currency,
-      method: payment.method,
-      created_at: payment.createdAt,
-      updated_at: payment.updatedAt,
-      metadata: payment.metadata
-    });
-
-  } catch (error) {
-    console.error('Tabby payment status error:', error);
-    next(error);
-  }
-}
 
 /**
  * Capture Tabby payment
@@ -888,6 +944,82 @@ export async function setupTabbyWebhook(req, res, next) {
   } catch (error) {
     console.error('Tabby webhook setup error:', error);
     next(error);
+  }
+}
+
+/**
+ * Perform Tabby pre-scoring check
+ */
+export async function performPrescoring(req, res, next) {
+  try {
+    const { orderData, type } = req.body;
+    
+    console.log('🔍 PRESCORING ENDPOINT - Received request:', { orderData, type });
+    
+    // Create payment object for Tabby
+    const payment = tabbyService.createPaymentObject(orderData);
+    
+    // Debug: Log the payment object being sent to Tabby API
+    console.log('🔍 PRESCORING ENDPOINT - Payment object:', JSON.stringify(payment, null, 2));
+    console.log('📱 Buyer Phone:', payment.buyer?.phone);
+    console.log('💰 Currency:', payment.currency);
+    console.log('🌍 Shipping Country:', payment.shipping_address?.country || 'No shipping address');
+    console.log('🏙️ Shipping City:', payment.shipping_address?.city || 'No shipping address');
+    
+    // Create merchant URLs with a temporary ID
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const tempId = `prescore-${Date.now()}`;
+    const merchant_urls = tabbyService.createMerchantUrls(baseUrl, tempId);
+    
+    // Create checkout data for pre-scoring
+    const checkoutData = {
+      payment,
+      merchant_urls,
+      lang: 'en'
+    };
+    
+    console.log('🔍 PRESCORING ENDPOINT - Checkout data:', JSON.stringify(checkoutData, null, 2));
+    
+    // Call Tabby API for pre-scoring
+    const checkoutSession = await tabbyService.createCheckoutSession(checkoutData);
+    
+    console.log('🔍 PRESCORING ENDPOINT - Tabby response:', JSON.stringify(checkoutSession, null, 2));
+    console.log('✅ Session Status:', checkoutSession.status);
+    console.log('🔧 Configuration:', checkoutSession.configuration);
+    console.log('❌ Rejection Reason:', checkoutSession.configuration?.products?.installments?.rejection_reason);
+    
+    // Return the pre-scoring result
+    res.json({
+      success: true,
+      status: checkoutSession.status,
+      configuration: checkoutSession.configuration,
+      rejection_reason: checkoutSession.configuration?.products?.installments?.rejection_reason,
+      session_id: checkoutSession.id
+    });
+    
+  } catch (error) {
+    console.error('❌ PRESCORING ENDPOINT - Error:', error);
+    console.log('📦 Error Response:', error.response?.data);
+    console.log('📦 Error Status:', error.response?.status);
+    
+    // Handle 400 errors as rejection
+    if (error.response?.status === 400) {
+      console.log('❌ PRESCORING ENDPOINT - Tabby rejected with 400 error');
+      return res.json({
+        success: false,
+        status: 'rejected',
+        rejection_reason: 'not_available',
+        error: error.message,
+        errorDetails: error.response.data
+      });
+    }
+    
+    // For other errors, return error
+    res.status(500).json({
+      success: false,
+      error: 'Pre-scoring failed',
+      message: error.message
+    });
   }
 }
 

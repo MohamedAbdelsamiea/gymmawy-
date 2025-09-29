@@ -5,6 +5,8 @@ import { CurrencyProvider } from './contexts/CurrencyContext.jsx';
 import { CartProvider } from './contexts/CartContext';
 import { AppRoutes } from './routes';
 import { ToastContainer } from './components/common/Toast';
+import CurrencyDetectionBanner from './components/currency/CurrencyDetectionBanner';
+import CurrencyDetectionDemo from './components/currency/CurrencyDetectionDemo';
 import i18n from './i18n/i18n';
 import { useTranslation } from 'react-i18next';
 import { useEffect, Suspense } from 'react';
@@ -28,6 +30,19 @@ const RTLHandler = () => {
       document.documentElement.dir = 'ltr';
     }
   }, [i18n.language, location.pathname]);
+  
+  // Load currency namespace
+  useEffect(() => {
+    const loadCurrencyNamespace = async () => {
+      try {
+        await i18n.loadNamespaces('currency');
+        console.log('✅ Currency namespace loaded in RTLHandler');
+      } catch (error) {
+        console.error('❌ Failed to load currency namespace in RTLHandler:', error);
+      }
+    };
+    loadCurrencyNamespace();
+  }, [i18n]);
   
   return null;
 };
@@ -60,6 +75,8 @@ function App() {
               <Router>
                 <RTLHandler />
                 <AppRoutes />
+                <CurrencyDetectionBanner />
+                {process.env.NODE_ENV === 'development' && <CurrencyDetectionDemo />}
                 <ToastContainer />
               </Router>
             </ToastProvider>

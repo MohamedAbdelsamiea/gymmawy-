@@ -705,14 +705,14 @@ return '';
                       currencySymbol = '$';
                       break;
                     case 'SAR':
-                      currencySymbol = 'رس';
+                      currencySymbol = i18n.language === 'ar' ? 'ر.س' : 'SAR';
                       break;
                     case 'AED':
-                      currencySymbol = 'د.إ';
+                      currencySymbol = i18n.language === 'ar' ? 'د.إ' : 'AED';
                       break;
                     case 'EGP':
                     default:
-                      currencySymbol = 'جم';
+                      currencySymbol = i18n.language === 'ar' ? 'جم' : 'L.E';
                       break;
                   }
                 } else {
@@ -722,7 +722,7 @@ return '';
                       currencySymbol = '$';
                       break;
                     case 'SAR':
-                      currencySymbol = 'S.R';
+                      currencySymbol = 'SAR';
                       break;
                     case 'AED':
                       currencySymbol = 'AED';

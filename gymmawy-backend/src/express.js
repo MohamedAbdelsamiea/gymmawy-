@@ -1,6 +1,5 @@
 import express from "express";
 import compression from "compression";
-import cors from "cors";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import { 
@@ -35,23 +34,31 @@ import loyaltyRoutes from "./modules/loyalty/loyalty.routes.js";
 import currencyRoutes from "./modules/currency/currency.routes.js";
 import priceRoutes from "./modules/prices/price.routes.js";
 import fileRoutes from "./routes/fileRoutes.js";
+import { initializeTabbyCronService } from "./services/tabbyCronService.js";
 
 const app = express();
+
+// Initialize Tabby cron service for handling AUTHORIZED payments
+initializeTabbyCronService();
 
 app.set("trust proxy", 1);
 
 // Security middleware (order matters!)
 app.use(addSecurityHeaders);
 app.use(compression());
-// Temporarily disable CORS for development - TODO: Re-enable with proper configuration
-app.use(cors({
-  origin: true, // Allow all origins
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'X-API-Key'],
-  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar', 'X-Total-Count'],
-  optionsSuccessStatus: 200
-}));
+// CORS bypass for development - allow all origins
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-API-Key, X-User-Currency');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 app.use(express.json(bodyParserOptions));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(process.env.COOKIE_SECRET || (() => {

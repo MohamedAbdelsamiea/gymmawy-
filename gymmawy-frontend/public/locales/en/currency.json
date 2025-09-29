@@ -1,0 +1,13 @@
+{
+  "currency": {
+    "detectedTitle": "Currency Detected",
+    "detectedMessage": "We detected you're in {{country}} ({{code}}). Change?",
+    "keep": "Keep",
+    "change": "Change",
+    "changing": "Changing...",
+    "detectedIn": "Detected in {country}",
+    "switchTo": "Switch to {currency}",
+    "preferenceSaved": "Currency preference saved",
+    "detectionFailed": "Currency detection failed, using default"
+  }
+}

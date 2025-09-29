@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { useCurrency } from '../../hooks/useCurrency';
+import { useCurrencyContext } from '../../contexts/CurrencyContext';
 import { useLanguage } from '../../hooks/useLanguage';
 import { config } from '../../config';
 import checkoutService from '../../services/checkoutService';
 import imageUploadService from '../../services/imageUploadService';
 import tabbyService from '../../services/tabbyService';
+import useTabbyPromo from '../../hooks/useTabbyPromo';
+import countryDetectionService from '../../services/countryDetectionService';
 import { useSecureImage } from '../../hooks/useSecureImage';
 import { 
   CreditCard, 
@@ -32,8 +34,8 @@ const Checkout = () => {
   const { t, i18n } = useTranslation(['checkout', 'common']);
   const { isArabic } = useLanguage();
   const { user, isAuthenticated } = useAuth();
-  const { showError, showSuccess } = useToast();
-  const { currency: detectedCurrency, isLoading: currencyLoading } = useCurrency();
+  const { showError, showSuccess, showInfo } = useToast();
+  const { currency: detectedCurrency, isLoading: currencyLoading, formatPrice } = useCurrencyContext();
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -52,7 +54,7 @@ return fallback;
   };
   
   // Get data from location state (plan, product, or cart items)
-  const { plan, product, cartItems, type, currency: passedCurrency, buyNow, subtotal: cartSubtotal, shipping: cartShipping, total: cartTotal } = location.state || {};
+  const { plan, product, cartItems, type, currency: passedCurrency, buyNow, subtotal: cartSubtotal, shipping: cartShipping, total: cartTotal, fromPaymentFailure, paymentFailureReason, fromPaymentCancel } = location.state || {};
   
   // Debug: Log currency detection
   console.log('🔍 Checkout - Currency detection:', {
@@ -88,15 +90,17 @@ return fallback;
     }
   }, [plan, product, cartItems, navigate]);
 
-  // Check Tabby availability when currency changes
-  useEffect(() => {
-    if (currency && !currencyLoading) {
-      checkTabbyAvailability(currency);
-    }
-  }, [currency, currencyLoading]);
+  // Removed duplicate useEffect - pre-scoring is handled by the main useEffect below
 
   // State management
   const [selectedDuration, setSelectedDuration] = useState('normal');
+  const prescoringCalledRef = useRef(false);
+
+  // Function to reset prescoring flag (for manual testing)
+  const resetPrescoringFlag = () => {
+    prescoringCalledRef.current = false;
+    console.log('🔄 PRESCORING - Flag reset, allowing new call');
+  };
   const [couponCode, setCouponCode] = useState('');
   const [couponValid, setCouponValid] = useState(null);
   const [couponLoading, setCouponLoading] = useState(false);
@@ -113,47 +117,90 @@ return fallback;
   const [error, setError] = useState(null);
   
   // Tabby Testing Panel State
-  const [testCredentials, setTestCredentials] = useState(null);
-  const [testScenario, setTestScenario] = useState(null);
   const [tabbyAvailable, setTabbyAvailable] = useState(false);
+  const [tabbyRejectionMessage, setTabbyRejectionMessage] = useState(null);
+  const [forceTabbyAvailable, setForceTabbyAvailable] = useState(false);
+  const [tabbyPrescoringLoading, setTabbyPrescoringLoading] = useState(false);
+  const [tabbyConfiguration, setTabbyConfiguration] = useState(null);
+  
+  // Clear any existing rejection message for testing
+  useEffect(() => {
+    if (forceTabbyAvailable) {
+      setTabbyRejectionMessage(null);
+    }
+  }, [forceTabbyAvailable]);
 
-  // Check Tabby availability based on currency
-  const checkTabbyAvailability = async (currency) => {
-    try {
-      const response = await fetch(`/api/tabby/availability?currency=${currency}`);
-      const data = await response.json();
-      setTabbyAvailable(data.available);
-      
-      if (!data.available) {
-        console.log(`Tabby not available for ${currency}:`, data.message);
-      }
-    } catch (error) {
-      console.error('Error checking Tabby availability:', error);
-      setTabbyAvailable(false);
+  // Generate dynamic Tabby instructions based on real configuration
+  const getTabbyInstructions = () => {
+    if (!tabbyConfiguration?.available_products?.installments?.[0]) {
+      // Fallback to default instructions if no configuration
+      return [
+        t('checkout.tabbyInstruction1'),
+        t('checkout.tabbyInstruction2'),
+        t('checkout.tabbyInstruction3')
+      ];
+    }
+
+    const installment = tabbyConfiguration.available_products.installments[0];
+    const installmentsCount = installment.installments_count || 2;
+    const serviceFee = parseFloat(installment.service_fee || '0');
+    const currency = tabbyConfiguration.currency || 'SAR';
+    
+    const instructions = [
+      `Pay in ${installmentsCount} ${serviceFee === 0 ? 'interest-free' : 'low-interest'} installments`,
+      'Secure payment processing by Tabby',
+      serviceFee === 0 ? 'No additional fees or charges' : `Low service fee: ${serviceFee} ${currency}`
+    ];
+
+    return instructions;
+  };
+
+  // Get Tabby hook data
+  const { currentCountry } = useTabbyPromo();
+
+  // Get phone number based on currency for Tabby
+  const getPhoneForCurrency = (currency) => {
+    switch (currency) {
+      case 'SAR':
+        return '+966500000001'; // Saudi Arabia test number
+      case 'AED':
+        return '+971500000001'; // UAE test number
+      case 'KWD':
+        return '+96590000001'; // Kuwait test number
+      default:
+        return user?.mobileNumber || '+201000000000'; // Default to Egypt
     }
   };
 
-  // Handle test credentials selection
-  const handleTestCredentialsSelect = (credentials, scenario) => {
-    setTestCredentials(credentials);
-    setTestScenario(scenario);
-    
-    // Update form fields with test credentials
-    setShippingDetails(prev => ({
-      ...prev,
-      shippingEmail: credentials.email,
-      shippingPhone: credentials.phone
-    }));
-    
-    // Show success message based on scenario
-    if (scenario === 'background_reject') {
-      showError('Test credentials applied. Tabby should be hidden/unavailable.');
-    } else if (scenario === 'payment_failure') {
-      showError('Test credentials applied. Payment will be rejected by Tabby.');
-    } else {
-      showSuccess('Test credentials applied. Use OTP: 8888 for testing.');
+  // Get country code based on currency for Tabby
+  const getCountryForCurrency = (currency) => {
+    switch (currency) {
+      case 'SAR':
+        return 'SA'; // Saudi Arabia
+      case 'AED':
+        return 'AE'; // UAE
+      case 'KWD':
+        return 'KW'; // Kuwait
+      default:
+        return 'EG'; // Default to Egypt
     }
   };
+
+  // Get city based on currency for Tabby
+  const getCityForCurrency = (currency) => {
+    switch (currency) {
+      case 'SAR':
+        return 'Riyadh'; // Saudi Arabia
+      case 'AED':
+        return 'Dubai'; // UAE
+      case 'KWD':
+        return 'Kuwait City'; // Kuwait
+      default:
+        return 'Cairo'; // Default to Egypt
+    }
+  };
+
+
   
   // Shipping details state (matching database schema)
   const [shippingDetails, setShippingDetails] = useState({
@@ -425,7 +472,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
           currencySymbol = 'ر.س';
           break;
         case 'AED':
-          currencySymbol = 'د.إ';
+          currencySymbol = i18n.language === 'ar' ? 'د.إ' : 'AED';
           break;
         case 'EGP':
         default:
@@ -480,7 +527,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
           currencySymbol = 'ر.س';
           break;
         case 'AED':
-          currencySymbol = 'د.إ';
+          currencySymbol = i18n.language === 'ar' ? 'د.إ' : 'AED';
           break;
         case 'EGP':
         default:
@@ -543,7 +590,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
           currencySymbol = 'ر.س';
           break;
         case 'AED':
-          currencySymbol = 'د.إ';
+          currencySymbol = i18n.language === 'ar' ? 'د.إ' : 'AED';
           break;
         case 'EGP':
         default:
@@ -629,7 +676,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       return {
         amount: plan.priceAED.amount || 0,
         currency: plan.priceAED.currency || 'AED',
-        currencySymbol: plan.priceAED.currencySymbol || 'د.إ',
+        currencySymbol: plan.priceAED.currencySymbol || (i18n.language === 'ar' ? 'د.إ' : 'AED'),
       };
     }
     
@@ -662,7 +709,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       return {
         amount: plan.priceAED.amount || 0,
         currency: plan.priceAED.currency || 'AED',
-        currencySymbol: plan.priceAED.currencySymbol || 'د.إ',
+        currencySymbol: plan.priceAED.currencySymbol || (i18n.language === 'ar' ? 'د.إ' : 'AED'),
       };
     }
     
@@ -699,7 +746,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
         if (plan.priceAED !== undefined) {
           selectedPrice = convertDecimalToNumber(plan.priceAED);
           selectedCurrency = 'AED';
-          currencySymbol = 'د.إ';
+          currencySymbol = i18n.language === 'ar' ? 'د.إ' : 'AED';
         }
         break;
       case 'USD':
@@ -872,7 +919,9 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
   }
   
   const subtotal = originalPrice;
-  const total = subtotal - discount.totalDiscount + shippingCost;
+  const total = useMemo(() => {
+    return subtotal - discount.totalDiscount + shippingCost;
+  }, [subtotal, discount.totalDiscount, shippingCost]);
   
   // Debug: Log order summary calculation
   console.log('🔍 Order Summary Debug:', {
@@ -885,6 +934,266 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
     planPriceSAR: plan?.priceSAR,
     currentPrice
   });
+
+  // Get Tabby rejection message based on reason
+  const getTabbyRejectionMessage = (rejectionReason) => {
+    switch (rejectionReason) {
+      case 'order_amount_too_high':
+        return t('checkout.tabbyRejectionAmountHigh');
+      case 'order_amount_too_low':
+        return t('checkout.tabbyRejectionAmountLow');
+      case 'not_available':
+      default:
+        return t('checkout.tabbyRejectionGeneral');
+    }
+  };
+
+  // Check Tabby availability with actual pre-scoring
+  const checkTabbyAvailability = async (currency) => {
+    // Prevent multiple simultaneous calls
+    if (tabbyPrescoringLoading) {
+      console.log('🔍 PRESCORING - Already in progress, skipping');
+      return;
+    }
+
+    // Prevent multiple calls for the same currency
+    if (prescoringCalledRef.current) {
+      console.log('🔍 PRESCORING - Already called for this currency, skipping');
+      return;
+    }
+
+    // Mark as called
+    prescoringCalledRef.current = true;
+
+    try {
+      setTabbyPrescoringLoading(true);
+      console.log('🔍 PRESCORING - Checking Tabby availability:', {
+        currency,
+        currentCountry,
+        forceTabbyAvailable,
+        total
+      });
+      
+      // Force Tabby available for testing - this should never be called when force is true
+      if (forceTabbyAvailable) {
+        console.log('🧪 Testing mode: Forcing Tabby availability (this should not be called)');
+        setTabbyAvailable(true);
+        setTabbyRejectionMessage(null);
+        return;
+      }
+      
+      // Skip country check for pre-scoring - let Tabby API determine eligibility
+      console.log(`🔍 Country detected: ${currentCountry} - proceeding to pre-scoring`);
+      
+      // Check if currency is supported by Tabby
+      const supportedCurrencies = ['SAR', 'AED'];
+      const isCurrencySupported = supportedCurrencies.includes(currency);
+      
+      if (!isCurrencySupported) {
+        console.log(`❌ Tabby not supported for currency: ${currency}`);
+        setTabbyAvailable(false);
+        setTabbyRejectionMessage(t('checkout.tabbyRejectionGeneral'));
+        return;
+      }
+      
+      // Now do actual pre-scoring with Tabby API using REAL order data
+      console.log('🔍 PRESCORING - Performing official Tabby pre-scoring check');
+      
+      // Create real order data for pre-scoring (not test data)
+      const realOrderData = {
+        amount: total,
+        currency: currency,
+        description: 'Pre-scoring check for Tabby eligibility',
+        buyer: {
+          phone: getPhoneForCurrency(currency),
+          email: user?.email || 'test@example.com',
+          name: user?.firstName ? `${user.firstName} ${user.lastName}` : 'Test User'
+        },
+        order: {
+          tax_amount: '0.00',
+          shipping_amount: '0.00',
+          discount_amount: '0.00',
+          updated_at: new Date().toISOString(),
+          reference_id: `prescore-${Date.now()}`,
+          items: [{
+            title: 'Test Item',
+            description: 'Pre-scoring test',
+            quantity: 1,
+            unit_price: total.toString(),
+            discount_amount: '0.00',
+            reference_id: 'test-item',
+            image_url: '',
+            product_url: '',
+            category: 'test'
+          }]
+        },
+        items: [{
+          title: 'Test Item',
+          description: 'Pre-scoring test',
+          quantity: 1,
+          unit_price: total.toString(),
+          discount_amount: '0.00',
+          reference_id: 'test-item',
+          image_url: '',
+          product_url: '',
+          category: 'test'
+        }],
+        ...(type === 'cart' || type === 'product' ? {
+          shipping_address: {
+            line1: shippingDetails?.shippingAddress || 'Test Address',
+            line2: shippingDetails?.shippingAddress2 || '',
+            city: shippingDetails?.shippingCity || getCityForCurrency(currency),
+            state: shippingDetails?.shippingState || '',
+            zip: shippingDetails?.shippingPostalCode || '00000',
+            country: getCountryForCurrency(currency)
+          }
+        } : {}),
+        meta: {
+          order_id: `prescore-${Date.now()}`,
+          customer: {
+            registered: !!user,
+            loyalty_level: 0
+          }
+        },
+        attachment: {}
+      };
+      
+      console.log('🔍 PRESCORING - Real order data for pre-scoring:', JSON.stringify(realOrderData, null, 2));
+      
+      // Create checkout data for pre-scoring
+      const checkoutData = tabbyService.createCheckoutData(realOrderData, type);
+      console.log('🔍 PRESCORING - Checkout data for pre-scoring:', JSON.stringify(checkoutData, null, 2));
+      
+      // Perform official Tabby pre-scoring (calls backend endpoint)
+      const prescoringResult = await tabbyService.performBackgroundPrescoring(realOrderData, type);
+      console.log('🔍 PRESCORING - Official Tabby response:', prescoringResult);
+      
+      // Check official Tabby status as per documentation
+      if (prescoringResult.status === 'created') {
+        console.log('✅ PRESCORING - Tabby status "created" - customer eligible - showing payment option');
+        setTabbyAvailable(true);
+        setTabbyRejectionMessage(null);
+        setTabbyConfiguration(prescoringResult.configuration);
+      } else if (prescoringResult.status === 'rejected') {
+        console.log('❌ PRESCORING - Tabby status "rejected" - customer not eligible - hiding payment option');
+        const rejectionReason = prescoringResult.rejection_reason || 'not_available';
+        console.log('❌ PRESCORING - Rejection reason:', rejectionReason);
+        
+        // Set appropriate rejection message based on reason
+        let rejectionMessage = '';
+        switch (rejectionReason) {
+          case 'order_amount_too_high':
+            rejectionMessage = t('checkout.tabbyRejectionAmountHigh');
+            break;
+          case 'order_amount_too_low':
+            rejectionMessage = t('checkout.tabbyRejectionAmountLow');
+            break;
+          case 'not_available':
+          default:
+            rejectionMessage = t('checkout.tabbyRejectionGeneral');
+            break;
+        }
+        
+        setTabbyAvailable(false);
+        setTabbyRejectionMessage(rejectionMessage);
+      } else {
+        console.log('⚠️ PRESCORING - Unknown Tabby status:', prescoringResult.status);
+        setTabbyAvailable(false);
+        setTabbyRejectionMessage(t('checkout.tabbyRejectionGeneral'));
+      }
+      
+    } catch (error) {
+      console.error('❌ PRESCORING - Error during pre-scoring:', error);
+      console.error('❌ PRESCORING - Error details:', {
+        message: error.message,
+        stack: error.stack,
+        response: error.response?.data
+      });
+      // On error, hide Tabby option
+      setTabbyAvailable(false);
+      setTabbyRejectionMessage(t('checkout.tabbyRejectionGeneral'));
+    } finally {
+      setTabbyPrescoringLoading(false);
+    }
+  };
+
+  // Reset prescoring flag when currency changes
+  useEffect(() => {
+    prescoringCalledRef.current = false;
+  }, [currency]);
+
+  // Check Tabby availability when currency changes
+  useEffect(() => {
+    console.log('🔍 PRESCORING TRIGGER - useEffect called:', {
+      currency,
+      currencyLoading,
+      total,
+      currentCountry,
+      forceTabbyAvailable,
+      prescoringCalled: prescoringCalledRef.current
+    });
+    
+    if (currency && !currencyLoading && total > 0 && !forceTabbyAvailable && !tabbyPrescoringLoading) {
+      console.log('🔍 PRESCORING TRIGGER - Conditions met, calling checkTabbyAvailability');
+      checkTabbyAvailability(currency);
+    } else {
+      console.log('🔍 PRESCORING TRIGGER - Conditions not met:', {
+        hasCurrency: !!currency,
+        notLoading: !currencyLoading,
+        hasTotal: total > 0,
+        notForced: !forceTabbyAvailable,
+        notPrescoringLoading: !tabbyPrescoringLoading
+      });
+    }
+  }, [currency, currencyLoading, total, forceTabbyAvailable]); // Removed tabbyPrescoringLoading to prevent infinite loop
+
+  // Immediate effect when force flag changes
+  useEffect(() => {
+    if (forceTabbyAvailable) {
+      console.log('🧪 Force Tabby flag changed - immediately setting available');
+      setTabbyAvailable(true);
+      setTabbyRejectionMessage(null);
+    } else {
+      // When force mode is disabled, recheck availability
+      if (currency && !currencyLoading && total > 0) {
+        checkTabbyAvailability(currency);
+      }
+    }
+  }, [forceTabbyAvailable]);
+
+  // Handle payment failure state
+  useEffect(() => {
+    if (fromPaymentFailure && paymentFailureReason) {
+      const failureMessage = paymentFailureReason === 'rejected' 
+        ? (i18n.language === 'ar' 
+            ? 'نأسف، تابي غير قادرة على الموافقة على هذه العملية. الرجاء استخدام طريقة دفع أخرى.'
+            : 'Sorry, Tabby is unable to approve this purchase. Please use an alternative payment method for your order.')
+        : (i18n.language === 'ar'
+            ? 'انتهت صلاحية جلسة الدفع. يرجى المحاولة مرة أخرى.'
+            : 'Your payment session has expired. Please try again with a new payment session.');
+      
+      setError(failureMessage);
+      showError(failureMessage);
+      
+      // Ensure Tabby remains available for retry
+      setTabbyAvailable(true);
+    }
+  }, [fromPaymentFailure, paymentFailureReason, i18n.language, showError]);
+
+  // Handle payment cancellation state
+  useEffect(() => {
+    if (fromPaymentCancel) {
+      const cancelMessage = i18n.language === 'ar' 
+        ? 'لقد ألغيت الدفعة. فضلاً حاول مجددًا أو اختر طريقة دفع أخرى.'
+        : 'You aborted the payment. Please retry or choose another payment method.';
+      
+      setError(cancelMessage);
+      showInfo(cancelMessage);
+      
+      // Ensure Tabby remains available for retry
+      setTabbyAvailable(true);
+    }
+  }, [fromPaymentCancel, i18n.language, showInfo]);
   
   // Debug: Log discount calculation
   // console.log('=== DISCOUNT DEBUG ===');
@@ -1007,10 +1316,10 @@ return;
                     {item.hasDiscount ? (
                       <>
                         <span className="text-xs text-gray-500 line-through">
-                          {(item.price * item.quantity).toFixed(0)} L.E
+                          {formatPrice(item.price * item.quantity)}
                         </span>
                         <span className="text-sm font-medium text-gray-900">
-                          {(item.discountedPrice * item.quantity).toFixed(0)} L.E
+                          {formatPrice(item.discountedPrice * item.quantity)}
                         </span>
                         <span className="text-xs text-green-600 font-medium">
                           -{(((item.price - item.discountedPrice) / item.price) * 100).toFixed(0)}%
@@ -1018,7 +1327,7 @@ return;
                       </>
                     ) : (
                       <span className="text-sm font-medium text-gray-900">
-                        {(item.price * item.quantity).toFixed(0)} L.E
+                        {formatPrice(item.price * item.quantity)}
                       </span>
                     )}
                   </div>
@@ -1046,10 +1355,10 @@ return;
                 {product.hasDiscount ? (
                   <>
                     <span className="text-xs text-gray-500 line-through">
-                      {(product.price * product.quantity).toFixed(0)} L.E
+                      {formatPrice(product.price * product.quantity)}
                     </span>
                     <span className="text-sm font-medium text-gray-900">
-                      {(product.discountedPrice * product.quantity).toFixed(0)} L.E
+                      {formatPrice(product.discountedPrice * product.quantity)}
                     </span>
                     <span className="text-xs text-green-600 font-medium">
                       -{(((product.price - product.discountedPrice) / product.price) * 100).toFixed(0)}%
@@ -1057,7 +1366,7 @@ return;
                   </>
                 ) : (
                   <span className="text-sm font-medium text-gray-900">
-                    {(product.price * product.quantity).toFixed(0)} L.E
+                    {formatPrice(product.price * product.quantity)}
                   </span>
                 )}
               </div>
@@ -1105,7 +1414,7 @@ return;
       <div className="border-t border-gray-200 pt-4 space-y-2">
         <div className="flex justify-between text-sm">
           <span className="text-gray-600">{t('checkout.subtotal')}</span>
-          <span className="font-medium">{Number(subtotal).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{finalPrice?.currencySymbol || 'L.E'}</span>
+          <span className="font-medium">{formatPrice(subtotal)}</span>
         </div>
         
         {/* Shipping cost for cart and product orders */}
@@ -1113,7 +1422,7 @@ return;
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">Shipping</span>
             <span className="font-medium">
-              {shippingCost === 0 ? 'Free' : `${shippingCost} L.E`}
+              {shippingCost === 0 ? 'Free' : formatPrice(shippingCost)}
             </span>
           </div>
         )}
@@ -1130,7 +1439,7 @@ return;
               )}
               :
             </span>
-            <span>-{Number(discount.couponDiscount).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{currentPrice?.currencySymbol || 'L.E'}</span>
+            <span>-{formatPrice(discount.couponDiscount)}</span>
           </div>
         )}
         
@@ -1138,13 +1447,13 @@ return;
         {type !== 'cart' && type !== 'product' && (plan?.discountPercentage > 0) && (
           <div className="flex justify-between text-sm text-green-600">
             <span>{t('checkout.planDiscount')} ({plan.discountPercentage}%):</span>
-            <span>-{Number(discount.planDiscount).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{currentPrice?.currencySymbol || 'L.E'}</span>
+            <span>-{formatPrice(discount.planDiscount)}</span>
           </div>
         )}
         
         <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2">
           <span>{t('checkout.total')}</span>
-          <span>{Number(total).toFixed(2)}{i18n.language === 'ar' ? '\u00A0' : ' '}{finalPrice?.currencySymbol || 'L.E'}</span>
+          <span>{formatPrice(total)}</span>
         </div>
       </div>
     </div>
@@ -1155,14 +1464,6 @@ return;
     try {
       setSubmitting(true);
       setError(null);
-
-      // Check for test scenarios
-      if (testScenario === 'background_reject') {
-        setError('Sorry, Tabby is unable to approve this purchase, please use an alternative payment method for your order.');
-        showError('Tabby payment method is not available for this test scenario.');
-        setSubmitting(false);
-        return;
-      }
 
       // Generate a proper UUID for the order
       const generateUUID = () => {
@@ -1184,37 +1485,63 @@ return;
       // Prepare order data for Tabby
       const orderData = {
         id: generateUUID(),
-        amount: currentPrice?.amount || total,
-        currency: currentPrice?.currency || finalPrice?.currency || 'EGP',
+        amount: total, // Use total amount for consistency
+        currency: finalPrice?.currency || 'EGP',
         description: `Payment for ${type === 'cart' ? 'cart items' : type}`,
+        lang: i18n.language === 'ar' ? 'ar' : 'en', // Add language marker
         user: {
           firstName: user?.firstName || '',
           lastName: user?.lastName || '',
           email: user?.email || '',
-          mobileNumber: user?.mobileNumber || ''
+          mobileNumber: getPhoneForCurrency(finalPrice?.currency || 'EGP')
         },
         items: getOrderItemsForTabby(),
-        shippingAddress: {
-          address: shippingDetails?.shippingStreet || '',
-          city: shippingDetails?.shippingCity || 'Cairo',
-          country: 'EG',
-          postalCode: shippingDetails?.shippingPostalCode || '00000'
-        }
+        // Only include shipping address for physical items (cart and product orders)
+        ...(type === 'cart' || type === 'product' ? {
+          shippingAddress: {
+            address: shippingDetails?.shippingStreet || '',
+            city: shippingDetails?.shippingCity || getCityForCurrency(finalPrice?.currency || 'EGP'),
+            country: getCountryForCurrency(finalPrice?.currency || 'EGP'),
+            postalCode: shippingDetails?.shippingPostalCode || '00000'
+          }
+        } : {})
       };
 
       // Create checkout data for Tabby
       const checkoutData = tabbyService.createCheckoutData(orderData, type);
 
+      // Debug: Log the complete order data being sent to Tabby
+      console.log('🔍 COMPLETE ORDER DATA FOR TABBY:');
+      console.log('📦 Order Data:', JSON.stringify(orderData, null, 2));
+      console.log('🔧 Checkout Data:', JSON.stringify(checkoutData, null, 2));
+      console.log('📱 Phone Number:', orderData.user.mobileNumber);
+      console.log('💰 Currency:', orderData.currency);
+      console.log('🌍 Country:', orderData.shippingAddress?.country || 'No shipping address');
+      console.log('🏙️ City:', orderData.shippingAddress?.city || 'No shipping address');
+
       // Validate checkout data
       const validation = tabbyService.validateCheckoutData(checkoutData);
       if (!validation.isValid) {
+        console.error('❌ Tabby validation failed:', validation.errors);
         throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
       }
 
       // Create Tabby checkout session
-      console.log('🔍 About to call tabbyService.createCheckoutSession with:', checkoutData);
+      console.log('🔍 Creating Tabby checkout session with:', checkoutData);
       const result = await tabbyService.createCheckoutSession(checkoutData);
-      console.log('🔍 tabbyService.createCheckoutSession returned:', result);
+      console.log('🔍 Tabby checkout session created:', result);
+      
+      // Check if the response indicates rejection
+      if (result.status === 'rejected') {
+        const rejectionMessage = tabbyService.getRejectionMessage(
+          result.configuration?.products?.installments?.rejection_reason || 'not_available',
+          i18n.language
+        );
+        setError(rejectionMessage.message);
+        showError(rejectionMessage.message);
+        setSubmitting(false);
+        return;
+      }
       
       // Debug: Log the result structure
       console.log('🔍 Tabby checkout result:', result);
@@ -1237,8 +1564,10 @@ return;
         const errorMessage = error.response.data.message || 'Tabby payment is not available for this purchase.';
         setError(errorMessage);
         showError(errorMessage);
-        setTabbyAvailable(false); // Hide Tabby option for this session
-        console.log('❌ Tabby background pre-scoring failed - payment method not available');
+        // Hide Tabby option when pre-scoring fails
+        setTabbyAvailable(false);
+        setTabbyRejectionMessage(errorMessage);
+        console.log('❌ Tabby background pre-scoring failed - hiding payment method');
       } else {
         const errorMessage = error.message || 'Payment initialization failed. Please try again.';
         setError(errorMessage);
@@ -1292,6 +1621,17 @@ return;
     setSubmitting(true);
     setError(null);
 
+    // Client-side validation for payment option selection
+    if (!paymentOption) {
+      const errorMessage = i18n.language === 'ar' 
+        ? 'يرجى اختيار طريقة الدفع' 
+        : 'Please select a payment method';
+      setError(errorMessage);
+      showError(errorMessage);
+      setSubmitting(false);
+      return;
+    }
+
     // Client-side validation for payment proof
     if ((paymentOption === 'instapay' || paymentOption === 'vodafone') && !paymentProof) {
       const errorMessage = i18n.language === 'ar' 
@@ -1319,6 +1659,17 @@ return;
 
     // Handle Tabby payment separately
     if (paymentOption === 'tabby') {
+      // Check if Tabby has a rejection message (not available)
+      if (tabbyRejectionMessage) {
+        const errorMessage = i18n.language === 'ar' 
+          ? 'طريقة الدفع المختارة غير متاحة. يرجى اختيار طريقة دفع أخرى' 
+          : 'Selected payment method is not available. Please choose another payment method';
+        setError(errorMessage);
+        showError(errorMessage);
+        setSubmitting(false);
+        return;
+      }
+      
       await handleTabbyPayment();
       return;
     }
@@ -1705,16 +2056,17 @@ return;
                           {(() => {
                             // Use the correct currency's original amount based on detected currency
                             if (detectedCurrency === 'SAR' && plan?.priceSAR?.originalAmount) {
-                              return `${plan.priceSAR.originalAmount} ${plan.priceSAR.currencySymbol || 'ر.س'}`;
+                              return formatPrice(plan.priceSAR.originalAmount);
                             } else if (detectedCurrency === 'USD' && plan?.priceUSD?.originalAmount) {
-                              return `${plan.priceUSD.originalAmount} ${plan.priceUSD.currencySymbol || '$'}`;
+                              return formatPrice(plan.priceUSD.originalAmount);
                             } else if (detectedCurrency === 'AED' && plan?.priceAED?.originalAmount) {
-                              return `${plan.priceAED.originalAmount} ${plan.priceAED.currencySymbol || 'د.إ'}`;
+                              return formatPrice(plan.priceAED.originalAmount);
                             } else if (detectedCurrency === 'EGP' && plan?.priceEGP?.originalAmount) {
-                              return `${plan.priceEGP.originalAmount} ${plan.priceEGP.currencySymbol || 'L.E'}`;
+                              return formatPrice(plan.priceEGP.originalAmount);
                             } else {
                               // Fallback to any available original amount
-                              return `${plan?.priceSAR?.originalAmount || plan?.priceUSD?.originalAmount || plan?.priceEGP?.originalAmount || plan?.priceAED?.originalAmount || currentPrice?.amount || 0} ${currentPrice?.currencySymbol || 'L.E'}`;
+                              const fallbackAmount = plan?.priceSAR?.originalAmount || plan?.priceUSD?.originalAmount || plan?.priceEGP?.originalAmount || plan?.priceAED?.originalAmount || currentPrice?.amount || 0;
+                              return formatPrice(fallbackAmount);
                             }
                           })()}
                         </span>
@@ -1732,7 +2084,7 @@ return;
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-gray-700">{i18n.language === 'ar' ? 'السعر النهائي' : 'Final Price'}</span>
                         <span className="text-lg font-semibold text-gymmawy-primary">
-                          {(currentPrice?.amount || 0).toFixed(2)} {currentPrice?.currencySymbol || 'L.E'}
+                          {formatPrice(currentPrice?.amount || 0)}
                         </span>
                       </div>
                     </div>
@@ -1877,6 +2229,7 @@ return;
                 </div>
               </div>
 
+
               {/* Payment Method */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -1979,22 +2332,37 @@ return;
                     <h4 className="font-medium text-gray-900">{t('checkout.chooseInstallmentProvider')}</h4>
                     
                     <div className="grid grid-cols-2 gap-4">
-                      {tabbyAvailable && (
-                        <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                          <input
-                            type="radio"
-                            name="paymentOption"
-                            value="tabby"
-                            checked={paymentOption === 'tabby'}
-                            onChange={(e) => setPaymentOption(e.target.value)}
-                            className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
-                          />
-                          <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
-                            <img src="/assets/common/payments/tabby.png" alt="Tabby" className={`h-8 w-auto object-contain ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                            <span className="text-sm font-medium text-gray-900">{t('checkout.tabby')} (Pay in 4)</span>
+                      {/* Always show Tabby option, but disable if there's a rejection message */}
+                      <label className={`flex items-center p-4 border rounded-lg ${
+                        tabbyRejectionMessage 
+                          ? 'border-red-200 bg-red-50 cursor-not-allowed opacity-60' 
+                          : 'border-gray-200 cursor-pointer hover:bg-gray-50'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="paymentOption"
+                          value="tabby"
+                          checked={paymentOption === 'tabby'}
+                          onChange={(e) => setPaymentOption(e.target.value)}
+                          disabled={!tabbyAvailable}
+                          className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300 disabled:opacity-50"
+                        />
+                        <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
+                          <img src="/assets/common/payments/tabby.png" alt="Tabby" className={`h-8 w-auto object-contain ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                          <div className="flex flex-col">
+                            <span className={`text-sm font-medium ${
+                              tabbyRejectionMessage ? 'text-red-700' : 'text-gray-900'
+                            }`}>
+                              {t('checkout.tabby')}
+                            </span>
+                            <span className={`text-xs ${
+                              tabbyRejectionMessage ? 'text-red-600' : 'text-gray-500'
+                            }`}>
+                              {tabbyRejectionMessage || t('checkout.tabbyDescription')}
+                            </span>
                           </div>
-                        </label>
-                      )}
+                        </div>
+                      </label>
 
                       <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
                         <input
@@ -2014,23 +2382,6 @@ return;
                   </div>
                 )}
 
-                {/* Payment Instructions */}
-                {paymentOption === 'tabby' && tabbyAvailable && (
-                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-start">
-                      <Shield className="h-5 w-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
-                      <div className="flex-1">
-                        <h4 className="text-sm font-medium text-blue-900 mb-2">{t('checkout.tabbyInstructions')}</h4>
-                        <ul className="text-sm text-blue-800 space-y-1">
-                          <li>• {t('checkout.tabbyInstruction1')}</li>
-                          <li>• {t('checkout.tabbyInstruction2')}</li>
-                          <li>• {t('checkout.tabbyInstruction3')}</li>
-                        </ul>
-                      </div>
-                    </div>
-                    
-                  </div>
-                )}
 
                 {paymentOption === 'instapay' && (
                   <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">

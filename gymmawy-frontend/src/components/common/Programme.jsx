@@ -3,11 +3,13 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCurrencyContext } from '../../contexts/CurrencyContext';
 import { config } from '../../config';
 
 export default function Programme({ image, name, price, programme }) {
     const { t, i18n } = useTranslation('programmes');
     const { user, isAuthenticated } = useAuth();
+    const { formatPrice, getCurrencyInfo } = useCurrencyContext();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
@@ -38,11 +40,19 @@ return fallback;
         if (!imagePath) {
 return '';
 }
+        // Convert full URLs to API routes
+        if (imagePath.startsWith('https://gym.omarelnemr.xyz/uploads/')) {
+            // Convert to API route
+            const pathPart = imagePath.replace('https://gym.omarelnemr.xyz/uploads/', 'uploads/');
+            return `${config.API_BASE_URL}/${pathPart}`;
+        }
         if (imagePath.startsWith('http')) {
 return imagePath;
-} // Already a full URL
+} // Other full URLs
         if (imagePath.startsWith('/uploads/')) {
-            return `${config.STATIC_BASE_URL}${imagePath}`;
+            // Use API route for uploads
+            const cleanPath = imagePath.substring(1);
+            return `${config.API_BASE_URL}/${cleanPath}`;
         }
         return imagePath; // Return as-is for other cases
     };
@@ -106,9 +116,8 @@ return imagePath;
                                          programme.priceUSD?.originalAmount;
                       
                       if (originalPrice) {
-                        // Use the currency symbol from the current price display
-                        const currencySymbol = price.replace(/\d+(?:\.\d+)?/g, '').trim();
-                        return `${originalPrice.toFixed(0)} ${currencySymbol}`;
+                        // Use CurrencyContext to format the original price properly
+                        return formatPrice(originalPrice);
                       }
                       return price;
                     })()}
@@ -118,28 +127,12 @@ return imagePath;
                   </span>
                 </div>
                 <span className="text-xl sm:text-2xl font-bold text-orange-400 mt-1">
-                  {(() => {
-                    // Extract price and currency from the formatted price string
-                    const priceMatch = price.match(/(\d+(?:\.\d+)?)/);
-                    const currencySymbol = price.replace(/\d+(?:\.\d+)?/g, '').trim();
-                    if (priceMatch && currencySymbol) {
-                      return `${priceMatch[1]} ${currencySymbol}`;
-                    }
-                    return price;
-                  })()}
+                  {price}
                 </span>
               </div>
             ) : (
               <p className="text-xl sm:text-2xl">
-                {(() => {
-                  // Extract price and currency from the formatted price string
-                  const priceMatch = price.match(/(\d+(?:\.\d+)?)/);
-                  const currencySymbol = price.replace(/\d+(?:\.\d+)?/g, '').trim();
-                  if (priceMatch && currencySymbol) {
-                    return `${priceMatch[1]} ${currencySymbol}`;
-                  }
-                  return price;
-                })()}
+                {price}
               </p>
             )}
           </div>

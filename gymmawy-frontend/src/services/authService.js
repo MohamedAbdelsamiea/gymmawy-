@@ -12,7 +12,7 @@ class AuthService {
         password: credentials.password,
       };
       
-      const data = await apiClient.post('/auth/login', loginData);
+      const data = await apiClient.post('/api/auth/login', loginData);
       return data;
     } catch (error) {
       console.error('Login service error:', error);
@@ -37,7 +37,7 @@ class AuthService {
 
   async register(userData) {
     try {
-      const data = await apiClient.post('/auth/register', userData);
+      const data = await apiClient.post('/api/auth/register', userData);
       return data;
     } catch (error) {
       // If it's already our custom error with response data, re-throw it
@@ -115,7 +115,7 @@ class AuthService {
 
   async forgotPassword(email) {
     try {
-      const data = await apiClient.post('/auth/forgot-password', { email });
+      const data = await apiClient.post('/api/auth/forgot-password', { email });
       return data;
     } catch (error) {
       throw new Error(`Forgot password error: ${error.message}`);
@@ -124,7 +124,7 @@ class AuthService {
 
   async resetPassword(token, email, password) {
     try {
-      const data = await apiClient.post('/auth/reset-password', { 
+      const data = await apiClient.post('/api/auth/reset-password', { 
         token, 
         email, 
         newPassword: password, 
@@ -142,7 +142,7 @@ class AuthService {
 
   async resendVerificationEmail(email, language = 'en') {
     try {
-      const data = await apiClient.post('/auth/resend-verification', { email, language });
+      const data = await apiClient.post('/api/auth/resend-verification', { email, language });
       return data;
     } catch (error) {
       throw new Error(`Resend verification error: ${error.message}`);
@@ -151,7 +151,7 @@ class AuthService {
 
   async verifyEmail(token, email) {
     try {
-      const data = await apiClient.post('/auth/verify-email', { token, email });
+      const data = await apiClient.post('/api/auth/verify-email', { token, email });
       return data;
     } catch (error) {
       throw new Error(error.message);
@@ -160,7 +160,7 @@ class AuthService {
 
   async getProfile() {
     try {
-      const data = await apiClient.get('/users/me');
+      const data = await apiClient.get('/api/users/me');
       return data;
     } catch (error) {
       console.error('Get profile error:', error);
@@ -170,7 +170,7 @@ class AuthService {
 
   async updateProfile(profileData) {
     try {
-      const data = await apiClient.patch('/users/me', profileData);
+      const data = await apiClient.patch('/api/users/me', profileData);
       return data;
     } catch (error) {
       // If it's already our custom error with response data, re-throw it
@@ -225,7 +225,7 @@ class AuthService {
 
   async verifyEmailChange(token, email) {
     try {
-      const data = await apiClient.post('/auth/verify-email-change', { token, email });
+      const data = await apiClient.post('/api/auth/verify-email-change', { token, email });
       return data;
     } catch (error) {
       throw new Error(`Email change verification error: ${error.message}`);

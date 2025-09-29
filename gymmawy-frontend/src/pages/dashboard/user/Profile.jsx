@@ -135,7 +135,9 @@ const Profile = () => {
         validation = validateEmail(value);
         break;
       case 'phone':
-        validation = validatePhone(value);
+        // Combine country code and phone number for validation
+        const fullPhoneNumber = formData.countryCode + value;
+        validation = validatePhone(fullPhoneNumber);
         break;
       case 'birthDate':
         validation = validateBirthDate(value);
@@ -216,8 +218,9 @@ const Profile = () => {
       newErrors.email = emailValidation.error;
     }
 
-    // Phone Number
-    const phoneValidation = validatePhone(formData.phone);
+    // Phone Number - combine country code and phone number for validation
+    const fullPhoneNumber = formData.countryCode + formData.phone;
+    const phoneValidation = validatePhone(fullPhoneNumber);
     if (formData.phone && !phoneValidation.isValid) {
       newErrors.phone = phoneValidation.error;
     }

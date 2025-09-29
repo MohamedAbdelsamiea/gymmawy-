@@ -75,9 +75,24 @@ class TabbyService {
       };
 
       // Debug: Log the payload being sent to Tabby
-      console.log('🔍 Tabby API Payload:', JSON.stringify(payload, null, 2));
+      console.log('🔍 TABBY API PAYLOAD:');
+      console.log('📦 Complete Payload:', JSON.stringify(payload, null, 2));
+      console.log('📱 Buyer Phone:', payload.payment?.buyer?.phone);
+      console.log('💰 Currency:', payload.payment?.currency);
+      console.log('🌍 Shipping Country:', payload.payment?.shipping_address?.country || 'No shipping address');
+      console.log('🏙️ Shipping City:', payload.payment?.shipping_address?.city || 'No shipping address');
+      console.log('🔗 Merchant URLs:', payload.merchant_urls);
 
       const response = await apiClient.post('/api/v2/checkout', payload);
+      
+      // Debug: Log the Tabby API response
+      console.log('🔍 TABBY API RESPONSE:');
+      console.log('📦 Response Status:', response.status);
+      console.log('📦 Response Data:', JSON.stringify(response.data, null, 2));
+      console.log('📱 Session ID:', response.data?.id);
+      console.log('✅ Status:', response.data?.status);
+      console.log('🔧 Configuration:', response.data?.configuration);
+      
       return response.data;
     } catch (error) {
       console.error(`Tabby checkout session creation failed (attempt ${retryCount + 1}/${maxRetries + 1}):`, error);
@@ -350,7 +365,7 @@ class TabbyService {
    * @returns {Object} - The Tabby payment object
    */
   createPaymentObject(orderData) {
-    return {
+    const paymentObject = {
       amount: orderData.amount.toString(),
       currency: orderData.currency || 'SAR',
       description: orderData.description || 'Payment for order',
@@ -358,11 +373,17 @@ class TabbyService {
       buyer_history: orderData.buyer_history || {},
       order: orderData.order,
       order_history: orderData.order_history || [],
-      shipping_address: orderData.shipping_address,
       items: orderData.items,
       meta: orderData.meta || {},
       attachment: orderData.attachment || {}
     };
+
+    // Only include shipping_address if provided (for physical items)
+    if (orderData.shipping_address) {
+      paymentObject.shipping_address = orderData.shipping_address;
+    }
+
+    return paymentObject;
   }
 
   /**
@@ -373,9 +394,9 @@ class TabbyService {
    */
   createMerchantUrls(baseUrl, paymentId) {
     return {
-      success: `${baseUrl}/payment/success?session_id=${paymentId}`,
-      cancel: `${baseUrl}/payment/cancel?session_id=${paymentId}`,
-      failure: `${baseUrl}/payment/failure?session_id=${paymentId}`
+      success: `${baseUrl}/payment/success?payment_id=${paymentId}`,
+      cancel: `${baseUrl}/payment/cancel?payment_id=${paymentId}`,
+      failure: `${baseUrl}/payment/failure?payment_id=${paymentId}`
     };
   }
 }

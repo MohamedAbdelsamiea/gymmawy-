@@ -69,9 +69,17 @@ const AdminProgrammes = () => {
   // Helper function to get full image URL
   const getImageUrl = (imagePath) => {
     if (!imagePath) return '';
+    // Convert full URLs to API routes
+    if (imagePath.startsWith('https://gym.omarelnemr.xyz/uploads/')) {
+      // Convert to API route
+      const pathPart = imagePath.replace('https://gym.omarelnemr.xyz/uploads/', 'uploads/');
+      return `${config.API_BASE_URL}/${pathPart}`;
+    }
     if (imagePath.startsWith('http')) return imagePath;
     if (imagePath.startsWith('/uploads/')) {
-      return `${config.STATIC_BASE_URL}${imagePath}`;
+      // Use API route for uploads
+      const cleanPath = imagePath.substring(1);
+      return `${config.API_BASE_URL}/${cleanPath}`;
     }
     return imagePath;
   };

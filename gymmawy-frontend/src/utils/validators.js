@@ -70,8 +70,9 @@ export const validatePassword = (password, firstName = '', lastName = '', email 
 export const isValidPhone = (phone) => {
   // Remove all spaces and special characters except + at the beginning
   const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-  // Accept formats: +1234567890, 0123456789 (with leading zero)
-  const phoneRegex = /^(\+[1-9]\d{1,14}|0[1-9]\d{8,14})$/;
+  // Accept formats: +1234567890, +0123456789, 0123456789 (with leading zero)
+  // Allow any digit after country code, including 0
+  const phoneRegex = /^(\+\d{1,15}|0\d{8,14})$/;
   return phoneRegex.test(cleanPhone);
 };
 

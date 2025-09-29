@@ -35,6 +35,18 @@ export async function currencyDetectionMiddleware(req, res, next) {
       return;
     }
     
+    // Check for user currency preference from headers or cookies
+    const userCurrencyPreference = req.headers['x-user-currency'] || req.cookies?.userCurrencyPreference;
+    
+    if (userCurrencyPreference && Object.values(Currency).includes(userCurrencyPreference)) {
+      console.log(`👤 User currency preference: ${userCurrencyPreference}`);
+      req.currency = userCurrencyPreference;
+      res.set('X-Currency', userCurrencyPreference);
+      res.set('X-Currency-Source', 'user-preference');
+      next();
+      return;
+    }
+    
     // Get currency from IP geolocation
     const currency = await detectCurrencyFromIP(req);
     const clientIP = getClientIP(req);
@@ -44,6 +56,7 @@ export async function currencyDetectionMiddleware(req, res, next) {
     
     // Set currency in response headers for frontend
     res.set('X-Currency', currency);
+    res.set('X-Currency-Source', 'ip-detection');
     
     // Log currency detection (less verbose in production)
     if (process.env.NODE_ENV === 'development') {

@@ -17,12 +17,12 @@ const PaymentSuccess = () => {
   const sessionId = searchParams.get('session_id');
 
   useEffect(() => {
-    // Tabby redirects with session_id, not payment_id
-    // We need to find the payment record by session ID
-    if (sessionId) {
-      verifyPayment(sessionId);
-    } else if (paymentId) {
+    // Tabby redirects with payment_id as per their requirements
+    // We also support session_id for backward compatibility
+    if (paymentId) {
       verifyPayment(paymentId);
+    } else if (sessionId) {
+      verifyPayment(sessionId);
     } else {
       setError('No payment ID or session ID found in URL');
       setLoading(false);

@@ -1,37 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useToast } from '../contexts/ToastContext';
 import tabbyService from '../services/tabbyService';
 
 const PaymentFailure = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const { showError } = useToast();
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const paymentId = searchParams.get('payment_id');
+  const sessionId = searchParams.get('session_id');
   const reason = searchParams.get('reason');
 
   useEffect(() => {
-    if (paymentId) {
-      verifyPayment();
+    // Prioritize payment_id as per Tabby requirements, fallback to session_id
+    const id = paymentId || sessionId;
+    if (id) {
+      verifyPayment(id);
     } else {
       setError('No payment ID found in URL');
       setLoading(false);
     }
-  }, [paymentId]);
+  }, [paymentId, sessionId]);
 
-  const verifyPayment = async () => {
+  const verifyPayment = async (id) => {
     try {
       setLoading(true);
       
       // Get payment status from Tabby
-      const result = await tabbyService.handlePaymentFailure(paymentId);
+      const result = await tabbyService.handlePaymentFailure(id);
       
       setPaymentStatus(result.payment);
-      showError(result.message);
+      
+      // Show failure message as per Tabby specification
+      showError(t('checkout.tabbyFailure'));
       
     } catch (error) {
       console.error('Payment verification failed:', error);
@@ -43,8 +50,15 @@ const PaymentFailure = () => {
   };
 
   const handleRetryPayment = () => {
-    // Navigate back to checkout or payment page
-    navigate(-2); // Go back 2 steps to checkout page
+    // Navigate back to checkout page with preserved state
+    // This ensures cart items are preserved and Tabby remains available
+    navigate('/checkout', { 
+      state: { 
+        fromPaymentFailure: true,
+        paymentFailureReason: reason || 'rejected',
+        preserveCart: true
+      } 
+    });
   };
 
   const handleContactSupport = () => {
@@ -87,10 +101,16 @@ const PaymentFailure = () => {
           
           <p className="text-gray-600 mb-6">
             {reason === 'rejected' 
-              ? 'Your payment was rejected. This could be due to insufficient funds or other payment issues.'
+              ? (i18n.language === 'ar' 
+                  ? 'نأسف، تابي غير قادرة على الموافقة على هذه العملية. الرجاء استخدام طريقة دفع أخرى.'
+                  : 'Sorry, Tabby is unable to approve this purchase. Please use an alternative payment method for your order.')
               : reason === 'expired'
-              ? 'Your payment session has expired. Please try again with a new payment session.'
-              : 'Unfortunately, your payment could not be processed. Please try again or contact support if the problem persists.'
+              ? (i18n.language === 'ar'
+                  ? 'انتهت صلاحية جلسة الدفع. يرجى المحاولة مرة أخرى.'
+                  : 'Your payment session has expired. Please try again with a new payment session.')
+              : (i18n.language === 'ar'
+                  ? 'نأسف، تابي غير قادرة على الموافقة على هذه العملية. الرجاء استخدام طريقة دفع أخرى.'
+                  : 'Sorry, Tabby is unable to approve this purchase. Please use an alternative payment method for your order.')
             }
           </p>
           

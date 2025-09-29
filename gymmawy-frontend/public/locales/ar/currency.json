@@ -1,0 +1,13 @@
+{
+  "currency": {
+    "detectedTitle": "تم اكتشاف العملة",
+    "detectedMessage": "اكتشفنا أنك في {{country}} ({{code}}). تغيير؟",
+    "keep": "احتفظ",
+    "change": "تغيير",
+    "changing": "جاري التغيير...",
+    "detectedIn": "تم الاكتشاف في {country}",
+    "switchTo": "التبديل إلى {currency}",
+    "preferenceSaved": "تم حفظ تفضيل العملة",
+    "detectionFailed": "فشل في اكتشاف العملة، يتم استخدام الافتراضي"
+  }
+}

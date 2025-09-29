@@ -6,6 +6,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { config } from '../../config';
+import TabbyCartPromo from '../../components/payment/TabbyCartPromo';
+import useTabbyPromo from '../../hooks/useTabbyPromo';
+import { useTranslation } from 'react-i18next';
+import { useCurrencyContext } from '../../contexts/CurrencyContext';
 
 const CartPage = () => {
   const { cart, updateQuantity, removeFromCart, loading, error } = useCart();
@@ -13,15 +17,20 @@ const CartPage = () => {
   const { showSuccess, showError } = useToast();
   const navigate = useNavigate();
   const [isUpdating, setIsUpdating] = useState(false);
+  const { isSupported: isTabbySupported, currentCountry } = useTabbyPromo();
+  const { i18n } = useTranslation();
+  const { currency, formatPrice, getCurrencyInfo } = useCurrencyContext();
 
   // Transform cart items for display
   const transformCartItem = (item) => {
     const product = item.product;
     const primaryImage = product.images?.find(img => img.isPrimary) || product.images?.[0];
     
-    // Get EGP price
-    const egpPrice = product.prices?.find(p => p.currency === 'EGP');
-    const price = egpPrice?.amount ? parseFloat(egpPrice.amount) : 0;
+    // Get price for current currency, fallback to EGP
+    const currentPrice = product.prices?.find(p => p.currency === currency);
+    const fallbackPrice = product.prices?.find(p => p.currency === 'EGP');
+    const priceData = currentPrice || fallbackPrice;
+    const price = priceData?.amount ? parseFloat(priceData.amount) : 0;
     const discountPercentage = product.discountPercentage || 0;
     const discountedPrice = discountPercentage > 0 ? price * (1 - discountPercentage / 100) : price;
     
@@ -136,7 +145,7 @@ const CartPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white cart-page">
       <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12">
         {/* Header */}
         <div className="mb-8 sm:mb-12">
@@ -229,15 +238,15 @@ const CartPage = () => {
                             {item.hasDiscount ? (
                               <div className="flex items-center gap-3">
                                 <span className="text-lg sm:text-xl font-medium text-[#190143]">
-                                  {item.discountedPrice} LE
+                                  {formatPrice(item.discountedPrice)}
                                 </span>
                                 <span className="text-sm text-gray-500 line-through">
-                                  {item.price} LE
+                                  {formatPrice(item.price)}
                                 </span>
                               </div>
                             ) : (
                               <span className="text-lg sm:text-xl font-medium text-[#190143]">
-                                {item.price} LE
+                                {formatPrice(item.price)}
                               </span>
                             )}
                           </div>
@@ -296,7 +305,7 @@ const CartPage = () => {
                 <div className="space-y-4 mb-6">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Subtotal</span>
-                    <span className="font-medium">{subtotal.toLocaleString()} LE</span>
+                    <span className="font-medium">{formatPrice(subtotal)}</span>
                   </div>
                   
                   <div className="flex justify-between">
@@ -310,10 +319,23 @@ const CartPage = () => {
                   <div className="border-t border-gray-300 pt-4">
                     <div className="flex justify-between text-lg font-medium">
                       <span>Total</span>
-                      <span className="text-[#190143]">{total.toLocaleString()} LE</span>
+                      <span className="text-[#190143]">{formatPrice(total)}</span>
                     </div>
                   </div>
                 </div>
+
+                {/* Tabby Promo Snippet */}
+                {isTabbySupported && cartItems.length > 0 && (
+                  <div className="mb-4">
+                    <TabbyCartPromo
+                      key={`tabby-cart-${i18n.language}-${total}`}
+                      total={total}
+                      currency={currency}
+                      className="w-full"
+                      country={currentCountry}
+                    />
+                  </div>
+                )}
 
                 <button
                   onClick={handleCheckout}

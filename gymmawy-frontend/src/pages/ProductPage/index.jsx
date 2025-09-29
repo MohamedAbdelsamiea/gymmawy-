@@ -7,6 +7,10 @@ import { useCart } from '../../contexts/CartContext';
 import { ChevronLeft, ChevronRight, Plus, Minus } from 'lucide-react';
 import storeService from '../../services/storeService';
 import { config } from '../../config';
+import TabbyPromo from '../../components/payment/TabbyPromo';
+import useTabbyPromo from '../../hooks/useTabbyPromo';
+import { useTranslation } from 'react-i18next';
+import { useCurrencyContext } from '../../contexts/CurrencyContext';
 
 const ProductPage = () => {
   const { id } = useParams();
@@ -14,6 +18,9 @@ const ProductPage = () => {
   const { isAuthenticated } = useAuth();
   const { showSuccess, showError } = useToast();
   const { addToCart, loading: cartLoading } = useCart();
+  const { isSupported: isTabbySupported, currentCountry } = useTabbyPromo();
+  const { i18n } = useTranslation();
+  const { currency, formatPrice, getCurrencyInfo } = useCurrencyContext();
 
   // State for product interactions
   const [selectedSize, setSelectedSize] = useState('M');
@@ -91,9 +98,11 @@ const ProductPage = () => {
   const transformProduct = (apiProduct) => {
     const primaryImage = apiProduct.images?.find(img => img.isPrimary) || apiProduct.images?.[0];
     
-    // Get price for EGP currency (default)
-    const egpPrice = apiProduct.prices?.find(p => p.currency === 'EGP');
-    const price = egpPrice?.amount ? parseFloat(egpPrice.amount) : 0;
+    // Get price for current currency, fallback to EGP
+    const currentPrice = apiProduct.prices?.find(p => p.currency === currency);
+    const fallbackPrice = apiProduct.prices?.find(p => p.currency === 'EGP');
+    const priceData = currentPrice || fallbackPrice;
+    const price = priceData?.amount ? parseFloat(priceData.amount) : 0;
     const discountPercentage = apiProduct.discountPercentage || 0;
     const discountedPrice = discountPercentage > 0 ? price * (1 - discountPercentage / 100) : price;
     
@@ -110,7 +119,8 @@ const ProductPage = () => {
     
     const productImage = primaryImage?.url ? getImageSrc(primaryImage.url) : '/assets/common/store/product1-1.png';
     
-    console.log('Transform product - EGP Price:', egpPrice);
+    console.log('Transform product - Current Currency:', currency);
+    console.log('Transform product - Price Data:', priceData);
     console.log('Transform product - Price:', price);
     console.log('Transform product - Discount:', discountPercentage);
     console.log('Transform product - Discounted Price:', discountedPrice);
@@ -282,7 +292,7 @@ const ProductPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white product-page">
       <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 md:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-10 md:gap-12">
           {/* Product Image Carousel */}
@@ -378,18 +388,34 @@ const ProductPage = () => {
                 {transformedProduct.hasDiscount ? (
                   <div className="flex items-center space-x-4">
                     <span className="text-2xl font-bold text-[#190143]">
-                      {transformedProduct.discountedPrice.toFixed(0)} L.E
+                      {formatPrice(transformedProduct.discountedPrice)}
                     </span>
                     <span className="text-2xl font-light text-gray-500 line-through">
-                      {transformedProduct.price.toFixed(0)} L.E
+                      {formatPrice(transformedProduct.price)}
                     </span>
                   </div>
                 ) : (
                   <span className="text-2xl font-bold text-[#190143]">
-                    {transformedProduct.price.toFixed(0)} L.E
+                    {formatPrice(transformedProduct.price)}
                   </span>
                 )}
               </div>
+
+              {/* Tabby Promo Snippet */}
+              {isTabbySupported && transformedProduct && (
+                <div className="mb-6">
+                  <TabbyPromo
+                    key={`tabby-product-${i18n.language}-${transformedProduct.id}`}
+                    price={transformedProduct.hasDiscount ? transformedProduct.discountedPrice : transformedProduct.price}
+                    currency={currency}
+                    source="product"
+                    selector="#TabbyProductPromo"
+                    className="w-full"
+                    country={currentCountry}
+                    shouldInheritBg={false}
+                  />
+                </div>
+              )}
 
               {/* Size Selection */}
               <div className="mb-6">
@@ -601,15 +627,15 @@ const ProductPage = () => {
                         {relatedProduct.hasDiscount ? (
                           <div className="flex items-start space-x-4">
                             <span className="text-2xl font-light text-[#190143]">
-                              {relatedProduct.discountedPrice} LE
+                              {formatPrice(relatedProduct.discountedPrice)}
                             </span>
                             <span className="text-2xl font-light text-gray-500 line-through">
-                              {relatedProduct.price} LE
+                              {formatPrice(relatedProduct.price)}
                             </span>
                           </div>
                         ) : (
                           <span className="text-2xl font-light text-[#190143]">
-                            {relatedProduct.price} LE
+                            {formatPrice(relatedProduct.price)}
                           </span>
                         )}
                       </div>

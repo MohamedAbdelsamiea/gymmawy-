@@ -196,7 +196,7 @@ class CheckoutService {
   // ==================== PROGRAMMES ====================
   async purchaseProgramme(programmeId, paymentData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/programmes/${programmeId}/purchase-with-payment`, {
+      const response = await fetch(`${API_BASE_URL}/api/programmes/${programmeId}/purchase-with-payment`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(paymentData),
@@ -317,7 +317,7 @@ class CheckoutService {
   formatCurrency(amount, currency = 'EGP') {
     const symbols = {
       'EGP': 'L.E',
-      'SAR': 'S.R',
+      'SAR': 'SAR',
       'USD': '$',
       'EUR': '€',
     };

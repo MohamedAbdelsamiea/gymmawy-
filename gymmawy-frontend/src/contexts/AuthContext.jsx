@@ -4,6 +4,8 @@ import tokenManager from '../utils/tokenManager';
 
 const AuthContext = createContext();
 
+export { AuthContext };
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

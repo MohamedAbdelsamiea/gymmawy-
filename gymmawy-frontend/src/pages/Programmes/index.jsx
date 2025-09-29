@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import Programme from "../../components/common/Programme";
 import { useAsset } from "../../hooks/useAsset";
-import { useCurrency } from "../../hooks/useCurrency";
+import { useCurrencyContext } from "../../contexts/CurrencyContext";
 import programmeService from "../../services/programmeService";
 
 const TrainingProgramsPage = () => {
   const { t, i18n } = useTranslation("programmes"); // use the namespace
-  const { currency, isLoading: currencyLoading } = useCurrency();
+  const { currency, isLoading: currencyLoading, formatPrice, getCurrencyInfo } = useCurrencyContext();
   const [programmes, setProgrammes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -262,44 +262,8 @@ const TrainingProgramsPage = () => {
                   if (selectedPrice.amount === 0) {
                     formattedPrice = i18n.language === 'ar' ? 'مجاني' : 'FREE';
                   } else {
-                    // Use language-specific currency symbols based on detected currency
-                    let displayCurrencySymbol;
-                    if (i18n.language === 'ar') {
-                      // Arabic currency symbols
-                      switch (currency) {
-                        case 'USD':
-                          displayCurrencySymbol = '$';
-                          break;
-                        case 'SAR':
-                          displayCurrencySymbol = 'رس';
-                          break;
-                        case 'AED':
-                          displayCurrencySymbol = 'د.إ';
-                          break;
-                        case 'EGP':
-                        default:
-                          displayCurrencySymbol = 'جم';
-                          break;
-                      }
-                    } else {
-                      // English currency symbols
-                      switch (currency) {
-                        case 'USD':
-                          displayCurrencySymbol = '$';
-                          break;
-                        case 'SAR':
-                          displayCurrencySymbol = 'S.R';
-                          break;
-                        case 'AED':
-                          displayCurrencySymbol = 'د.إ';
-                          break;
-                        case 'EGP':
-                        default:
-                          displayCurrencySymbol = 'L.E';
-                          break;
-                      }
-                    }
-                    formattedPrice = `${displayCurrencySymbol} ${selectedPrice.amount}`;
+                    // Use the CurrencyContext formatPrice function for consistent formatting
+                    formattedPrice = formatPrice(selectedPrice.amount);
                   }
                 } else {
                   formattedPrice = i18n.language === 'ar' ? 'السعر غير متوفر' : 'Price not available';

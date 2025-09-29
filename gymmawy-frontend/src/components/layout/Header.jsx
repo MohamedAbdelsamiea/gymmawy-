@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Menu, X, Globe, User, LogOut, ShoppingBag, Gift, Home, ShoppingCart } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import languageEventService from "../../services/languageEventService";
 import { useCart } from "../../contexts/CartContext";
 import logo from "/assets/common/logo.webp"; // import your logo directly
 
@@ -100,6 +101,12 @@ element.scrollIntoView({ behavior: "smooth" });
 
   const toggleLanguage = () => {
     const newLang = i18n.language === "en" ? "ar" : "en";
+    console.log('Header: Language toggle clicked, changing to:', newLang);
+    
+    // Notify the language event service immediately
+    languageEventService.notifyLanguageChange(newLang);
+    
+    // Change the language in i18n
     i18n.changeLanguage(newLang);
   };
 

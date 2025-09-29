@@ -9,14 +9,18 @@ class ApiClient {
     this.failedQueue = [];
   }
 
-  // Get authorization headers
-  getAuthHeaders(customHeaders = {}, isFormData = false) {
-    const token = localStorage.getItem('accessToken');
-    console.log('API Client - Token from localStorage:', token);
-    const headers = {
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-      ...customHeaders,
-    };
+      // Get authorization headers
+      getAuthHeaders(customHeaders = {}, isFormData = false) {
+        const token = localStorage.getItem('accessToken');
+        const userCurrencyPreference = localStorage.getItem('userCurrencyPreference');
+        console.log('API Client - Token from localStorage:', token);
+        console.log('API Client - User currency preference:', userCurrencyPreference);
+        
+        const headers = {
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+          ...(userCurrencyPreference && { 'X-User-Currency': userCurrencyPreference }),
+          ...customHeaders,
+        };
     
     // Only set Content-Type if not FormData and not already set
     if (!isFormData && !customHeaders['Content-Type'] && !customHeaders['content-type']) {

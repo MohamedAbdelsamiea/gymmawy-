@@ -1,32 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useToast } from '../contexts/ToastContext';
 import tabbyService from '../services/tabbyService';
 
 const PaymentCancel = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const { showInfo } = useToast();
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const paymentId = searchParams.get('payment_id');
+  const sessionId = searchParams.get('session_id');
 
   useEffect(() => {
-    if (paymentId) {
-      checkPaymentStatus();
+    // Prioritize payment_id as per Tabby requirements, fallback to session_id
+    const id = paymentId || sessionId;
+    if (id) {
+      checkPaymentStatus(id);
     } else {
       setLoading(false);
     }
-  }, [paymentId]);
+  }, [paymentId, sessionId]);
 
-  const checkPaymentStatus = async () => {
+  const checkPaymentStatus = async (id) => {
     try {
       setLoading(true);
       
       // Get payment status from Tabby
-      const result = await tabbyService.handlePaymentCancel(paymentId);
+      const result = await tabbyService.handlePaymentCancel(id);
       setPaymentStatus(result.payment);
+      
+      // Show cancellation message as per Tabby specification
+      showInfo(t('checkout.tabbyCancellation'));
       
     } catch (error) {
       console.error('Payment status check failed:', error);
@@ -36,8 +44,13 @@ const PaymentCancel = () => {
   };
 
   const handleRetryPayment = () => {
-    // Navigate back to checkout page
-    navigate(-2);
+    // Navigate back to checkout page with preserved state
+    navigate('/checkout', { 
+      state: { 
+        fromPaymentCancel: true,
+        preserveCart: true
+      } 
+    });
   };
 
   const handleContinueShopping = () => {
@@ -78,7 +91,10 @@ const PaymentCancel = () => {
           </h1>
           
           <p className="text-gray-600 mb-6">
-            You cancelled the payment process. No charges have been made to your account.
+            {i18n.language === 'ar' 
+              ? 'لقد ألغيت الدفعة. فضلاً حاول مجددًا أو اختر طريقة دفع أخرى.'
+              : 'You aborted the payment. Please retry or choose another payment method.'
+            }
           </p>
           
           {/* Payment Details (if available) */}

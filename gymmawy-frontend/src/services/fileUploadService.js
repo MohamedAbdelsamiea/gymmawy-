@@ -2,7 +2,7 @@ import apiClient from './apiClient';
 
 class FileUploadService {
   constructor() {
-    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
   }
 
   /**

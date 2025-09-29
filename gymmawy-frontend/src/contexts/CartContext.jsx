@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useAuth } from './AuthContext';
+import { useAuth, AuthContext } from './AuthContext';
 import storeService from '../services/storeService';
 
 const CartContext = createContext();
@@ -16,7 +16,10 @@ export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { isAuthenticated } = useAuth();
+  
+  // Get auth context safely
+  const authContext = useContext(AuthContext);
+  const isAuthenticated = authContext?.isAuthenticated || false;
 
   // Load cart when user is authenticated
   useEffect(() => {

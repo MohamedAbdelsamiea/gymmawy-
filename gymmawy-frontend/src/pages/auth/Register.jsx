@@ -103,7 +103,9 @@ const Register = () => {
         validation = validateEmail(value);
         break;
       case 'phone':
-        validation = validatePhone(value);
+        // Combine country code and phone number for validation
+        const fullPhoneNumber = formData.countryCode + value;
+        validation = validatePhone(fullPhoneNumber);
         break;
       case 'birthDate':
         validation = validateBirthDate(value);
@@ -188,8 +190,9 @@ const Register = () => {
       newErrors.email = t(`register.errors.${emailValidation.error}`);
     }
 
-    // Phone
-    const phoneValidation = validatePhone(formData.phone);
+    // Phone - combine country code and phone number for validation
+    const fullPhoneNumber = formData.countryCode + formData.phone;
+    const phoneValidation = validatePhone(fullPhoneNumber);
     if (!phoneValidation.isValid) {
       newErrors.phone = t(`register.errors.${phoneValidation.error}`);
     }

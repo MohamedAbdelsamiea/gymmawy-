@@ -6,21 +6,79 @@ class TabbyService {
   }
 
   /**
-   * Create a Tabby checkout session
+   * Perform background pre-scoring check via backend
+   * @param {Object} orderData - The order data
+   * @param {String} type - The order type
+   * @returns {Promise<Object>} - The pre-scoring response
+   */
+  async performBackgroundPrescoring(orderData, type) {
+    try {
+      console.log('🔍 PRESCORING - Starting background pre-scoring check via backend');
+      console.log('📦 Order Data:', JSON.stringify(orderData, null, 2));
+      console.log('📱 Buyer Phone:', orderData.buyer?.phone);
+      console.log('💰 Currency:', orderData.currency);
+      console.log('🌍 Shipping Country:', orderData.shipping_address?.country || 'No shipping address');
+      console.log('🏙️ Shipping City:', orderData.shipping_address?.city || 'No shipping address');
+      console.log('🔗 API Endpoint: /api/tabby/prescoring');
+      
+      const response = await apiClient.post('/api/tabby/prescoring', {
+        orderData,
+        type
+      });
+      
+      console.log('🔍 PRESCORING - Backend response received:');
+      console.log('📦 Response Data:', JSON.stringify(response, null, 2));
+      console.log('✅ Session Status:', response?.status);
+      console.log('🔧 Configuration:', response?.configuration);
+      console.log('❌ Rejection Reason:', response?.rejection_reason);
+      
+      return {
+        success: response?.success || true,
+        status: response?.status,
+        configuration: response?.configuration,
+        rejection_reason: response?.rejection_reason
+      };
+    } catch (error) {
+      console.error('❌ PRESCORING - Failed:', error);
+      console.log('📦 Error Response:', error.response?.data);
+      console.log('📦 Error Status:', error.response?.status);
+      console.log('📦 Error Message:', error.message);
+      
+      // Handle 400 errors as rejection rather than failure
+      if (error.response?.status === 400) {
+        console.log('❌ Tabby pre-scoring rejected with 400 error');
+        console.log('📦 Rejection Details:', error.response.data);
+        return {
+          success: false,
+          status: 'rejected',
+          rejection_reason: 'not_available',
+          error: error.message,
+          errorDetails: error.response.data
+        };
+      }
+      
+      // For other errors, still show Tabby but let actual checkout handle it
+      return {
+        success: true,
+        status: 'created',
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Create a Tabby checkout session (after pre-scoring approval)
    * @param {Object} checkoutData - The checkout session data
    * @returns {Promise<Object>} - The checkout session response
    */
   async createCheckoutSession(checkoutData) {
     try {
-      console.log('🔍 TabbyService - Making request to:', `${this.baseURL}/checkout`);
-      console.log('🔍 TabbyService - Request data:', checkoutData);
+      console.log('🔍 TabbyService - Creating checkout session:', checkoutData);
       
       const response = await apiClient.post(`${this.baseURL}/checkout`, checkoutData);
       
-      console.log('🔍 TabbyService - Response received:', response);
-      console.log('🔍 TabbyService - Response data:', response);
+      console.log('🔍 TabbyService - Checkout session response:', response);
       
-      // The API client returns the data directly, not wrapped in a 'data' property
       return response;
     } catch (error) {
       console.error('Tabby checkout creation failed:', error);
@@ -112,6 +170,8 @@ class TabbyService {
    * @returns {Object} - The formatted checkout data
    */
   createCheckoutData(orderData, orderType = 'product') {
+    const baseUrl = window.location.origin;
+    
     const baseData = {
       amount: orderData.amount,
       currency: orderData.currency || 'EGP',
@@ -127,15 +187,23 @@ class TabbyService {
           new Date(orderData.user.dateOfBirth).toISOString().split('T')[0] : 
           undefined
       },
-      shipping_address: {
-        line1: orderData.shippingAddress?.address || orderData.shippingAddress?.line1 || 'N/A',
-        line2: orderData.shippingAddress?.line2 || '',
-        city: orderData.shippingAddress?.city || 'Cairo',
-        state: orderData.shippingAddress?.state || '',
-        zip: orderData.shippingAddress?.postalCode || orderData.shippingAddress?.zip || '00000',
-        country: orderData.shippingAddress?.country || 'EG'
-      },
+      // Only include shipping_address if provided (for physical items)
+      ...(orderData.shippingAddress ? {
+        shipping_address: {
+          line1: orderData.shippingAddress.address || orderData.shippingAddress.line1 || 'N/A',
+          line2: orderData.shippingAddress.line2 || '',
+          city: orderData.shippingAddress.city || 'Cairo',
+          state: orderData.shippingAddress.state || '',
+          zip: orderData.shippingAddress.postalCode || orderData.shippingAddress.zip || '00000',
+          country: orderData.shippingAddress.country || 'EG'
+        }
+      } : {}),
       items: this.formatOrderItems(orderData.items || [orderData]),
+      merchant_urls: {
+        success: `${baseUrl}/payment/success`,
+        cancel: `${baseUrl}/payment/cancel`,
+        failure: `${baseUrl}/payment/failure`
+      },
       metadata: {
         orderType,
         ...orderData.metadata
@@ -238,6 +306,35 @@ class TabbyService {
         message: 'Payment was cancelled'
       };
     }
+  }
+
+  /**
+   * Get rejection message based on rejection reason
+   * @param {string} rejectionReason - The rejection reason from Tabby
+   * @param {string} language - The language ('ar' or 'en')
+   * @returns {Object} - The rejection message
+   */
+  getRejectionMessage(rejectionReason, language = 'en') {
+    const messages = {
+      'not_available': {
+        en: 'Sorry, Tabby is unable to approve this purchase. Please use an alternative payment method for your order.',
+        ar: 'نأسف، تابي غير قادرة على الموافقة على هذه العملية. الرجاء استخدام طريقة دفع أخرى.'
+      },
+      'order_amount_too_high': {
+        en: 'This purchase is above your current spending limit with Tabby, try a smaller cart or use another payment method',
+        ar: 'قيمة الطلب تفوق الحد الأقصى المسموح به حاليًا مع تابي. يُرجى تخفيض قيمة السلة أو استخدام وسيلة دفع أخرى.'
+      },
+      'order_amount_too_low': {
+        en: 'The purchase amount is below the minimum amount required to use Tabby, try adding more items or use another payment method',
+        ar: 'قيمة الطلب أقل من الحد الأدنى المطلوب لاستخدام خدمة تابي. يُرجى زيادة قيمة الطلب أو استخدام وسيلة دفع أخرى.'
+      }
+    };
+
+    const message = messages[rejectionReason] || messages['not_available'];
+    return {
+      message: message[language] || message.en,
+      reason: rejectionReason
+    };
   }
 
   /**
