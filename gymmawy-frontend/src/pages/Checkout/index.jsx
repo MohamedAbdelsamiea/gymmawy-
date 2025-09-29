@@ -1496,15 +1496,21 @@ return;
           mobileNumber: getPhoneForCurrency(finalPrice?.currency || 'EGP')
         },
         items: getOrderItemsForTabby(),
-        // Only include shipping address for physical items (cart and product orders)
-        ...(type === 'cart' || type === 'product' ? {
-          shippingAddress: {
-            address: shippingDetails?.shippingStreet || '',
-            city: shippingDetails?.shippingCity || getCityForCurrency(finalPrice?.currency || 'EGP'),
-            country: getCountryForCurrency(finalPrice?.currency || 'EGP'),
-            postalCode: shippingDetails?.shippingPostalCode || '00000'
-          }
-        } : {})
+        // Include shipping address for all orders (Tabby requires it)
+        // For physical items, use actual shipping details
+        // For digital items (programmes), use default values
+        shippingAddress: {
+          address: type === 'cart' || type === 'product' 
+            ? (shippingDetails?.shippingStreet || 'Digital Product Address')
+            : 'Digital Product Address',
+          city: type === 'cart' || type === 'product' 
+            ? (shippingDetails?.shippingCity || getCityForCurrency(finalPrice?.currency || 'EGP'))
+            : getCityForCurrency(finalPrice?.currency || 'EGP'),
+          country: getCountryForCurrency(finalPrice?.currency || 'EGP'),
+          postalCode: type === 'cart' || type === 'product' 
+            ? (shippingDetails?.shippingPostalCode || '00000')
+            : '00000'
+        }
       };
 
       // Create checkout data for Tabby
