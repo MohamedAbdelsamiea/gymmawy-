@@ -2337,38 +2337,40 @@ return;
                   <div className="space-y-4">
                     <h4 className="font-medium text-gray-900">{t('checkout.chooseInstallmentProvider')}</h4>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Always show Tabby option, but disable if there's a rejection message */}
-                      <label className={`flex items-center p-4 border rounded-lg ${
-                        tabbyRejectionMessage 
-                          ? 'border-red-200 bg-red-50 cursor-not-allowed opacity-60' 
-                          : 'border-gray-200 cursor-pointer hover:bg-gray-50'
-                      }`}>
-                        <input
-                          type="radio"
-                          name="paymentOption"
-                          value="tabby"
-                          checked={paymentOption === 'tabby'}
-                          onChange={(e) => setPaymentOption(e.target.value)}
-                          disabled={!tabbyAvailable}
-                          className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300 disabled:opacity-50"
-                        />
-                        <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
-                          <img src="/assets/common/payments/tabby.png" alt="Tabby" className={`h-8 w-auto object-contain ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                          <div className="flex flex-col">
-                            <span className={`text-sm font-medium ${
-                              tabbyRejectionMessage ? 'text-red-700' : 'text-gray-900'
-                            }`}>
-                              {t('checkout.tabby')}
-                            </span>
-                            <span className={`text-xs ${
-                              tabbyRejectionMessage ? 'text-red-600' : 'text-gray-500'
-                            }`}>
-                              {tabbyRejectionMessage || t('checkout.tabbyDescription')}
-                            </span>
+                    <div className={`grid ${detectedCurrency === 'SAR' || detectedCurrency === 'AED' ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                      {/* Only show Tabby option for SAR and AED currencies */}
+                      {(detectedCurrency === 'SAR' || detectedCurrency === 'AED') && (
+                        <label className={`flex items-center p-4 border rounded-lg ${
+                          tabbyRejectionMessage 
+                            ? 'border-red-200 bg-red-50 cursor-not-allowed opacity-60' 
+                            : 'border-gray-200 cursor-pointer hover:bg-gray-50'
+                        }`}>
+                          <input
+                            type="radio"
+                            name="paymentOption"
+                            value="tabby"
+                            checked={paymentOption === 'tabby'}
+                            onChange={(e) => setPaymentOption(e.target.value)}
+                            disabled={!tabbyAvailable}
+                            className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300 disabled:opacity-50"
+                          />
+                          <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
+                            <img src="/assets/common/payments/tabby.png" alt="Tabby" className={`h-8 w-auto object-contain ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                            <div className="flex flex-col">
+                              <span className={`text-sm font-medium ${
+                                tabbyRejectionMessage ? 'text-red-700' : 'text-gray-900'
+                              }`}>
+                                {t('checkout.tabby')}
+                              </span>
+                              <span className={`text-xs ${
+                                tabbyRejectionMessage ? 'text-red-600' : 'text-gray-500'
+                              }`}>
+                                {tabbyRejectionMessage || t('checkout.tabbyDescription')}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      </label>
+                        </label>
+                      )}
 
                       <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
                         <input

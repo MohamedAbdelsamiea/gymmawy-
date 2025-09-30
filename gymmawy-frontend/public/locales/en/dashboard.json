@@ -253,6 +253,8 @@
     "export": "Export",
     "actions": "Actions",
     "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
     "noData": "No data available",
     "view": "View",
     "edit": "Edit",

@@ -148,7 +148,7 @@ element.scrollIntoView({ behavior: "smooth" });
         {/* Left Navigation */}
         <nav className="hidden lg:flex items-center justify-end" style={{ width: 'calc(50% - 100px)' }}>
           <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-12' : 'space-x-12'}`}>
-            {navItems.slice(0, i18n.language === 'ar' ? 5 : 5).map((item) => (
+            {navItems.slice(0, i18n.language === 'ar' ? 6 : 5).map((item) => (
               <button
                 key={item.key}
                 onClick={() => handleNavigation(item)}
@@ -170,7 +170,7 @@ element.scrollIntoView({ behavior: "smooth" });
         {/* Right Navigation */}
         <nav className="hidden lg:flex items-center justify-start" style={{ width: 'calc(50% - 100px)' }}>
           <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-12' : 'space-x-12'}`}>
-            {navItems.slice(i18n.language === 'ar' ? 5 : 5, 8).map((item) => (
+            {navItems.slice(i18n.language === 'ar' ? 6 : 5, 8).map((item) => (
               <button
                 key={item.key}
                 onClick={() => handleNavigation(item)}

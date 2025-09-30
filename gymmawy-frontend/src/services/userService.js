@@ -57,6 +57,14 @@ class UserService {
       throw new Error(`Orders fetch error: ${error.message}`);
     }
   }
+
+  async getUserStats() {
+    try {
+      return await apiClient.get('/users/stats');
+    } catch (error) {
+      throw new Error(`User stats fetch error: ${error.message}`);
+    }
+  }
 }
 
 export default new UserService();

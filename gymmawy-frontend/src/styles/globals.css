@@ -1,6 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap');
 
+/* Alexandria Variable Font for Arabic Text */
+@font-face {
+  font-family: 'Alexandria';
+  src: url('/fonts/alexandria/Alexandria-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @import "slick-carousel/slick/slick.css"; 
 @import "slick-carousel/slick/slick-theme.css";
 
@@ -37,7 +46,31 @@
 
 /* Arabic Font Support */
 [dir="rtl"] {
-  font-family: 'Noto Sans Arabic', 'Cairo', 'Amiri', sans-serif;
+  font-family: 'Alexandria', 'Noto Sans Arabic', 'Cairo', 'Amiri', sans-serif;
+}
+
+/* Arabic Language Support */
+:lang(ar) {
+  font-family: 'Alexandria', 'Noto Sans Arabic', 'Cairo', 'Amiri', sans-serif;
+}
+
+/* Comprehensive Arabic Font Support - Catch All */
+[dir="rtl"] *, [lang="ar"] * {
+  font-family: 'Alexandria', 'Noto Sans Arabic', 'Cairo', 'Amiri', sans-serif !important;
+}
+
+/* Override for specific elements that should use English fonts in Arabic context */
+[dir="rtl"] .admin-dashboard,
+[dir="rtl"] .admin-dashboard *,
+[lang="ar"] .admin-dashboard,
+[lang="ar"] .admin-dashboard * {
+  font-family: 'Inter', 'Arial', system-ui, sans-serif !important;
+}
+
+/* Ensure buttons and interactive elements use Arabic font */
+[dir="rtl"] button, [dir="rtl"] input, [dir="rtl"] textarea, [dir="rtl"] select,
+[lang="ar"] button, [lang="ar"] input, [lang="ar"] textarea, [lang="ar"] select {
+  font-family: 'Alexandria', 'Noto Sans Arabic', 'Cairo', 'Amiri', sans-serif !important;
 }
 
 /* Admin Dashboard - Force LTR */
@@ -133,17 +166,41 @@ html {
     line-height: 1.6;
   }
   
+  /* Arabic font for RTL direction */
   html[dir="rtl"] {
-    font-family: 'Noto Sans Arabic', system-ui, sans-serif;
+    font-family: 'Alexandria', 'Noto Sans Arabic', system-ui, sans-serif;
+  }
+  
+  /* Arabic font for Arabic language */
+  html[lang="ar"] {
+    font-family: 'Alexandria', 'Noto Sans Arabic', system-ui, sans-serif;
   }
 
+  /* Headings - use Arabic font for RTL/Arabic */
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Inter', 'Arial Black', system-ui, sans-serif;
     line-height: 1.2;
   }
+  
+  /* Arabic headings */
+  [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4, [dir="rtl"] h5, [dir="rtl"] h6,
+  [lang="ar"] h1, [lang="ar"] h2, [lang="ar"] h3, [lang="ar"] h4, [lang="ar"] h5, [lang="ar"] h6 {
+    font-family: 'Alexandria', 'Noto Sans Arabic', system-ui, sans-serif;
+  }
+
+  /* Body text - use Arabic font for RTL/Arabic */
+  [dir="rtl"] p, [dir="rtl"] span, [dir="rtl"] div, [dir="rtl"] a, [dir="rtl"] li,
+  [lang="ar"] p, [lang="ar"] span, [lang="ar"] div, [lang="ar"] a, [lang="ar"] li {
+    font-family: 'Alexandria', 'Noto Sans Arabic', system-ui, sans-serif;
+  }
 
   .subtitle {
     font-family: 'Helvetica', 'Arial', system-ui, sans-serif;
+  }
+  
+  /* Arabic subtitles */
+  [dir="rtl"] .subtitle, [lang="ar"] .subtitle {
+    font-family: 'Alexandria', 'Noto Sans Arabic', system-ui, sans-serif;
   }
 }
 
@@ -161,9 +218,19 @@ html {
     font-family: 'Inter', 'Arial Black', system-ui, sans-serif;
   }
   
+  /* Arabic section titles */
+  [dir="rtl"] .section-title, [lang="ar"] .section-title {
+    font-family: 'Alexandria', 'Noto Sans Arabic', system-ui, sans-serif;
+  }
+  
   .section-subtitle {
     @apply text-base md:text-lg font-medium;
     font-family: 'Helvetica', 'Arial', system-ui, sans-serif;
+  }
+  
+  /* Arabic section subtitles */
+  [dir="rtl"] .section-subtitle, [lang="ar"] .section-subtitle {
+    font-family: 'Alexandria', 'Noto Sans Arabic', system-ui, sans-serif;
   }
   
   .card {
@@ -177,6 +244,11 @@ html {
   .body-text {
     font-family: 'Arial', system-ui, sans-serif;
     line-height: 1.6;
+  }
+  
+  /* Arabic body text */
+  [dir="rtl"] .body-text, [lang="ar"] .body-text {
+    font-family: 'Alexandria', 'Noto Sans Arabic', system-ui, sans-serif;
   }
 
   /* PNG Image Filters for Purple Brand Color */
@@ -302,14 +374,29 @@ html {
   font-weight: 700;
 }
 
+/* Arabic main titles */
+[dir="rtl"] .text-main-title, [lang="ar"] .text-main-title {
+  font-family: 'Alexandria', 'Noto Sans Arabic', system-ui, sans-serif;
+}
+
 .text-subtitle {
   font-family: 'Inter', 'Arial', system-ui, sans-serif;
   font-weight: 500;
 }
 
+/* Arabic subtitles */
+[dir="rtl"] .text-subtitle, [lang="ar"] .text-subtitle {
+  font-family: 'Alexandria', 'Noto Sans Arabic', system-ui, sans-serif;
+}
+
 .text-body {
   font-family: 'Arial', system-ui, sans-serif;
   font-weight: 400;
+}
+
+/* Arabic body text */
+[dir="rtl"] .text-body, [lang="ar"] .text-body {
+  font-family: 'Alexandria', 'Noto Sans Arabic', system-ui, sans-serif;
 }
 
 /* Image sizing utilities */

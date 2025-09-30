@@ -1,37 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calendar, Clock, Gift, TrendingUp, Package, CreditCard, Award, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { StatCard, StatusBadge } from '../../../components/dashboard';
+import { Calendar, Package } from 'lucide-react';
+import { StatusBadge } from '../../../components/dashboard';
 import { useAuth } from '../../../contexts/AuthContext';
-import userService from '../../../services/userService';
+import programmeService from '../../../services/programmeService';
 import subscriptionService from '../../../services/subscriptionService';
 import orderService from '../../../services/orderService';
-import loyaltyService from '../../../services/loyaltyService';
 
 const UserOverview = () => {
   const { t } = useTranslation("dashboard");
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [userStats, setUserStats] = useState({
-    subscription: {
-      plan: 'No Active Plan',
-      status: 'Inactive',
-      expiryDate: null,
-      autoRenew: false
-    },
-    loyaltyPoints: 0,
-    totalOrders: 0,
-    totalSpent: '$0.00'
-  });
-  const [recentActivity, setRecentActivity] = useState([]);
-  const [upcomingEvents, setUpcomingEvents] = useState([]);
-  const [loyaltyTransactions, setLoyaltyTransactions] = useState([]);
-  const [loyaltyStats, setLoyaltyStats] = useState({
-    totalEarned: 0,
-    totalRedeemed: 0,
-    currentBalance: 0
-  });
+  const [programmes, setProgrammes] = useState([]);
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [orders, setOrders] = useState([]);
 
   useEffect(() => {
     if (user) {
@@ -45,78 +28,49 @@ const UserOverview = () => {
       setError(null);
 
       // Load data in parallel
-      const [userStatsResponse, subscriptions, orders, loyaltyTransactionsResponse, loyaltyStatsResponse] = await Promise.allSettled([
-        userService.getUserStats(),
+      const [programmesResponse, subscriptionsResponse, ordersResponse] = await Promise.allSettled([
+        programmeService.getUserProgrammes(),
         subscriptionService.getUserSubscriptions(),
-        orderService.getOrders(),
-        loyaltyService.getRecentTransactions(),
-        loyaltyService.getStats()
+        orderService.getOrders()
       ]);
 
-      // Process user stats
-      let stats = {
-        loyaltyPoints: 0,
-        totalOrders: 0,
-        totalSpent: '$0.00',
-        workoutsThisMonth: 0
-      };
-
-      if (userStatsResponse.status === 'fulfilled' && userStatsResponse.value?.stats) {
-        const userStatsData = userStatsResponse.value.stats;
-        stats = {
-          loyaltyPoints: userStatsData.loyaltyPoints || 0,
-          totalOrders: userStatsData.orders?.total || 0,
-          totalSpent: `$${(userStatsData.spending?.total || 0).toFixed(2)}`,
-          workoutsThisMonth: userStatsData.workoutsThisMonth || 0
-        };
+      // Process programmes
+      console.log('📦 Programmes Response:', programmesResponse);
+      if (programmesResponse.status === 'fulfilled') {
+        // Handle direct array response
+        if (Array.isArray(programmesResponse.value)) {
+          console.log('✅ Programmes data (direct array):', programmesResponse.value);
+          console.log('📋 First programme details:', programmesResponse.value[0]);
+          setProgrammes(programmesResponse.value);
+        } else if (programmesResponse.value?.items) {
+          console.log('✅ Programmes data:', programmesResponse.value.items);
+          console.log('📋 First programme details:', programmesResponse.value.items[0]);
+          setProgrammes(programmesResponse.value.items);
+        } else if (programmesResponse.value?.programmes) {
+          console.log('✅ Programmes data (alt structure):', programmesResponse.value.programmes);
+          console.log('📋 First programme details:', programmesResponse.value.programmes[0]);
+          setProgrammes(programmesResponse.value.programmes);
+        }
       }
 
       // Process subscriptions
-      let activeSubscription = null;
-      if (subscriptions.status === 'fulfilled' && subscriptions.value?.data?.length > 0) {
-        activeSubscription = subscriptions.value.data.find(sub => sub.status === 'active');
+      console.log('📅 Subscriptions Response:', subscriptionsResponse);
+      if (subscriptionsResponse.status === 'fulfilled' && subscriptionsResponse.value?.items) {
+        console.log('✅ Subscriptions data:', subscriptionsResponse.value.items);
+        setSubscriptions(subscriptionsResponse.value.items);
+      } else if (subscriptionsResponse.status === 'fulfilled' && subscriptionsResponse.value?.subscriptions) {
+        console.log('✅ Subscriptions data (alt structure):', subscriptionsResponse.value.subscriptions);
+        setSubscriptions(subscriptionsResponse.value.subscriptions);
       }
 
-      // Process orders for recent activity
-      let recentActivities = [];
-      if (orders.status === 'fulfilled' && orders.value?.data) {
-        recentActivities = orders.value.data.slice(0, 4).map((order, index) => ({
-          id: index + 1,
-          action: t('user.overview.orderPlaced'),
-          description: `Order #${order.id} - ${order.status}`,
-          time: formatTimeAgo(order.createdAt),
-          type: 'order'
-        }));
-      }
-
-      setUserStats({
-        subscription: activeSubscription ? {
-          plan: activeSubscription.plan?.name || 'Unknown Plan',
-          status: activeSubscription.status || 'Inactive',
-          expiryDate: activeSubscription.endDate,
-          autoRenew: activeSubscription.autoRenew || false
-        } : {
-          plan: 'No Active Plan',
-          status: 'Inactive',
-          expiryDate: null,
-          autoRenew: false
-        },
-        ...stats
-      });
-
-      setRecentActivity(recentActivities);
-
-      // Process loyalty transactions
-      if (loyaltyTransactionsResponse.status === 'fulfilled' && loyaltyTransactionsResponse.value.success) {
-        const formattedTransactions = loyaltyTransactionsResponse.value.transactions.map(transaction => 
-          loyaltyService.formatTransaction(transaction)
-        );
-        setLoyaltyTransactions(formattedTransactions);
-      }
-
-      // Process loyalty stats
-      if (loyaltyStatsResponse.status === 'fulfilled' && loyaltyStatsResponse.value.success) {
-        setLoyaltyStats(loyaltyStatsResponse.value.stats);
+      // Process orders
+      console.log('🛒 Orders Response:', ordersResponse);
+      if (ordersResponse.status === 'fulfilled' && ordersResponse.value?.items) {
+        console.log('✅ Orders data:', ordersResponse.value.items);
+        setOrders(ordersResponse.value.items);
+      } else if (ordersResponse.status === 'fulfilled' && ordersResponse.value?.orders) {
+        console.log('✅ Orders data (alt structure):', ordersResponse.value.orders);
+        setOrders(ordersResponse.value.orders);
       }
 
     } catch (err) {
@@ -185,195 +139,173 @@ const UserOverview = () => {
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title={t('user.overview.loyaltyPoints')}
-          value={userStats.loyaltyPoints.toLocaleString()}
-          icon={Gift}
-          color="purple"
-        />
-        <StatCard
-          title={t('user.overview.totalOrders')}
-          value={userStats.totalOrders}
-          icon={Package}
-          color="blue"
-        />
-        <StatCard
-          title={t('user.overview.totalSpent')}
-          value={userStats.totalSpent}
-          icon={CreditCard}
-          color="green"
-        />
-        <StatCard
-          title={t('user.overview.workoutsThisMonth')}
-          value={userStats.workoutsThisMonth}
-          change="+15%"
-          changeType="positive"
-          icon={TrendingUp}
-          color="orange"
-        />
-      </div>
-
-      {/* Subscription Status */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('user.overview.subscriptionStatus')}</h3>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-gymmawy-primary bg-opacity-10 rounded-lg">
-              <Package className="h-6 w-6 text-gymmawy-primary" />
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-900">{userStats.subscription.plan}</h4>
-              <p className="text-sm text-gray-600">
-                {userStats.subscription.expiryDate 
-                  ? `${t('user.overview.expiresOn')} ${new Date(userStats.subscription.expiryDate).toLocaleDateString()}`
-                  : t('user.overview.noActiveSubscription')
-                }
-              </p>
-            </div>
-          </div>
-          <div className="text-right">
-            <StatusBadge status={userStats.subscription.status} />
-            <p className="text-sm text-gray-600 mt-1">
-              {userStats.subscription.autoRenew ? t('user.overview.autoRenewalEnabled') : t('user.overview.autoRenewalDisabled')}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activity */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('user.overview.recentActivity')}</h3>
-          <div className="space-y-4">
-            {recentActivity.length > 0 ? (
-              recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start space-x-3">
-                  <div className={`w-2 h-2 rounded-full mt-2 ${
-                    activity.type === 'workout' ? 'bg-green-500' :
-                    activity.type === 'order' ? 'bg-blue-500' :
-                    activity.type === 'loyalty' ? 'bg-purple-500' :
-                    'bg-orange-500'
-                  }`}></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                    <p className="text-sm text-gray-600">{activity.description}</p>
-                    <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500 text-sm">{t('user.overview.noRecentActivity')}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Upcoming Events */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('user.overview.upcomingEvents')}</h3>
-          <div className="space-y-4">
-            {upcomingEvents.length > 0 ? (
-              upcomingEvents.map((event) => (
-                <div key={event.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="p-2 bg-gymmawy-primary bg-opacity-10 rounded-lg">
-                    <Calendar className="h-4 w-4 text-gymmawy-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{event.title}</p>
-                    <div className="flex items-center text-xs text-gray-600 mt-1">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {event.date} at {event.time}
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <div className="p-3 bg-gymmawy-primary bg-opacity-10 rounded-lg w-fit mx-auto mb-3">
-                  <Calendar className="h-6 w-6 text-gymmawy-primary" />
-                </div>
-                <p className="text-gray-500 text-sm">{t('user.overview.noUpcomingEvents')}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Loyalty Activity */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Loyalty Activity</h3>
-          <button 
-            onClick={() => window.location.href = '/dashboard/loyalty-history'}
-            className="text-sm text-gymmawy-primary hover:text-gymmawy-primary-dark font-medium flex items-center"
-          >
-            View Full History
-            <ArrowUpRight className="h-4 w-4 ml-1" />
-          </button>
+      {/* Purchase History Table */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Purchase History</h3>
         </div>
         
-        <div className="space-y-3">
-          {loyaltyTransactions.length > 0 ? (
-            loyaltyTransactions.slice(0, 5).map((transaction) => (
-              <div key={transaction.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
-                <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-lg ${loyaltyService.getTransactionColorClass(transaction)}`}>
-                    {transaction.isEarned ? (
-                      <ArrowUpRight className="h-4 w-4" />
-                    ) : (
-                      <ArrowDownRight className="h-4 w-4" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {transaction.action} {Math.abs(transaction.points)} points
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      {transaction.sourceDisplay} • {transaction.reason || 'No reason provided'}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className={`text-sm font-semibold ${transaction.isEarned ? 'text-green-600' : 'text-red-600'}`}>
-                    {transaction.pointsDisplay}
-                  </p>
-                  <p className="text-xs text-gray-500">{transaction.formattedDate}</p>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-8">
-              <div className="p-3 bg-gymmawy-primary bg-opacity-10 rounded-lg w-fit mx-auto mb-3">
-                <Award className="h-6 w-6 text-gymmawy-primary" />
-              </div>
-              <p className="text-gray-500 text-sm">No loyalty activity yet</p>
-              <p className="text-xs text-gray-400 mt-1">Start earning points by making purchases or referring friends!</p>
-            </div>
-          )}
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Order Number
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Item
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Purchase Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Start Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  End Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Amount
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {/* Programmes Rows */}
+              {programmes.map((programme) => (
+                <tr key={programme.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm font-mono text-gray-900">
+                      {programme.purchaseNumber || programme.id?.slice(0, 8)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center">
+                      <div className="h-12 w-12 rounded-lg overflow-hidden mr-3 flex-shrink-0 bg-gray-100">
+                        {programme.programme?.imageUrl ? (
+                          <img 
+                            src={programme.programme.imageUrl} 
+                            alt={typeof programme.programme?.name === 'object' 
+                              ? (programme.programme.name.en || programme.programme.name.ar) 
+                              : programme.programme?.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center">
+                            <Package className="h-6 w-6 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-900 font-medium">
+                          {typeof programme.programme?.name === 'object' 
+                            ? (programme.programme.name.en || programme.programme.name.ar) 
+                            : programme.programme?.name || 'Programme'}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {new Date(programme.purchasedAt || programme.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    -
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {programme.expiresAt ? new Date(programme.expiresAt).toLocaleDateString() : 'Lifetime'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                    {programme.price || programme.amount} {programme.currency}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <StatusBadge status={programme.status || 'active'} />
+                  </td>
+                </tr>
+              ))}
+
+              {/* Subscriptions Rows */}
+              {subscriptions.map((subscription) => (
+                <tr key={subscription.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm font-mono text-gray-900">
+                      {subscription.subscriptionNumber || subscription.orderNumber || subscription.id?.slice(0, 8)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-900 font-medium">
+                      {subscription.plan?.name || 'Subscription Plan'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {new Date(subscription.createdAt || subscription.startDate).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {new Date(subscription.startDate).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {new Date(subscription.endDate).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                    {subscription.amount} {subscription.currency}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <StatusBadge status={subscription.status || 'active'} />
+                  </td>
+                </tr>
+              ))}
+
+              {/* Orders Rows */}
+              {orders.map((order) => (
+                <tr key={order.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm font-mono text-gray-900">
+                      {order.orderNumber || order.id?.slice(0, 8)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-900 font-medium">
+                      Order #{order.orderNumber || order.id?.slice(0, 8)}
+                    </div>
+                    <div className="text-xs text-gray-500">{order.items?.length || 0} item(s)</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {new Date(order.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    -
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                    {order.totalAmount || order.amount} {order.currency}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <StatusBadge status={order.status || 'processing'} />
+                  </td>
+                </tr>
+              ))}
+
+              {/* Empty State */}
+              {programmes.length === 0 && subscriptions.length === 0 && orders.length === 0 && (
+                <tr>
+                  <td colSpan="7" className="px-6 py-12 text-center">
+                    <div className="text-gray-500">
+                      <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p className="text-sm">No purchase history yet</p>
+                      <p className="text-xs mt-1">Your purchases will appear here</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('user.overview.quickActions')}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="flex items-center justify-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <Package className="h-5 w-5 mr-2 text-gymmawy-primary" />
-            <span className="font-medium">{t('user.overview.startWorkout')}</span>
-          </button>
-          <button className="flex items-center justify-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <Gift className="h-5 w-5 mr-2 text-gymmawy-primary" />
-            <span className="font-medium">{t('user.overview.redeemPoints')}</span>
-          </button>
-          <button className="flex items-center justify-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <CreditCard className="h-5 w-5 mr-2 text-gymmawy-primary" />
-            <span className="font-medium">{t('user.overview.shopNow')}</span>
-          </button>
-        </div>
-      </div>
+
     </div>
   );
 };

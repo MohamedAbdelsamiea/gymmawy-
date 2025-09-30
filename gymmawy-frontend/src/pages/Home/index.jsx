@@ -274,7 +274,6 @@ return '';
 
   // Partners section assets
   const partnerEvolve = useAsset("home/partners/evolve.webp", "common");
-  const partnerCalo = useAsset("home/partners/calo.webp", "common");
 
   useEffect(() => {
     setIsVisible(true);
@@ -458,7 +457,7 @@ return '';
             </div>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-2 md:gap-4">
             {[
               {
                 background: dietCard,
@@ -478,19 +477,17 @@ return '';
             ].map((feature, index) => (
               <div
                 key={index}
-                className="relative rounded-2xl bg-contain bg-no-repeat bg-center overflow-hidden p-10 text-[#ebebeb] transition-all duration-700 ease-out flex flex-col justify-end items-start"
+                className="relative rounded-2xl bg-contain bg-no-repeat bg-center overflow-hidden px-8 py-6 md:p-10 text-[#ebebeb] transition-all duration-700 ease-out flex flex-col justify-end items-start w-full max-w-sm md:w-[380px] md:max-w-none h-[500px] md:h-[620px]"
                 style={{
                   backgroundImage: `url(${feature.background})`,
-                  height: "620px", // fixed height for all cards
-                  width: "380px", // fixed width for all cards
                 }}
               >
                 {/* Bottom Third Text */}
-                <div className="text-left mb-16">
-                  <h3 className="text-2xl font-bold mb-2 text-main-title">
+                <div className="text-left mb-8 md:mb-16">
+                  <h3 className="text-2xl md:text-2xl font-bold mb-3 text-main-title">
                     {feature.title}
                   </h3>
-                  <p className="text-base leading-snug text-body">
+                  <p className="text-base md:text-base leading-relaxed text-body">
                     {feature.description}
                   </p>
                 </div>
@@ -978,18 +975,11 @@ return '';
             </div>
 
             {/* Logos */}
-            <div className="flex justify-center lg:justify-end space-x-8">
+            <div className="flex justify-center lg:justify-end">
               <div className="w-28 h-14">
                 <img
                   src={partnerEvolve}
                   alt="EVOLVZ"
-                  className="w-full h-full object-contain brightness-0 invert opacity-90"
-                />
-              </div>
-              <div className="w-28 h-14">
-                <img
-                  src={partnerCalo}
-                  alt="CALO"
                   className="w-full h-full object-contain brightness-0 invert opacity-90"
                 />
               </div>
@@ -999,7 +989,7 @@ return '';
       </section>
 
       {/* FAQ Section */}
-      <section className="py-16 md:py-20 bg-[#ebebeb]">
+      <section className="pt-16 pb-8 md:py-20 bg-[#ebebeb]">
         <div className="container mx-auto px-8 md:px-12 lg:px-20">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-8 items-start">
             {/* Left Title */}
