@@ -9,8 +9,177 @@ import tabbyService from './tabbyService.js';
 const prisma = getPrismaClient();
 
 /**
+ * Register webhook with Tabby on server startup
+ * This ensures we receive payment status updates
+ */
+async function registerWebhook() {
+  try {
+    console.log('[TABBY_WEBHOOK] Registering webhook with Tabby...');
+    
+    // Use existing BASE_URL from .env which points to the backend API
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000/api';
+    const webhookUrl = `${baseUrl}/tabby/webhook`;
+    
+    // Check if webhook already exists
+    try {
+      const existingWebhooks = await tabbyService.getWebhooks();
+      
+      // Check if our webhook URL is already registered
+      const webhookExists = existingWebhooks.some(webhook => 
+        webhook.url === webhookUrl
+      );
+      
+      if (webhookExists) {
+        console.log('[TABBY_WEBHOOK] Webhook already registered:', webhookUrl);
+        return;
+      }
+    } catch (error) {
+      console.log('[TABBY_WEBHOOK] Could not check existing webhooks:', error.message);
+      // Continue to try registering anyway
+    }
+    
+    // Register new webhook
+    const webhookData = {
+      url: webhookUrl,
+      is_test: process.env.NODE_ENV !== 'production',
+      events: [
+        'payment.authorized',
+        'payment.closed',
+        'payment.rejected',
+        'payment.updated'
+      ]
+    };
+    
+    const webhook = await tabbyService.createWebhook(webhookData);
+    console.log('[TABBY_WEBHOOK] Webhook registered successfully:', webhook.id);
+    console.log('[TABBY_WEBHOOK] Webhook URL:', webhookUrl);
+    
+  } catch (error) {
+    // Don't fail server startup if webhook registration fails
+    // The cron job will handle payment verification as fallback
+    console.error('[TABBY_WEBHOOK] Failed to register webhook:', error.message);
+    console.log('[TABBY_WEBHOOK] Cron job will handle payment verification as fallback');
+  }
+}
+
+/**
+ * Process PENDING payments and check their status with Tabby
+ * This catches payments that were authorized but we missed the redirect/webhook
+ */
+async function checkPendingPayments() {
+  try {
+    console.log('[TABBY_CRON] Checking PENDING payments...');
+    
+    // Find payments that are still PENDING/CREATED (older than 2 minutes)
+    const twoMinutesAgo = new Date();
+    twoMinutesAgo.setMinutes(twoMinutesAgo.getMinutes() - 2);
+    
+    const thirtyMinutesAgo = new Date();
+    thirtyMinutesAgo.setMinutes(thirtyMinutesAgo.getMinutes() - 30);
+    
+    const pendingPayments = await prisma.payment.findMany({
+      where: {
+        method: 'TABBY',
+        status: 'PENDING',
+        createdAt: {
+          gte: thirtyMinutesAgo, // Don't check payments older than 30 mins (they're expired)
+          lte: twoMinutesAgo // Only check payments older than 2 mins
+        }
+      },
+      orderBy: {
+        createdAt: 'asc'
+      },
+      take: 20 // Process max 20 at a time
+    });
+
+    console.log(`[TABBY_CRON] Found ${pendingPayments.length} PENDING payments to check`);
+
+    for (const payment of pendingPayments) {
+      try {
+        console.log(`[TABBY_CRON] Checking status for payment ${payment.transactionId}...`);
+        
+        // Retrieve payment status from Tabby
+        const tabbyPayment = await tabbyService.getPayment(payment.transactionId);
+        
+        console.log(`[TABBY_CRON] Payment ${payment.transactionId} status: ${tabbyPayment.status}`);
+        
+        if (tabbyPayment.status === 'AUTHORIZED') {
+          // Payment was authorized! Update our database
+          console.log(`[TABBY_CRON] Payment ${payment.transactionId} is AUTHORIZED (missed redirect/webhook)`);
+          
+          await prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+              status: 'SUCCESS',
+              processedAt: new Date(),
+              metadata: {
+                ...payment.metadata,
+                tabby_status: 'AUTHORIZED',
+                authorized_at: new Date().toISOString(),
+                found_by_cron: true
+              }
+            }
+          });
+          
+          // Try to capture it
+          try {
+            const captureResult = await tabbyService.capturePayment(payment.transactionId, {
+              amount: payment.amount.toString(), // Convert Decimal to string as required by Tabby API
+              reference_id: `cron-capture-${payment.paymentReference}`
+            });
+            
+            await prisma.payment.update({
+              where: { id: payment.id },
+              data: {
+                metadata: {
+                  ...payment.metadata,
+                  tabby_status: 'CLOSED',
+                  captured_at: new Date().toISOString(),
+                  capture_id: captureResult.id,
+                  cron_captured: true
+                }
+              }
+            });
+            
+            console.log(`[TABBY_CRON] Successfully captured payment ${payment.transactionId}`);
+          } catch (error) {
+            console.error(`[TABBY_CRON] Failed to capture payment ${payment.transactionId}:`, error.message);
+          }
+          
+        } else if (tabbyPayment.status === 'REJECTED' || tabbyPayment.status === 'EXPIRED') {
+          // Payment failed or expired
+          console.log(`[TABBY_CRON] Payment ${payment.transactionId} is ${tabbyPayment.status}`);
+          
+          await prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+              status: 'FAILED',
+              metadata: {
+                ...payment.metadata,
+                tabby_status: tabbyPayment.status,
+                final_status_at: new Date().toISOString(),
+                found_by_cron: true
+              }
+            }
+          });
+        }
+        // else: still in CREATED/NEW status, check again next time
+        
+      } catch (error) {
+        console.error(`[TABBY_CRON] Error checking payment ${payment.transactionId}:`, error.message);
+      }
+    }
+    
+    console.log('[TABBY_CRON] Finished checking PENDING payments');
+    
+  } catch (error) {
+    console.error('[TABBY_CRON] Error in checkPendingPayments:', error);
+  }
+}
+
+/**
  * Process AUTHORIZED payments that need to be captured
- * This handles cases where webhooks might have failed
+ * This handles cases where capture might have failed
  */
 async function processAuthorizedPayments() {
   try {
@@ -53,7 +222,7 @@ async function processAuthorizedPayments() {
           console.log(`[TABBY_CRON] Capturing payment ${payment.transactionId}...`);
           
           const captureResult = await tabbyService.capturePayment(payment.transactionId, {
-            amount: payment.amount,
+            amount: payment.amount.toString(), // Convert Decimal to string as required by Tabby API
             reference_id: `cron-capture-${payment.paymentReference}`
           });
           
@@ -190,16 +359,32 @@ export function initializeTabbyCronService() {
     console.log('[TABBY_CRON] Initializing Tabby cron service...');
   }
   
+  // Register webhook with Tabby
+  // Do this first to ensure we receive webhook notifications ASAP
+  registerWebhook().catch(console.error);
+  
   // Run initial processing
+  checkPendingPayments().catch(console.error);
   processAuthorizedPayments().catch(console.error);
   
-  // Schedule every 15 minutes to process AUTHORIZED payments
+  // Schedule every 5 minutes to check PENDING payments (for missed redirects/webhooks)
+  // Tabby recommends checking every couple of minutes
+  cron.schedule('*/5 * * * *', async () => {
+    console.log('[TABBY_CRON] Running scheduled PENDING payment check...');
+    try {
+      await checkPendingPayments();
+    } catch (error) {
+      console.error('[TABBY_CRON] PENDING payment check failed:', error);
+    }
+  });
+  
+  // Schedule every 15 minutes to process AUTHORIZED payments (for capture)
   cron.schedule('*/15 * * * *', async () => {
     console.log('[TABBY_CRON] Running scheduled AUTHORIZED payment processing...');
     try {
       await processAuthorizedPayments();
     } catch (error) {
-      console.error('[TABBY_CRON] Scheduled processing failed:', error);
+      console.error('[TABBY_CRON] AUTHORIZED payment processing failed:', error);
     }
   });
   
@@ -214,7 +399,10 @@ export function initializeTabbyCronService() {
   });
   
   if (process.env.NODE_ENV === 'development') {
-    console.log('[TABBY_CRON] Tabby cron service initialized');
+    console.log('[TABBY_CRON] Tabby cron service initialized:');
+    console.log('[TABBY_CRON] - PENDING payment check: every 5 minutes');
+    console.log('[TABBY_CRON] - AUTHORIZED payment capture: every 15 minutes');
+    console.log('[TABBY_CRON] - Daily cleanup: 2 AM');
   }
 }
 

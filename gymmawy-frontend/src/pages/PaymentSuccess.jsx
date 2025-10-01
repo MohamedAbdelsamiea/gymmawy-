@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import tabbyService from '../services/tabbyService';
 import { useAuth } from '../contexts/AuthContext';
+import apiClient from '../services/apiClient';
 
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
@@ -38,15 +39,8 @@ const PaymentSuccess = () => {
       if (id.startsWith('temp-')) {
         console.log('🔍 Detected temporary ID, searching for actual payment record...');
         // Search for the most recent payment record for this user
-        const response = await fetch('/payments/recent', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
+        try {
+          const data = await apiClient.get('/payments/recent');
           if (data.payments && data.payments.length > 0) {
             // Find the most recent Tabby payment
             const recentTabbyPayment = data.payments.find(p => p.method === 'TABBY');
@@ -55,6 +49,8 @@ const PaymentSuccess = () => {
               console.log('🔍 Found actual session ID:', actualId);
             }
           }
+        } catch (error) {
+          console.error('Failed to fetch recent payments:', error);
         }
       }
       

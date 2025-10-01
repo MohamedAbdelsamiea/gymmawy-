@@ -2,10 +2,12 @@ import { z } from 'zod';
 import tabbyService from '../../services/tabbyService.js';
 import { getPrismaClient } from '../../config/db.js';
 import { parseOrThrow } from '../../utils/validation.js';
+import { getFrontendUrl } from '../../utils/urls.js';
 import * as paymentService from './payment.service.js';
 import * as subscriptionService from '../subscriptions/subscription.service.js';
 import * as programmeService from '../programmes/programme.service.js';
 import { TABBY_TEST_CREDENTIALS, TABBY_TEST_SCENARIOS } from '../../config/tabbyTesting.js';
+import { buildTabbyHistory } from './tabbyHistoryService.js';
 
 const prisma = getPrismaClient();
 
@@ -191,20 +193,17 @@ export async function createTabbyCheckout(req, res, next) {
       });
     }
 
+    // Build buyer_history and order_history from actual user data
+    console.log('🔍 Building buyer and order history for Tabby...');
+    const { buyer_history, order_history } = await buildTabbyHistory(userId);
+
     // Create order data for Tabby
     const orderData = {
       amount: checkoutData.amount,
       currency: currency, // Dynamic currency support
       description: checkoutData.description || 'Payment for order',
       buyer,
-      buyer_history: {
-        registered_since: user.createdAt?.toISOString() || new Date().toISOString(),
-        loyalty_level: user.loyaltyPoints || 0,
-        wishlist_count: 0,
-        is_social_networks_connected: false,
-        is_phone_number_verified: true,
-        is_email_verified: true
-      },
+      buyer_history, // Real buyer history from database
       order: {
         reference_id: checkoutData.paymentableId,
         tax_amount: '0.00',
@@ -213,7 +212,7 @@ export async function createTabbyCheckout(req, res, next) {
         updated_at: new Date().toISOString(),
         items: checkoutData.items
       },
-      order_history: [],
+      order_history, // Real order history from database
       // Only include shipping_address if provided (for physical items)
       ...(checkoutData.shipping_address ? {
         shipping_address: {
@@ -253,7 +252,7 @@ export async function createTabbyCheckout(req, res, next) {
     console.log('💵 Amount:', payment.amount);
 
     // Create merchant URLs with a temporary ID - we'll update them after getting the real session ID
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const baseUrl = getFrontendUrl();
     const tempId = `temp-${Date.now()}`;
     const merchant_urls = tabbyService.createMerchantUrls(baseUrl, tempId);
 
@@ -307,9 +306,10 @@ export async function createTabbyCheckout(req, res, next) {
         console.log('✅ Tabby background pre-scoring passed - payment method available');
       }
 
-      // Now create merchant URLs with the actual session ID
-      updatedMerchantUrls = tabbyService.createMerchantUrls(baseUrl, checkoutSession.id);
-      console.log('🔍 Updated merchant URLs with session ID:', updatedMerchantUrls);
+      // Now create merchant URLs with the actual payment ID (not session ID)
+      // Tabby redirects with payment_id, so we must use checkoutSession.payment.id
+      updatedMerchantUrls = tabbyService.createMerchantUrls(baseUrl, checkoutSession.payment.id);
+      console.log('🔍 Updated merchant URLs with payment ID:', updatedMerchantUrls);
     } catch (error) {
       console.error('🔍 Backend - Tabby API completely unavailable:', error.message);
       
@@ -506,7 +506,7 @@ async function handlePaymentAuthorized(webhookData) {
     try {
       console.log(`Auto-capturing payment ${paymentId}...`);
       const captureResult = await tabbyService.capturePayment(paymentId, {
-        amount: payment.amount,
+        amount: payment.amount.toString(), // Convert Decimal to string as required by Tabby API
         reference_id: `auto-capture-${payment.paymentReference}`
       });
       
@@ -569,7 +569,7 @@ export async function manualCapturePayment(req, res, next) {
 
     // Attempt to capture the payment
     const captureResult = await tabbyService.capturePayment(paymentId, {
-      amount: payment.amount,
+      amount: payment.amount.toString(), // Convert Decimal to string as required by Tabby API
       reference_id: `manual-capture-${payment.paymentReference}`
     });
 
@@ -608,27 +608,41 @@ export async function getTabbyPaymentStatus(req, res, next) {
     const userId = req.user.id;
 
     // Find the payment in our database
+    // Search by either payment ID (transactionId) OR session ID (in metadata)
     const payment = await prisma.payment.findFirst({
       where: {
-        transactionId: paymentId,
-        userId: userId
+        userId: userId,
+        method: 'TABBY',
+        OR: [
+          { transactionId: paymentId }, // Search by payment ID
+          { 
+            metadata: {
+              path: ['tabby_session_id'],
+              equals: paymentId
+            }
+          } // Search by session ID
+        ]
       }
     });
 
     if (!payment) {
       return res.status(404).json({
         success: false,
-        error: 'Payment not found'
+        error: 'Payment not found',
+        message: `No Tabby payment found with ID: ${paymentId}`
       });
     }
 
-    // Get status from Tabby API
-    const tabbyStatus = await tabbyService.getPaymentStatus(paymentId);
+    // Get status from Tabby API using the actual payment ID (transactionId)
+    // Even if the user passed a session ID, we use the real payment ID for the API call
+    const tabbyPaymentId = payment.transactionId;
+    const tabbyStatus = await tabbyService.getPayment(tabbyPaymentId);
 
     res.json({
       success: true,
       payment: {
-        id: paymentId,
+        payment_id: tabbyStatus.id,
+        session_id: payment.metadata?.tabby_session_id,
         status: tabbyStatus.status,
         amount: tabbyStatus.amount,
         currency: tabbyStatus.currency,
@@ -967,7 +981,7 @@ export async function performPrescoring(req, res, next) {
     console.log('🏙️ Shipping City:', payment.shipping_address?.city || 'No shipping address');
     
     // Create merchant URLs with a temporary ID
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const baseUrl = getFrontendUrl();
     const tempId = `prescore-${Date.now()}`;
     const merchant_urls = tabbyService.createMerchantUrls(baseUrl, tempId);
     

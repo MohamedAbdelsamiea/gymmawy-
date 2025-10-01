@@ -901,7 +901,9 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
   if (type === 'cart') {
     originalPrice = cartSubtotal || 0;
   } else if (type === 'product') {
-    originalPrice = product.price * (product.quantity || 1);
+    // Use discounted price if product has discount, otherwise use regular price
+    const productPrice = product.hasDiscount ? product.discountedPrice : product.price;
+    originalPrice = productPrice * (product.quantity || 1);
   } else {
     // For subscriptions/programmes - use the correct currency's original amount
     if (detectedCurrency === 'SAR' && plan?.priceSAR?.originalAmount) {

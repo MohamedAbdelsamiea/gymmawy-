@@ -23,13 +23,14 @@ class TabbyService {
    * @returns {string} - The appropriate merchant code
    */
   getMerchantCode(currency) {
+    // Use merchant codes from environment variables, with country-specific fallbacks
     switch (currency) {
       case 'SAR':
-        return 'CCSAU'; // Saudi Arabia
+        return process.env.TABBY_MERCHANT_CODE_SAR || 'CCSAU'; // Saudi Arabia
       case 'AED':
-        return 'GUAE';  // UAE
+        return process.env.TABBY_MERCHANT_CODE_AED || 'GUAE';  // UAE
       default:
-        return this.merchantCode; // Fallback to default
+        return this.merchantCode; // Fallback to default from .env
     }
   }
 
@@ -334,10 +335,31 @@ class TabbyService {
    * @returns {boolean} - Whether the signature is valid
    */
   verifyWebhookSignature(payload, signature) {
-    // Tabby webhook signature verification implementation
-    // This would typically use HMAC verification
-    // For now, we'll implement a basic check
-    console.warn('Webhook signature verification not implemented. Implement based on Tabby documentation.');
+    // For development/testing: accept webhooks without signature verification
+    if (process.env.NODE_ENV === 'development' && !signature) {
+      console.warn('[TABBY] Webhook signature verification skipped in development mode');
+      return true;
+    }
+    
+    if (!signature) {
+      console.error('[TABBY] Webhook signature missing');
+      return false;
+    }
+    
+    // TODO: Implement proper HMAC-SHA256 signature verification when Tabby provides the webhook secret
+    // Tabby typically uses HMAC-SHA256 with a webhook secret key
+    // Example implementation:
+    // const crypto = require('crypto');
+    // const hmac = crypto.createHmac('sha256', process.env.TABBY_WEBHOOK_SECRET);
+    // const expectedSignature = hmac.update(payload).digest('hex');
+    // return signature === expectedSignature;
+    
+    // For now, log the signature for debugging
+    console.log('[TABBY] Webhook signature received:', signature);
+    console.warn('[TABBY] Webhook signature verification not fully implemented. Contact Tabby for webhook secret.');
+    
+    // Accept all webhooks in production until we get the webhook secret from Tabby
+    // This is better than blocking all webhooks
     return true;
   }
 

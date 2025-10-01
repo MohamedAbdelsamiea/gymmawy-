@@ -235,12 +235,14 @@ class TabbyService {
   async handlePaymentSuccess(paymentId) {
     try {
       // Get payment status to verify
-      const status = await this.getPaymentStatus(paymentId);
+      const response = await this.getPaymentStatus(paymentId);
       
-      // Redirect to success page or show success message
+      // Backend returns: { success: true, payment: {...}, local_status: ... }
+      // We want to return the payment object directly
       return {
-        success: true,
-        payment: status,
+        success: response.success,
+        payment: response.payment, // This is the actual payment data
+        local_status: response.local_status,
         message: 'Payment completed successfully'
       };
     } catch (error) {
@@ -261,11 +263,12 @@ class TabbyService {
   async handlePaymentFailure(paymentId) {
     try {
       // Get payment status to understand what happened
-      const status = await this.getPaymentStatus(paymentId);
+      const response = await this.getPaymentStatus(paymentId);
       
       return {
         success: false,
-        payment: status,
+        payment: response.payment, // Extract nested payment object
+        local_status: response.local_status,
         message: 'Payment was rejected or failed'
       };
     } catch (error) {
@@ -286,11 +289,12 @@ class TabbyService {
   async handlePaymentCancel(paymentId) {
     try {
       // Get payment status to understand what happened
-      const status = await this.getPaymentStatus(paymentId);
+      const response = await this.getPaymentStatus(paymentId);
       
       return {
         success: false,
-        payment: status,
+        payment: response.payment, // Extract nested payment object
+        local_status: response.local_status,
         message: 'Payment was cancelled by user'
       };
     } catch (error) {

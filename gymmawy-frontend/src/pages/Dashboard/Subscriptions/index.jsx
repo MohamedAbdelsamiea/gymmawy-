@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
-import { config } from '../../../config';
+import apiClient from '../../../services/apiClient';
 
 const Subscriptions = () => {
   const { user } = useAuth();
@@ -17,17 +17,7 @@ const Subscriptions = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${config.API_BASE_URL}/subscriptions`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch subscriptions');
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get('/subscriptions');
       setSubscriptions(data.items || []);
     } catch (err) {
       console.error('Error loading subscriptions:', err);
