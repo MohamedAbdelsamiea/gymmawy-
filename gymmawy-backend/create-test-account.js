@@ -27,64 +27,95 @@ const log = {
 };
 
 // Test account credentials
-const TEST_ACCOUNT = {
-  email: 'qa_tester@gymmawy.com',
-  password: 'Test123!',
-  firstName: 'QA',
-  lastName: 'Tester',
-  mobileNumber: '+971501234567',
-  role: 'MEMBER'
-};
+const TEST_ACCOUNTS = [
+  {
+    email: 'qa_tester@gymmawy.com',
+    password: 'Test123!',
+    firstName: 'QA',
+    lastName: 'Tester',
+    mobileNumber: '+971501234567',
+    role: 'MEMBER'
+  },
+  {
+    email: 'test@gmail.com',
+    password: 'Test123!',
+    firstName: 'Test',
+    lastName: 'User',
+    mobileNumber: '+966500000002', // Different Tabby test number for Saudi Arabia
+    role: 'MEMBER'
+  }
+];
 
 async function main() {
-  console.log(`${colors.cyan}👥 Creating QA test account...${colors.reset}\n`);
+  console.log(`${colors.cyan}👥 Creating QA test accounts...${colors.reset}\n`);
   
   const prisma = getPrismaClient();
   
   try {
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: TEST_ACCOUNT.email }
-    });
+    const createdAccounts = [];
+    const existingAccounts = [];
     
-    if (existingUser) {
-      log.warning(`User with email ${TEST_ACCOUNT.email} already exists`);
-      console.log(`   User ID: ${existingUser.id}`);
-      console.log(`   Name: ${existingUser.firstName} ${existingUser.lastName}`);
-      console.log(`   Role: ${existingUser.role}`);
-      console.log(`   Created: ${existingUser.createdAt}`);
-      return;
+    for (const TEST_ACCOUNT of TEST_ACCOUNTS) {
+      // Check if user already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { email: TEST_ACCOUNT.email }
+      });
+      
+      if (existingUser) {
+        log.warning(`User with email ${TEST_ACCOUNT.email} already exists`);
+        console.log(`   User ID: ${existingUser.id}`);
+        console.log(`   Name: ${existingUser.firstName} ${existingUser.lastName}`);
+        console.log(`   Role: ${existingUser.role}\n`);
+        existingAccounts.push(TEST_ACCOUNT);
+        continue;
+      }
+      
+      // Hash the password
+      const passwordHash = await hashPassword(TEST_ACCOUNT.password);
+      
+      // Create the user directly in the database
+      const user = await prisma.user.create({
+        data: {
+          email: TEST_ACCOUNT.email,
+          passwordHash: passwordHash,
+          firstName: TEST_ACCOUNT.firstName,
+          lastName: TEST_ACCOUNT.lastName,
+          mobileNumber: TEST_ACCOUNT.mobileNumber,
+          role: TEST_ACCOUNT.role
+        }
+      });
+      
+      createdAccounts.push({ ...TEST_ACCOUNT, userId: user.id });
+      log.success(`Created account: ${TEST_ACCOUNT.email}`);
     }
     
-    // Hash the password
-    const passwordHash = await hashPassword(TEST_ACCOUNT.password);
+    // Summary
+    console.log('\n==========================================');
+    console.log('📋 QA Test Accounts Summary:');
+    console.log('==========================================\n');
     
-    // Create the user directly in the database
-    const user = await prisma.user.create({
-      data: {
-        email: TEST_ACCOUNT.email,
-        passwordHash: passwordHash,
-        firstName: TEST_ACCOUNT.firstName,
-        lastName: TEST_ACCOUNT.lastName,
-        mobileNumber: TEST_ACCOUNT.mobileNumber,
-        role: TEST_ACCOUNT.role
-      }
-    });
+    if (createdAccounts.length > 0) {
+      console.log(`${colors.green}✅ Created ${createdAccounts.length} new account(s):${colors.reset}\n`);
+      createdAccounts.forEach(account => {
+        console.log(`   📧 Email: ${account.email}`);
+        console.log(`   🔑 Password: ${account.password}`);
+        console.log(`   👤 Name: ${account.firstName} ${account.lastName}`);
+        console.log(`   📱 Phone: ${account.mobileNumber}`);
+        console.log(`   🆔 User ID: ${account.userId}`);
+        console.log('');
+      });
+    }
     
-    log.success('QA test account created successfully!');
+    if (existingAccounts.length > 0) {
+      console.log(`${colors.yellow}⚠️  ${existingAccounts.length} account(s) already existed${colors.reset}\n`);
+    }
+    
     console.log('==========================================');
-    console.log('📋 Created QA Test Account Credentials:');
-    console.log('');
-    console.log(`   Email: ${TEST_ACCOUNT.email}`);
-    console.log(`   Password: ${TEST_ACCOUNT.password}`);
-    console.log(`   Name: ${TEST_ACCOUNT.firstName} ${TEST_ACCOUNT.lastName}`);
-    console.log(`   Phone: ${TEST_ACCOUNT.mobileNumber}`);
-    console.log(`   Role: ${TEST_ACCOUNT.role}`);
-    console.log(`   User ID: ${user.id}`);
+    console.log(`${colors.cyan}🧪 Use these credentials for Tabby testing!${colors.reset}`);
     console.log('==========================================\n');
     
   } catch (error) {
-    log.error(`Failed to create test account: ${error.message}`);
+    log.error(`Failed to create test accounts: ${error.message}`);
     console.error(error);
     process.exit(1);
   } finally {
