@@ -397,10 +397,48 @@ export async function handleTabbyWebhook(req, res, next) {
     }
 
     const webhookData = req.body;
-    console.log('Tabby webhook received:', webhookData);
+    console.log('Tabby webhook received:', JSON.stringify(webhookData, null, 2));
+
+    // Tabby may send different webhook structures
+    // Check for event field or derive event from payment status
+    let eventType = webhookData.event;
+    
+    // If no event field, derive from payment data
+    if (!eventType && webhookData.id && webhookData.status) {
+      // This is a direct payment object, derive event from status
+      console.log('[TABBY] Webhook is payment object, deriving event from status:', webhookData.status);
+      
+      switch (webhookData.status?.toUpperCase()) {
+        case 'CREATED':
+          eventType = 'payment.created';
+          break;
+        case 'AUTHORIZED':
+          eventType = 'payment.authorized';
+          break;
+        case 'CLOSED':
+          eventType = 'payment.closed';
+          break;
+        case 'REJECTED':
+          eventType = 'payment.rejected';
+          break;
+        case 'EXPIRED':
+          eventType = 'payment.expired';
+          break;
+        default:
+          eventType = 'payment.updated';
+      }
+      
+      // Wrap payment in expected structure
+      webhookData.event = eventType;
+      if (!webhookData.payment) {
+        webhookData.payment = { ...webhookData };
+      }
+    }
+
+    console.log('[TABBY] Processing webhook event:', eventType);
 
     // Handle different webhook events
-    switch (webhookData.event) {
+    switch (eventType) {
       case 'payment.created':
         await handlePaymentCreated(webhookData);
         break;
@@ -414,10 +452,12 @@ export async function handleTabbyWebhook(req, res, next) {
         await handlePaymentClosed(webhookData);
         break;
       case 'payment.rejected':
+      case 'payment.expired':
         await handlePaymentRejected(webhookData);
         break;
       default:
-        console.log(`Unhandled Tabby webhook event: ${webhookData.event}`);
+        console.log(`[TABBY] Unhandled webhook event: ${eventType}`);
+        console.log('[TABBY] Full webhook data:', JSON.stringify(webhookData, null, 2));
     }
 
     res.status(200).json({ received: true });
