@@ -15,6 +15,7 @@ import Checkout from './pages/Checkout';
 import PaymentSuccess from './pages/PaymentSuccess.jsx';
 import PaymentFailure from './pages/PaymentFailure.jsx';
 import PaymentCancel from './pages/PaymentCancel.jsx';
+import PaymobPaymentResult from './components/payment/PaymobPaymentResult.jsx';
 
 
 import { ProtectedRoute } from './components/auth';
@@ -33,6 +34,7 @@ export const publicRoutes = [
   { path: '/payment/success', element: <MainLayout><PaymentSuccess /></MainLayout> },
   { path: '/payment/failure', element: <MainLayout><PaymentFailure /></MainLayout> },
   { path: '/payment/cancel', element: <MainLayout><PaymentCancel /></MainLayout> },
+  { path: '/payment/result', element: <MainLayout><PaymobPaymentResult /></MainLayout> },
 
 ];
 

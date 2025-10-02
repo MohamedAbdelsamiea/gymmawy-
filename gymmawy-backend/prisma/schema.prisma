@@ -622,6 +622,7 @@ enum PaymentMethod {
   TABBY
   TAMARA
   CARD
+  PAYMOB
 }
 
 enum TokenType {

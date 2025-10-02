@@ -1,0 +1,547 @@
+import paymobService from '../../services/paymobService.js';
+import { getPrismaClient } from '../../config/db.js';
+import { v4 as uuidv4 } from 'uuid';
+
+const prisma = getPrismaClient();
+
+/**
+ * Create a payment intention using Paymob's Unified Intention API
+ * POST /api/paymob/create-intention
+ */
+export const createIntention = async (req, res) => {
+  try {
+    const {
+      amount,
+      currency = 'SAR',
+      paymentMethod = 'card',
+      items = [],
+      billingData,
+      customer,
+      extras = {},
+      specialReference,
+      orderId,
+      subscriptionPlanId
+    } = req.body;
+
+    // Validate required fields
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        error: { message: 'Amount is required and must be greater than 0' }
+      });
+    }
+
+    if (!billingData || !customer) {
+      return res.status(400).json({
+        error: { message: 'Billing data and customer information are required' }
+      });
+    }
+
+    // Validate payment data
+    const validation = paymobService.validatePaymentData({
+      amount,
+      currency,
+      paymentMethod,
+      items,
+      billingData,
+      customer,
+      extras
+    });
+
+    if (!validation.isValid) {
+      return res.status(400).json({
+        error: { message: 'Validation failed', details: validation.errors }
+      });
+    }
+
+    // Generate special reference if not provided
+    const finalSpecialReference = specialReference || `gymmawy_${Date.now()}_${uuidv4().substring(0, 8)}`;
+
+    // Prepare webhook URLs
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3001';
+    const notificationUrl = `${baseUrl}/api/paymob/webhook`;
+    const redirectionUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/result`;
+
+    // Create payment intention
+    const intentionResult = await paymobService.createIntention({
+      amount,
+      currency,
+      paymentMethod,
+      items,
+      billingData,
+      customer,
+      extras: {
+        ...extras,
+        orderId: orderId || null,
+        subscriptionPlanId: subscriptionPlanId || null,
+        userId: req.user?.id || null
+      },
+      specialReference: finalSpecialReference,
+      notificationUrl,
+      redirectionUrl
+    });
+
+    // Create payment record in database
+    const payment = await prisma.payment.create({
+      data: {
+        amount: amount,
+        currency: currency,
+        method: 'PAYMOB',
+        status: 'PENDING',
+        gatewayId: intentionResult.data.id,
+        transactionId: null, // Will be updated when webhook is received
+        paymentReference: finalSpecialReference,
+        userId: req.user?.id || null,
+        customerInfo: {
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          email: customer.email,
+          phone: billingData.phoneNumber
+        },
+        metadata: {
+          intentionId: intentionResult.data.id,
+          clientSecret: intentionResult.data.client_secret,
+          paymentMethod: paymentMethod,
+          billingData: billingData,
+          items: items,
+          checkoutUrl: intentionResult.checkoutUrl,
+          orderId: orderId || null,
+          subscriptionPlanId: subscriptionPlanId || null,
+          extras: extras
+        }
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        intentionId: intentionResult.data.id,
+        clientSecret: intentionResult.data.client_secret,
+        checkoutUrl: intentionResult.checkoutUrl,
+        paymentId: payment.id,
+        specialReference: finalSpecialReference
+      }
+    });
+
+  } catch (error) {
+    console.error('Error creating Paymob intention:', error);
+    res.status(500).json({
+      error: { message: error.message || 'Failed to create payment intention' }
+    });
+  }
+};
+
+/**
+ * Handle Paymob webhook callbacks
+ * POST /api/paymob/webhook
+ */
+export const handleWebhook = async (req, res) => {
+  try {
+    const rawPayload = JSON.stringify(req.body);
+    // Paymob sends HMAC in different header names, check both
+    const hmacHeader = req.headers['x-paymob-hmac'] || req.headers['x-paymob-signature'] || req.headers['hmac'];
+
+    console.log('Received Paymob webhook:', {
+      headers: req.headers,
+      body: req.body,
+      hmacHeader: hmacHeader
+    });
+
+    // Process webhook with HMAC verification
+    const webhookResult = paymobService.processWebhook(rawPayload, hmacHeader);
+    
+    if (!webhookResult.success) {
+      console.error('Webhook processing failed:', webhookResult.error);
+      return res.status(400).json({ error: { message: webhookResult.error } });
+    }
+    
+    const webhookData = webhookResult.data;
+
+    // Extract transaction details
+    const {
+      type,
+      obj: {
+        id: transactionId,
+        amount_cents: amountCents,
+        currency,
+        success,
+        is_3d_secure,
+        pending,
+        is_auth,
+        is_capture,
+        is_voided,
+        is_refunded,
+        is_standalone_payment,
+        integration_id,
+        profile_id,
+        has_parent_transaction,
+        order: orderData,
+        created_at,
+        data: transactionData,
+        error_occured,
+        is_live,
+        other_endpoint_reference,
+        refunded_amount_cents,
+        captured_amount_cents,
+        updated_at,
+        is_settled,
+        bill_balanced,
+        is_bill,
+        owner,
+        parent_transaction,
+        source_data: sourceData,
+        card_tokens: cardTokens
+      }
+    } = webhookData;
+
+    // Find the payment record using multiple lookup strategies
+    let payment = null;
+    
+    // Strategy 1: Look by gatewayId (intention ID)
+    if (orderData?.id) {
+      payment = await prisma.payment.findFirst({
+        where: { gatewayId: orderData.id }
+      });
+    }
+    
+    // Strategy 2: Look by payment reference (special reference)
+    if (!payment && orderData?.merchant_order_id) {
+      payment = await prisma.payment.findFirst({
+        where: { paymentReference: orderData.merchant_order_id }
+      });
+    }
+    
+    // Strategy 3: Look by transaction ID (if this is an update)
+    if (!payment && transactionId) {
+      payment = await prisma.payment.findFirst({
+        where: { transactionId: transactionId }
+      });
+    }
+
+    if (!payment) {
+      console.error('Payment not found for webhook:', {
+        orderData,
+        transactionId,
+        webhookType: type
+      });
+      return res.status(404).json({ error: { message: 'Payment not found' } });
+    }
+
+    console.log('Found payment for webhook:', {
+      paymentId: payment.id,
+      currentStatus: payment.status,
+      gatewayId: payment.gatewayId,
+      transactionId: payment.transactionId
+    });
+
+    // Determine payment status based on webhook data
+    let status = 'PENDING';
+    let statusReason = '';
+    
+    if (success && !error_occured) {
+      if (is_refunded) {
+        status = 'REFUNDED';
+        statusReason = 'Payment refunded';
+      } else if (is_voided) {
+        status = 'FAILED';
+        statusReason = 'Payment voided';
+      } else {
+        status = 'SUCCESS';
+        statusReason = 'Payment successful';
+      }
+    } else if (error_occured) {
+      status = 'FAILED';
+      statusReason = 'Payment failed with error';
+    } else if (is_voided) {
+      status = 'FAILED';
+      statusReason = 'Payment voided';
+    } else if (is_refunded) {
+      status = 'REFUNDED';
+      statusReason = 'Payment refunded';
+    } else {
+      status = 'PENDING';
+      statusReason = 'Payment pending';
+    }
+
+    console.log('Updating payment status:', {
+      paymentId: payment.id,
+      oldStatus: payment.status,
+      newStatus: status,
+      reason: statusReason,
+      success: success,
+      errorOccurred: error_occured,
+      isVoided: is_voided,
+      isRefunded: is_refunded
+    });
+
+    // Update payment record with comprehensive data
+    const updatedPayment = await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: status,
+        transactionId: transactionId,
+        processedAt: new Date(),
+        metadata: {
+          ...payment.metadata,
+          webhookData: webhookData,
+          transactionDetails: {
+            amountCents: amountCents,
+            success: success,
+            is3DSecure: is_3d_secure,
+            pending: pending,
+            isAuth: is_auth,
+            isCapture: is_capture,
+            isVoided: is_voided,
+            isRefunded: is_refunded,
+            integrationId: integration_id,
+            errorOccurred: error_occured,
+            isLive: is_live,
+            statusReason: statusReason,
+            webhookReceivedAt: new Date().toISOString(),
+            webhookType: type
+          }
+        }
+      }
+    });
+
+    console.log('Payment updated successfully:', {
+      paymentId: updatedPayment.id,
+      newStatus: updatedPayment.status,
+      transactionId: updatedPayment.transactionId,
+      processedAt: updatedPayment.processedAt
+    });
+
+    // Handle successful payment
+    const paymentMetadata = payment.metadata || {};
+    if (success && paymentMetadata.orderId) {
+      // Update order status
+      await prisma.order.update({
+        where: { id: paymentMetadata.orderId },
+        data: {
+          status: 'paid',
+          paymentMethod: 'paymob',
+          paymentReference: transactionId,
+          paidAt: new Date()
+        }
+      });
+    }
+
+    // Handle successful subscription payment
+    if (success && paymentMetadata.subscriptionPlanId && payment.userId) {
+      // Create or update user subscription
+      const subscription = await prisma.subscription.upsert({
+        where: {
+          userId_subscriptionPlanId: {
+            userId: payment.userId,
+            subscriptionPlanId: paymentMetadata.subscriptionPlanId
+          }
+        },
+        update: {
+          status: 'active',
+          paymentMethod: 'PAYMOB',
+          paymentReference: transactionId,
+          startDate: new Date(),
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+          lastPaymentDate: new Date()
+        },
+        create: {
+          userId: payment.userId,
+          subscriptionPlanId: paymentMetadata.subscriptionPlanId,
+          status: 'active',
+          paymentMethod: 'PAYMOB',
+          paymentReference: transactionId,
+          startDate: new Date(),
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+          lastPaymentDate: new Date()
+        }
+      });
+
+      console.log('Subscription created/updated:', subscription.id);
+    }
+
+    console.log('Webhook processed successfully for payment:', {
+      paymentId: payment.id,
+      status: status,
+      transactionId: transactionId,
+      webhookType: type
+    });
+
+    // Return comprehensive response
+    res.status(200).json({ 
+      success: true, 
+      message: 'Webhook processed successfully',
+      data: {
+        paymentId: payment.id,
+        status: status,
+        transactionId: transactionId,
+        webhookType: type,
+        processedAt: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Error processing Paymob webhook:', error);
+    
+    // Return detailed error response for debugging
+    res.status(500).json({
+      error: { 
+        message: 'Failed to process webhook',
+        details: error.message,
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+};
+
+/**
+ * Get payment intention status
+ * GET /api/paymob/intention/:intentionId/status
+ */
+export const getIntentionStatus = async (req, res) => {
+  try {
+    const { intentionId } = req.params;
+
+    const payment = await prisma.payment.findFirst({
+      where: { gatewayId: intentionId }
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        error: { message: 'Payment not found' }
+      });
+    }
+
+    // Get latest status from Paymob API
+    const statusResult = await paymobService.getIntentionStatus(intentionId);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        local: payment,
+        remote: statusResult.data
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching intention status:', error);
+    res.status(500).json({
+      error: { message: 'Failed to fetch intention status' }
+    });
+  }
+};
+
+/**
+ * Refund a transaction
+ * POST /api/paymob/refund
+ */
+export const refundTransaction = async (req, res) => {
+  try {
+    const { transactionId, amount } = req.body;
+
+    if (!transactionId || !amount) {
+      return res.status(400).json({
+        error: { message: 'Transaction ID and amount are required' }
+      });
+    }
+
+    const refundResult = await paymobService.refundTransaction(transactionId, amount);
+
+    // Update payment status
+    const payment = await prisma.payment.findFirst({
+      where: { transactionId }
+    });
+
+    if (payment) {
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: 'REFUNDED',
+          processedAt: new Date(),
+          metadata: {
+            ...payment.metadata,
+            refundDetails: {
+              refundedAmount: amount,
+              refundedAt: new Date(),
+              refundTransactionId: refundResult.data.id
+            }
+          }
+        }
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: refundResult.data
+    });
+
+  } catch (error) {
+    console.error('Error processing refund:', error);
+    res.status(500).json({
+      error: { message: 'Failed to process refund' }
+    });
+  }
+};
+
+/**
+ * Get payment history for a user
+ * GET /api/paymob/payments
+ */
+export const getPaymentHistory = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, status } = req.query;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        error: { message: 'Authentication required' }
+      });
+    }
+
+    const whereClause = { userId, method: 'PAYMOB' };
+    if (status) {
+      whereClause.status = status;
+    }
+
+    const payments = await prisma.payment.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: parseInt(limit),
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        method: true,
+        status: true,
+        paymentReference: true,
+        transactionId: true,
+        createdAt: true,
+        processedAt: true,
+        customerInfo: true,
+        metadata: true
+      }
+    });
+
+    const total = await prisma.payment.count({
+      where: whereClause
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        payments,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching payment history:', error);
+    res.status(500).json({
+      error: { message: 'Failed to fetch payment history' }
+    });
+  }
+};

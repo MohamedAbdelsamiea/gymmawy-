@@ -1,0 +1,304 @@
+.paymob-result {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.paymob-result__container {
+  max-width: 500px;
+  width: 100%;
+}
+
+.paymob-result__loading,
+.paymob-result__content,
+.paymob-result__error {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 40px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.paymob-result__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f4f6;
+  border-top: 4px solid #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.result-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+}
+
+.success-icon {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.error-icon {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.result-icon svg {
+  width: 40px;
+  height: 40px;
+  stroke-width: 2;
+}
+
+.paymob-result__content h2,
+.paymob-result__error h2,
+.paymob-result__loading h2 {
+  margin: 0 0 16px 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.paymob-result__content p,
+.paymob-result__error p,
+.paymob-result__loading p {
+  margin: 0 0 24px 0;
+  font-size: 16px;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.paymob-result__details {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 24px 0;
+  text-align: left;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.detail-value {
+  font-size: 14px;
+  color: #1f2937;
+  font-weight: 600;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  word-break: break-all;
+}
+
+.paymob-result__error-details {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 24px 0;
+}
+
+.paymob-result__error-details p {
+  margin: 0;
+  color: #dc2626;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.paymob-result__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.paymob-result__button {
+  padding: 16px 32px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+}
+
+.paymob-result__button--primary {
+  background: #2563eb;
+  color: white;
+}
+
+.paymob-result__button--primary:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.paymob-result__button--secondary {
+  background: transparent;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+}
+
+.paymob-result__button--secondary:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+/* Success state specific styles */
+.paymob-result__content.success {
+  border-top: 4px solid #16a34a;
+}
+
+.paymob-result__content.success h2 {
+  color: #16a34a;
+}
+
+/* Failed state specific styles */
+.paymob-result__content.failed {
+  border-top: 4px solid #dc2626;
+}
+
+.paymob-result__content.failed h2 {
+  color: #dc2626;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .paymob-result__loading,
+  .paymob-result__content,
+  .paymob-result__error {
+    background: #1f2937;
+    color: #f9fafb;
+  }
+
+  .paymob-result__content h2,
+  .paymob-result__error h2,
+  .paymob-result__loading h2 {
+    color: #f9fafb;
+  }
+
+  .paymob-result__content p,
+  .paymob-result__error p,
+  .paymob-result__loading p {
+    color: #9ca3af;
+  }
+
+  .paymob-result__details {
+    background: #374151;
+  }
+
+  .detail-label {
+    color: #9ca3af;
+  }
+
+  .detail-value {
+    color: #f9fafb;
+  }
+
+  .detail-item {
+    border-bottom-color: #4b5563;
+  }
+
+  .paymob-result__button--secondary {
+    color: #9ca3af;
+    border-color: #4b5563;
+  }
+
+  .paymob-result__button--secondary:hover {
+    background: #374151;
+    border-color: #6b7280;
+    color: #d1d5db;
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .paymob-result {
+    padding: 16px;
+  }
+
+  .paymob-result__loading,
+  .paymob-result__content,
+  .paymob-result__error {
+    padding: 24px;
+  }
+
+  .result-icon {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 16px;
+  }
+
+  .result-icon svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  .paymob-result__content h2,
+  .paymob-result__error h2,
+  .paymob-result__loading h2 {
+    font-size: 24px;
+  }
+
+  .paymob-result__content p,
+  .paymob-result__error p,
+  .paymob-result__loading p {
+    font-size: 14px;
+  }
+
+  .paymob-result__details {
+    padding: 16px;
+  }
+
+  .detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .paymob-result__actions {
+    gap: 8px;
+  }
+
+  .paymob-result__button {
+    padding: 14px 24px;
+    font-size: 15px;
+  }
+}

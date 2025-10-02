@@ -223,6 +223,7 @@ return fallback;
     }
   }, [type, paymentOption]);
 
+
   // Helper function to format subscription period
   const formatSubscriptionPeriod = (days) => {
     // Ensure days is a number
@@ -829,6 +830,15 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
   };
 
   const finalPrice = getCartOrProductPrice();
+  
+  // Reset payment option when currency changes to ensure valid options are shown
+  useEffect(() => {
+    if (finalPrice?.currency === 'EGP' && (paymentOption === 'paymob_card' || paymentOption === 'paymob_apple')) {
+      setPaymentOption(''); // Reset Paymob options for EGP currency
+    } else if (finalPrice?.currency !== 'EGP' && (paymentOption === 'vodafone' || paymentOption === 'instapay')) {
+      setPaymentOption(''); // Reset Vodafone/InstaPay options for non-EGP currencies
+    }
+  }, [finalPrice?.currency, paymentOption]);
   
   // Calculate shipping cost (hardcoded to 200 L.E for now)
   const getShippingCost = () => {
@@ -1461,6 +1471,171 @@ return;
     </div>
   );
 
+  // Handle Paymob payment
+  const handlePaymobPayment = async () => {
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      // Determine payment method for Paymob
+      const paymobPaymentMethod = paymentOption === 'paymob_apple' ? 'apple_pay' : 'card';
+      
+      console.log('🔍 Processing Paymob payment:', {
+        paymentMethod: paymobPaymentMethod,
+        total,
+        currency: finalPrice?.currency || 'SAR',
+        type
+      });
+
+      // Prepare payment data
+      const paymentData = {
+        amount: total,
+        currency: finalPrice?.currency || 'SAR',
+        paymentMethod: paymobPaymentMethod,
+        items: getOrderItemsForPaymob(),
+        billingData: {
+          firstName: user?.firstName || 'User',
+          lastName: user?.lastName || 'Name',
+          email: user?.email || 'user@example.com',
+          phoneNumber: user?.mobileNumber || '+966500000001',
+          street: type === 'cart' || type === 'product' ? (shippingDetails?.shippingStreet || '') : '',
+          building: type === 'cart' || type === 'product' ? (shippingDetails?.shippingBuilding || '') : '',
+          apartment: type === 'cart' || type === 'product' ? (shippingDetails?.shippingApartment || '') : '',
+          floor: type === 'cart' || type === 'product' ? (shippingDetails?.shippingFloor || '') : '',
+          city: type === 'cart' || type === 'product' ? (shippingDetails?.shippingCity || 'Riyadh') : 'Riyadh',
+          state: type === 'cart' || type === 'product' ? (shippingDetails?.shippingState || 'Riyadh') : 'Riyadh',
+          country: finalPrice?.currency === 'SAR' ? 'KSA' : 'Egypt',
+          postalCode: type === 'cart' || type === 'product' ? (shippingDetails?.shippingPostalCode || '') : ''
+        },
+        customer: {
+          firstName: user?.firstName || 'User',
+          lastName: user?.lastName || 'Name',
+          email: user?.email || 'user@example.com',
+          extras: {
+            userId: user?.id,
+            userRole: user?.role
+          }
+        },
+        extras: {
+          source: 'web',
+          userAgent: navigator.userAgent,
+          timestamp: new Date().toISOString(),
+          orderType: type,
+          planId: plan?.id || null,
+          subscriptionPlanId: type === 'subscription' ? plan?.id : null
+        }
+      };
+
+      console.log('🔍 Paymob payment data:', paymentData);
+
+      // Import PaymobService dynamically
+      const { default: paymobService } = await import('../../services/paymobService.js');
+      
+      // Create payment intention
+      const result = await paymobService.createAndPay(paymentData);
+      
+      if (result.success && result.checkoutUrl) {
+        showSuccess('Redirecting to secure payment page...');
+        
+        // Open Paymob checkout in a new window
+        const checkoutWindow = window.open(
+          result.checkoutUrl,
+          'paymob_checkout',
+          'width=800,height=600,scrollbars=yes,resizable=yes'
+        );
+
+        if (!checkoutWindow) {
+          throw new Error('Failed to open checkout window. Please check your popup blocker settings.');
+        }
+
+        // Don't set success state yet - wait for actual payment completion
+        // The success state will be set when user returns from successful payment
+        setSubmitting(false);
+        
+        // Show a message that payment is in progress
+        showSuccess('Payment window opened. Please complete your payment in the popup window.');
+        
+        // Add a listener to detect when user returns from payment popup
+        const checkPaymentStatus = () => {
+          // Check if the popup window is closed
+          if (checkoutWindow.closed) {
+            // Popup was closed, check if user was redirected to success page
+            const currentUrl = window.location.href;
+            if (currentUrl.includes('/payment/result')) {
+              // User was redirected to payment result page, let that page handle the result
+              return;
+            }
+            
+            // Popup was closed without completion, show a message
+            showError('Payment was cancelled. You can try again or choose a different payment method.');
+            setSubmitting(false);
+          } else {
+            // Popup is still open, check again in 1 second
+            setTimeout(checkPaymentStatus, 1000);
+          }
+        };
+        
+        // Start checking payment status
+        setTimeout(checkPaymentStatus, 1000);
+      } else {
+        throw new Error('Failed to create payment intention');
+      }
+
+    } catch (error) {
+      console.error('Paymob payment error:', error);
+      setError(error.message);
+      showError(error.message);
+      setSubmitting(false);
+    }
+  };
+
+  // Helper function to get order items for Paymob
+  const getOrderItemsForPaymob = () => {
+    const items = [];
+    
+    if (type === 'subscription' && plan) {
+      items.push({
+        name: typeof plan.name === 'object' ? plan.name?.en || plan.name?.ar || 'Subscription' : plan.name,
+        amount: total,
+        description: typeof plan.description === 'object' ? plan.description?.en || plan.description?.ar || '' : plan.description,
+        quantity: 1
+      });
+    } else if (type === 'programme' && plan) {
+      items.push({
+        name: typeof plan.name === 'object' ? plan.name?.en || plan.name?.ar || 'Programme' : plan.name,
+        amount: total,
+        description: typeof plan.description === 'object' ? plan.description?.en || plan.description?.ar || '' : plan.description,
+        quantity: 1
+      });
+    } else if (type === 'cart' && cartItems) {
+      cartItems.forEach(item => {
+        items.push({
+          name: item.name,
+          amount: item.price * item.quantity,
+          description: `${item.quantity}x ${item.name}`,
+          quantity: item.quantity
+        });
+      });
+    } else if (type === 'product' && product) {
+      items.push({
+        name: product.name,
+        amount: total,
+        description: `${product.quantity}x ${product.name}`,
+        quantity: product.quantity
+      });
+    } else {
+      // Fallback item
+      items.push({
+        name: 'Gymmawy Purchase',
+        amount: total,
+        description: 'Purchase from Gymmawy',
+        quantity: 1
+      });
+    }
+    
+    return items;
+  };
+
   // Handle Tabby payment
   const handleTabbyPayment = async () => {
     try {
@@ -1665,6 +1840,12 @@ return;
       }
     }
 
+    // Handle Paymob payments separately
+    if (paymentOption === 'paymob_card' || paymentOption === 'paymob_apple') {
+      await handlePaymobPayment();
+      return;
+    }
+
     // Handle Tabby payment separately
     if (paymentOption === 'tabby') {
       // Check if Tabby has a rejection message (not available)
@@ -1713,6 +1894,8 @@ return;
           planId: plan.id,
           paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONE_CASH' : 
                         paymentOption?.toUpperCase() === 'INSTAPAY' ? 'INSTA_PAY' : 
+                        paymentOption === 'paymob_card' ? 'PAYMOB' :
+                        paymentOption === 'paymob_apple' ? 'PAYMOB' :
                         paymentOption?.toUpperCase(),
           // Additional subscription details
           isMedical: isMedical,
@@ -1761,6 +1944,8 @@ return;
         const programmeData = {
           paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONE_CASH' : 
                         paymentOption?.toUpperCase() === 'INSTAPAY' ? 'INSTA_PAY' : 
+                        paymentOption === 'paymob_card' ? 'PAYMOB' :
+                        paymentOption === 'paymob_apple' ? 'PAYMOB' :
                         paymentOption?.toUpperCase(),
           currency: currentPrice?.currency || 'EGP',
           programmeName: typeof plan.name === 'object' ? plan.name?.en || plan.name?.ar || 'Programme' : plan.name,
@@ -1800,6 +1985,8 @@ return;
           paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONE_CASH' : 
                         paymentOption?.toUpperCase() === 'INSTAPAY' ? 'INSTA_PAY' : 
                         paymentOption?.toUpperCase() === 'CASH_ON_DELIVERY' ? 'CASH_ON_DELIVERY' :
+                        paymentOption === 'paymob_card' ? 'PAYMOB' :
+                        paymentOption === 'paymob_apple' ? 'PAYMOB' :
                         paymentOption?.toUpperCase(),
           currency: 'EGP',
           couponId: couponValid && couponData ? couponData.id : null,
@@ -1823,6 +2010,8 @@ return;
           paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONE_CASH' : 
                         paymentOption?.toUpperCase() === 'INSTAPAY' ? 'INSTA_PAY' : 
                         paymentOption?.toUpperCase() === 'CASH_ON_DELIVERY' ? 'CASH_ON_DELIVERY' :
+                        paymentOption === 'paymob_card' ? 'PAYMOB' :
+                        paymentOption === 'paymob_apple' ? 'PAYMOB' :
                         paymentOption?.toUpperCase(),
           currency: 'EGP',
           couponId: couponValid && couponData ? couponData.id : null,
@@ -2284,35 +2473,85 @@ return;
                     <h4 className="font-medium text-gray-900">{t('checkout.choosePaymentOption')}</h4>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input
-                          type="radio"
-                          name="paymentOption"
-                          value="instapay"
-                          checked={paymentOption === 'instapay'}
-                          onChange={(e) => setPaymentOption(e.target.value)}
-                          className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
-                        />
-                        <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
-                          <img src="/assets/common/payments/insta-pay.png" alt="InstaPay" className={`h-8 w-auto object-contain ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                          <span className="text-sm font-medium text-gray-900">{t('checkout.instaPay')}</span>
-                        </div>
-                      </label>
+                      {/* Show Paymob options only for non-EGP currencies */}
+                      {finalPrice?.currency !== 'EGP' && (
+                        <>
+                          {/* Paymob Card Payment */}
+                          <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input
+                              type="radio"
+                              name="paymentOption"
+                              value="paymob_card"
+                              checked={paymentOption === 'paymob_card'}
+                              onChange={(e) => setPaymentOption(e.target.value)}
+                              className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
+                            />
+                            <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
+                              <div className={`h-8 w-8 bg-gray-100 rounded-md flex items-center justify-center ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`}>
+                                <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                </svg>
+                              </div>
+                              <span className="text-sm font-medium text-gray-900">Credit/Debit Card</span>
+                            </div>
+                          </label>
 
-                      <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input
-                          type="radio"
-                          name="paymentOption"
-                          value="vodafone"
-                          checked={paymentOption === 'vodafone'}
-                          onChange={(e) => setPaymentOption(e.target.value)}
-                          className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
-                        />
-                        <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
-                          <img src="/assets/common/payments/vodafone-cash.png" alt="Vodafone Cash" className={`h-8 w-auto object-contain ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                          <span className="text-sm font-medium text-gray-900">{t('checkout.vodafoneCash')}</span>
-                        </div>
-                      </label>
+                          {/* Paymob Apple Pay */}
+                          <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input
+                              type="radio"
+                              name="paymentOption"
+                              value="paymob_apple"
+                              checked={paymentOption === 'paymob_apple'}
+                              onChange={(e) => setPaymentOption(e.target.value)}
+                              className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
+                            />
+                            <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
+                              <div className={`h-8 w-8 bg-black rounded-md flex items-center justify-center ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`}>
+                                <svg className="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                                </svg>
+                              </div>
+                              <span className="text-sm font-medium text-gray-900">Apple Pay</span>
+                            </div>
+                          </label>
+                        </>
+                      )}
+
+                      {/* Show InstaPay and Vodafone Cash only for EGP currency */}
+                      {finalPrice?.currency === 'EGP' && (
+                        <>
+                          <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input
+                              type="radio"
+                              name="paymentOption"
+                              value="instapay"
+                              checked={paymentOption === 'instapay'}
+                              onChange={(e) => setPaymentOption(e.target.value)}
+                              className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
+                            />
+                            <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
+                              <img src="/assets/common/payments/insta-pay.png" alt="InstaPay" className={`h-8 w-auto object-contain ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                              <span className="text-sm font-medium text-gray-900">{t('checkout.instaPay')}</span>
+                            </div>
+                          </label>
+
+                          <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input
+                              type="radio"
+                              name="paymentOption"
+                              value="vodafone"
+                              checked={paymentOption === 'vodafone'}
+                              onChange={(e) => setPaymentOption(e.target.value)}
+                              className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
+                            />
+                            <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
+                              <img src="/assets/common/payments/vodafone-cash.png" alt="Vodafone Cash" className={`h-8 w-auto object-contain ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                              <span className="text-sm font-medium text-gray-900">{t('checkout.vodafoneCash')}</span>
+                            </div>
+                          </label>
+                        </>
+                      )}
 
                       {/* Cash on Delivery - Only for cart and product orders (physical items) */}
                       {(type === 'cart' || type === 'product') && (

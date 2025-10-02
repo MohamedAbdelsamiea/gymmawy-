@@ -1,0 +1,258 @@
+.paymob-checkout {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 24px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.paymob-checkout__header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.paymob-checkout__header h3 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.paymob-checkout__subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #666666;
+  line-height: 1.4;
+}
+
+.paymob-checkout__amount {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.amount-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.amount-label {
+  font-size: 14px;
+  color: #666666;
+  font-weight: 500;
+}
+
+.amount-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.paymob-checkout__error {
+  background: #fee;
+  border: 1px solid #fcc;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.paymob-checkout__error p {
+  margin: 0;
+  color: #c33;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.paymob-checkout__methods {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.paymob-checkout__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  min-height: 56px;
+}
+
+.paymob-checkout__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.paymob-checkout__button--card {
+  background: #2563eb;
+  color: white;
+}
+
+.paymob-checkout__button--card:hover:not(:disabled) {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.paymob-checkout__button--apple {
+  background: #000000;
+  color: white;
+}
+
+.paymob-checkout__button--apple:hover:not(:disabled) {
+  background: #333333;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.card-icon,
+.apple-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.paymob-checkout__security {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.security-badges {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.security-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #666666;
+  font-weight: 500;
+}
+
+.lock-icon,
+.shield-icon {
+  width: 14px;
+  height: 14px;
+  color: #10b981;
+}
+
+.paymob-checkout__disclaimer {
+  margin: 0;
+  font-size: 12px;
+  color: #888888;
+  line-height: 1.4;
+}
+
+.paymob-checkout__cancel {
+  width: 100%;
+  padding: 12px 24px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: transparent;
+  color: #666666;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.paymob-checkout__cancel:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.paymob-checkout__cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .paymob-checkout {
+    background: #1f2937;
+    color: #f9fafb;
+  }
+
+  .paymob-checkout__header h3 {
+    color: #f9fafb;
+  }
+
+  .paymob-checkout__subtitle {
+    color: #9ca3af;
+  }
+
+  .paymob-checkout__amount {
+    background: #374151;
+  }
+
+  .amount-label {
+    color: #9ca3af;
+  }
+
+  .amount-value {
+    color: #f9fafb;
+  }
+
+  .paymob-checkout__cancel {
+    border-color: #4b5563;
+    color: #9ca3af;
+  }
+
+  .paymob-checkout__cancel:hover:not(:disabled) {
+    background: #374151;
+    border-color: #6b7280;
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .paymob-checkout {
+    padding: 16px;
+    margin: 16px;
+  }
+
+  .paymob-checkout__header h3 {
+    font-size: 20px;
+  }
+
+  .paymob-checkout__button {
+    padding: 14px 20px;
+    font-size: 15px;
+  }
+
+  .security-badges {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
