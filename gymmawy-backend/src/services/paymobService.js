@@ -6,9 +6,9 @@ class PaymobService {
     this.baseURL = 'https://ksa.paymob.com';
     this.secretKey = process.env.PAYMOB_SECRET_KEY;
     this.publicKey = process.env.PAYMOB_PUBLIC_KEY;
-    // Use production integration IDs
-    this.integrationIdCard = process.env.PAYMOB_MIGS_INTEGRATION_ID;
-    this.integrationIdApplePay = process.env.PAYMOB_APPLEPAY_INTEGRATION_ID;
+    // Use test integration ID for both card and Apple Pay (for testing)
+    this.integrationIdCard = process.env.PAYMOB_TEST_INTEGRATION_ID;
+    this.integrationIdApplePay = process.env.PAYMOB_TEST_INTEGRATION_ID;
     this.hmacSecret = process.env.PAYMOB_HMAC_SECRET;
     
     if (!this.secretKey || !this.publicKey) {
@@ -16,17 +16,17 @@ class PaymobService {
     }
     
     if (!this.integrationIdCard) {
-      console.warn('Paymob MIGS integration ID missing. Please set PAYMOB_MIGS_INTEGRATION_ID in environment variables.');
+      console.warn('Paymob test integration ID missing. Please set PAYMOB_TEST_INTEGRATION_ID in environment variables.');
     }
     
     if (!this.integrationIdApplePay) {
-      console.warn('Paymob Apple Pay integration ID missing. Please set PAYMOB_APPLEPAY_INTEGRATION_ID in environment variables.');
+      console.warn('Paymob test integration ID missing. Please set PAYMOB_TEST_INTEGRATION_ID in environment variables.');
     }
     
     // Debug: Log integration IDs (without exposing actual values)
     console.log('Paymob Service initialized:');
-    console.log('- MIGS Integration ID (Card):', this.integrationIdCard ? '✓ Configured' : '✗ Missing');
-    console.log('- Apple Pay Integration ID:', this.integrationIdApplePay ? '✓ Configured' : '✗ Missing');
+    console.log('- Test Integration ID (Card):', this.integrationIdCard ? '✓ Configured' : '✗ Missing');
+    console.log('- Test Integration ID (Apple Pay):', this.integrationIdApplePay ? '✓ Configured' : '✗ Missing');
     console.log('- HMAC Secret:', this.hmacSecret ? '✓ Configured' : '✗ Missing');
   }
 
