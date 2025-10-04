@@ -13,7 +13,7 @@ class PaymentService {
    * @param {string} provider - Payment provider ('tabby' or 'paymob')
    * @returns {Promise<Object>} Payment result
    */
-  async createPayment(paymentData, provider = 'paymob') {
+  async createPaymentWithProvider(paymentData, provider = 'paymob') {
     try {
       switch (provider.toLowerCase()) {
         case 'paymob':
@@ -150,6 +150,41 @@ class PaymentService {
       }
     } catch (error) {
       console.error(`Error getting ${provider} payment status:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a payment record in the database
+   * @param {Object} paymentData - Payment data
+   * @returns {Promise<Object>} Created payment record
+   */
+  async createPayment(paymentData) {
+    try {
+      const payment = await prisma.payment.create({
+        data: {
+          amount: paymentData.amount,
+          currency: paymentData.currency,
+          method: paymentData.method,
+          status: 'PENDING',
+          gatewayId: paymentData.transactionId,
+          transactionId: paymentData.transactionId,
+          paymentReference: `payment_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+          userId: paymentData.userId,
+          customerInfo: paymentData.customerInfo || null,
+          metadata: paymentData.metadata || {},
+          paymentableId: paymentData.paymentableId,
+          paymentableType: paymentData.paymentableType,
+          paymentProofUrl: paymentData.paymentProofUrl || null
+        }
+      });
+
+      return {
+        success: true,
+        data: payment
+      };
+    } catch (error) {
+      console.error('Error creating payment record:', error);
       throw error;
     }
   }

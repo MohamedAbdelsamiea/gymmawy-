@@ -93,7 +93,7 @@ export const createPayment = async (req, res) => {
     };
 
     // Create payment using the specified provider
-    const result = await paymentService.createPayment(paymentData, provider);
+    const result = await paymentService.createPaymentWithProvider(paymentData, provider);
 
     res.status(201).json({
       success: true,

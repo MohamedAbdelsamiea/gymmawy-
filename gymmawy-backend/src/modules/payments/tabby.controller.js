@@ -3,7 +3,7 @@ import tabbyService from '../../services/tabbyService.js';
 import { getPrismaClient } from '../../config/db.js';
 import { parseOrThrow } from '../../utils/validation.js';
 import { getFrontendUrl } from '../../utils/urls.js';
-import * as paymentService from './payment.service.js';
+import paymentService from './payment.service.js';
 import * as subscriptionService from '../subscriptions/subscription.service.js';
 import * as programmeService from '../programmes/programme.service.js';
 import { TABBY_TEST_CREDENTIALS, TABBY_TEST_SCENARIOS } from '../../config/tabbyTesting.js';
