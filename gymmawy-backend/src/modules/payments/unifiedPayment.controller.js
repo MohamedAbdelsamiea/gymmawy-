@@ -53,6 +53,20 @@ export const createPayment = async (req, res) => {
       });
     }
 
+    // Validate currency and payment method for Paymob
+    if (provider === 'paymob') {
+      if (currency !== 'SAR') {
+        return res.status(400).json({
+          error: { message: 'Paymob only accepts SAR currency' }
+        });
+      }
+      if (paymentMethod !== 'card' && paymentMethod !== 'apple_pay') {
+        return res.status(400).json({
+          error: { message: 'Paymob only accepts card and apple_pay payment methods' }
+        });
+      }
+    }
+
     if (!billingData || !customer) {
       return res.status(400).json({
         error: { message: 'Billing data and customer information are required' }

@@ -36,7 +36,12 @@ class PaymentService {
    */
   async createPaymobPayment(paymentData) {
     try {
-  // Validate payment data
+      // Enforce SAR currency for Paymob
+      if (paymentData.currency && paymentData.currency !== 'SAR') {
+        throw new Error('Paymob only accepts SAR currency');
+      }
+
+      // Validate payment data
       const validation = paymobService.validatePaymentData(paymentData);
       if (!validation.isValid) {
         throw new Error(`Payment validation failed: ${validation.errors.join(', ')}`);
@@ -49,7 +54,7 @@ class PaymentService {
       const payment = await prisma.payment.create({
         data: {
           amount: paymentData.amount,
-          currency: paymentData.currency || 'SAR',
+          currency: 'SAR', // Always use SAR for Paymob
           method: 'PAYMOB',
           status: 'PENDING',
           gatewayId: intentionResult.data.id,
@@ -110,9 +115,9 @@ class PaymentService {
       {
         id: 'paymob',
         name: 'Paymob',
-        description: 'Secure payment with cards and Apple Pay',
+        description: 'Secure payment with cards and Apple Pay - SAR only',
         supportedMethods: ['card', 'apple_pay'],
-        currencies: ['SAR'],
+        currencies: ['SAR'], // Only SAR is supported
         isAvailable: !!process.env.PAYMOB_SECRET_KEY
       },
       {

@@ -30,6 +30,20 @@ export const createIntention = async (req, res) => {
       });
     }
 
+    // Enforce SAR currency for Paymob
+    if (currency !== 'SAR') {
+      return res.status(400).json({
+        error: { message: 'Paymob only accepts SAR currency' }
+      });
+    }
+
+    // Validate payment method
+    if (paymentMethod !== 'card' && paymentMethod !== 'apple_pay') {
+      return res.status(400).json({
+        error: { message: 'Paymob only accepts card and apple_pay payment methods' }
+      });
+    }
+
     if (!billingData || !customer) {
       return res.status(400).json({
         error: { message: 'Billing data and customer information are required' }
@@ -84,7 +98,7 @@ export const createIntention = async (req, res) => {
     const payment = await prisma.payment.create({
       data: {
         amount: amount,
-        currency: currency,
+        currency: 'SAR', // Always use SAR for Paymob
         method: 'PAYMOB',
         status: 'PENDING',
         gatewayId: intentionResult.data.id,

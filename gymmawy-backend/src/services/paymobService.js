@@ -60,6 +60,16 @@ class PaymobService {
         redirectionUrl
       } = paymentData;
 
+      // Enforce SAR currency for Paymob
+      if (currency !== 'SAR') {
+        throw new Error('Paymob only accepts SAR currency');
+      }
+
+      // Validate payment method
+      if (paymentMethod !== 'card' && paymentMethod !== 'apple_pay') {
+        throw new Error('Paymob only accepts card and apple_pay payment methods');
+      }
+
       // Determine integration ID based on payment method
       const integrationId = paymentMethod === 'apple_pay' 
         ? this.integrationIdApplePay 
@@ -71,7 +81,7 @@ class PaymobService {
 
       const payload = {
         amount: Math.round(amount * 100), // Convert to cents
-        currency,
+        currency: 'SAR', // Always use SAR
         payment_methods: [parseInt(integrationId)],
         items: items.map(item => ({
           name: item.name,
@@ -86,7 +96,7 @@ class PaymobService {
           street: billingData.street || '',
           building: billingData.building || '',
           phone_number: billingData.phoneNumber,
-          country: billingData.country || 'KSA',
+          country: 'KSA', // Always use KSA for SAR currency transactions
           email: billingData.email,
           floor: billingData.floor || '',
           state: billingData.state || '',

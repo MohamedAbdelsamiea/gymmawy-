@@ -837,6 +837,8 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       setPaymentOption(''); // Reset Paymob options for EGP currency
     } else if (finalPrice?.currency !== 'EGP' && (paymentOption === 'vodafone' || paymentOption === 'instapay')) {
       setPaymentOption(''); // Reset Vodafone/InstaPay options for non-EGP currencies
+    } else if (finalPrice?.currency !== 'SAR' && (paymentOption === 'paymob_card' || paymentOption === 'paymob_apple')) {
+      setPaymentOption(''); // Reset Paymob options for non-SAR currencies
     }
   }, [finalPrice?.currency, paymentOption]);
   
@@ -1483,14 +1485,14 @@ return;
       console.log('🔍 Processing Paymob payment:', {
         paymentMethod: paymobPaymentMethod,
         total,
-        currency: finalPrice?.currency || 'SAR',
+        currency: 'SAR', // Always use SAR for Paymob
         type
       });
 
       // Prepare payment data
       const paymentData = {
         amount: total,
-        currency: finalPrice?.currency || 'SAR',
+        currency: 'SAR', // Always use SAR for Paymob
         paymentMethod: paymobPaymentMethod,
         items: getOrderItemsForPaymob(),
         billingData: {
@@ -1504,7 +1506,7 @@ return;
           floor: type === 'cart' || type === 'product' ? (shippingDetails?.shippingFloor || '') : '',
           city: type === 'cart' || type === 'product' ? (shippingDetails?.shippingCity || 'Riyadh') : 'Riyadh',
           state: type === 'cart' || type === 'product' ? (shippingDetails?.shippingState || 'Riyadh') : 'Riyadh',
-          country: finalPrice?.currency === 'SAR' ? 'KSA' : 'Egypt',
+          country: 'KSA', // Always use KSA for Paymob
           postalCode: type === 'cart' || type === 'product' ? (shippingDetails?.shippingPostalCode || '') : ''
         },
         customer: {
@@ -2473,8 +2475,8 @@ return;
                     <h4 className="font-medium text-gray-900">{t('checkout.choosePaymentOption')}</h4>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {/* Show Paymob options only for non-EGP currencies */}
-                      {finalPrice?.currency !== 'EGP' && (
+                      {/* Show Paymob options only for SAR currency */}
+                      {finalPrice?.currency === 'SAR' && (
                         <>
                           {/* Paymob Card Payment */}
                           <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
