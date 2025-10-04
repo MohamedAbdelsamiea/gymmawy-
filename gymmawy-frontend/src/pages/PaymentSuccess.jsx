@@ -57,7 +57,29 @@ const PaymentSuccess = () => {
       // Get payment status from Tabby
       const result = await tabbyService.handlePaymentSuccess(actualId);
       
-      if (result.success) {
+      console.log('🔍 Payment verification result:', result);
+      console.log('🔍 Payment status:', result.payment?.status);
+      
+      // Check if the payment was actually successful
+      // Tabby status can be: AUTHORIZED, CLOSED, REJECTED, EXPIRED, CREATED
+      const tabbyStatus = result.payment?.status?.toUpperCase();
+      
+      if (tabbyStatus === 'REJECTED' || tabbyStatus === 'EXPIRED') {
+        // Payment was rejected or expired - redirect to failure page
+        console.log('❌ Payment was rejected/expired, redirecting to failure page');
+        navigate(`/payment/failure?payment_id=${actualId}`, { replace: true });
+        return;
+      }
+      
+      if (tabbyStatus === 'CANCELLED') {
+        // Payment was cancelled - redirect to cancel page
+        console.log('❌ Payment was cancelled, redirecting to cancel page');
+        navigate(`/payment/cancel?payment_id=${actualId}`, { replace: true });
+        return;
+      }
+      
+      // Payment is successful (AUTHORIZED or CLOSED) or still processing (CREATED)
+      if (result.success || tabbyStatus === 'AUTHORIZED' || tabbyStatus === 'CLOSED') {
         setPaymentStatus(result.payment);
         showSuccess('Payment completed successfully!');
       } else {

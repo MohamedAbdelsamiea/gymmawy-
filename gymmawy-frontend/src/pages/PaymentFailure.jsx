@@ -35,6 +35,26 @@ const PaymentFailure = () => {
       // Get payment status from Tabby
       const result = await tabbyService.handlePaymentFailure(id);
       
+      console.log('🔍 Payment failure verification result:', result);
+      console.log('🔍 Payment status:', result.payment?.status);
+      
+      // Check if the payment was actually successful (mis-redirected)
+      const tabbyStatus = result.payment?.status?.toUpperCase();
+      
+      if (tabbyStatus === 'AUTHORIZED' || tabbyStatus === 'CLOSED') {
+        // Payment was actually successful - redirect to success page
+        console.log('✅ Payment was successful, redirecting to success page');
+        navigate(`/payment/success?payment_id=${id}`, { replace: true });
+        return;
+      }
+      
+      if (tabbyStatus === 'CANCELLED') {
+        // Payment was cancelled - redirect to cancel page
+        console.log('❌ Payment was cancelled, redirecting to cancel page');
+        navigate(`/payment/cancel?payment_id=${id}`, { replace: true });
+        return;
+      }
+      
       setPaymentStatus(result.payment);
       
       // Show failure message as per Tabby specification
