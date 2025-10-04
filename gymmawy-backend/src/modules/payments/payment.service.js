@@ -179,10 +179,8 @@ class PaymentService {
         }
       });
 
-      return {
-        success: true,
-        data: payment
-      };
+      // Return the payment object directly (not wrapped)
+      return payment;
     } catch (error) {
       console.error('Error creating payment record:', error);
       throw error;
