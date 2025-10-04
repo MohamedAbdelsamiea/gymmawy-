@@ -163,12 +163,25 @@ const PaymentCancel = () => {
             Payment Cancelled
           </h1>
           
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-600 mb-4">
             {i18n.language === 'ar' 
-              ? 'لقد ألغيت الدفعة. فضلاً حاول مجددًا أو اختر طريقة دفع أخرى.'
-              : 'You aborted the payment. Please retry or choose another payment method.'
+              ? 'تم إلغاء عملية الدفع. يمكنك المحاولة مرة أخرى في أي وقت.'
+              : 'You cancelled your payment. No worries - you can try again anytime.'
             }
           </p>
+          
+          {/* Order Preservation Notice */}
+          <div className="w-full bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center mb-2">
+              <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="font-semibold text-blue-900">Your Order is Saved</h3>
+            </div>
+            <p className="text-sm text-blue-800">
+              Your order has been preserved in your cart. You can resume payment anytime from your dashboard or cart.
+            </p>
+          </div>
           
           {/* Payment Details (if available) */}
           {paymentStatus && (
@@ -196,41 +209,89 @@ const PaymentCancel = () => {
           )}
           
           {/* Information Section */}
-          <div className="w-full bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <h4 className="font-medium text-blue-900 mb-2">What happened?</h4>
-            <p className="text-sm text-blue-800">
-              You chose to cancel the payment process. Your items are still in your cart and no charges have been made.
-            </p>
+          <div className="w-full bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+            <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+              <svg className="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              What happened?
+            </h4>
+            <div className="space-y-2 text-sm text-gray-700">
+              <div className="flex items-start">
+                <svg className="w-4 h-4 mr-2 mt-0.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                <span>You chose to cancel the payment process</span>
+              </div>
+              <div className="flex items-start">
+                <svg className="w-4 h-4 mr-2 mt-0.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Your items are safely saved in your cart</span>
+              </div>
+              <div className="flex items-start">
+                <svg className="w-4 h-4 mr-2 mt-0.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
+                <span>No charges have been made to your card</span>
+              </div>
+            </div>
           </div>
           
           {/* Action Buttons */}
-          <div className="flex space-x-4 w-full">
+          <div className="space-y-3 w-full">
             <button
               onClick={handleRetryPayment}
-              className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium"
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium flex items-center justify-center"
             >
-              Try Payment Again
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+              Resume Payment
             </button>
-            <button
-              onClick={handleViewCart}
-              className="flex-1 bg-gray-300 text-gray-700 py-3 px-4 rounded-md hover:bg-gray-400 transition-colors"
-            >
-              View Cart
-            </button>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={handleViewCart}
+                className="flex-1 bg-gray-300 text-gray-700 py-3 px-4 rounded-md hover:bg-gray-400 transition-colors font-medium flex items-center justify-center"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                View Cart
+              </button>
+              <button
+                onClick={handleContinueShopping}
+                className="flex-1 bg-gray-100 text-gray-600 py-3 px-4 rounded-md hover:bg-gray-200 transition-colors font-medium flex items-center justify-center"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                Return to Store
+              </button>
+            </div>
           </div>
           
-          <button
-            onClick={handleContinueShopping}
-            className="w-full mt-3 bg-gray-100 text-gray-600 py-2 px-4 rounded-md hover:bg-gray-200 transition-colors"
-          >
-            Continue Shopping
-          </button>
-          
-          {/* Additional Help */}
-          <div className="mt-6 text-center">
-            <p className="text-xs text-gray-500">
-              Need help? Contact our support team for assistance with your payment.
+          {/* Support Section */}
+          <div className="w-full bg-gray-50 border border-gray-200 rounded-lg p-4 mt-6">
+            <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+              <svg className="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M12 2.25a9.75 9.75 0 100 19.5 9.75 9.75 0 000-19.5z" />
+              </svg>
+              Need Help?
+            </h4>
+            <p className="text-sm text-gray-600 mb-3">
+              If you didn't mean to cancel or need assistance with your payment, our support team is here to help.
             </p>
+            <button
+              onClick={() => navigate('/contact')}
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              Contact Support
+            </button>
           </div>
         </div>
       </div>
