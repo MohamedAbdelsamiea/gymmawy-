@@ -1539,46 +1539,12 @@ return;
       if (result.success && result.checkoutUrl) {
         showSuccess('Redirecting to secure payment page...');
         
-        // Open Paymob checkout in a new window
-        const checkoutWindow = window.open(
-          result.checkoutUrl,
-          'paymob_checkout',
-          'width=800,height=600,scrollbars=yes,resizable=yes'
-        );
-
-        if (!checkoutWindow) {
-          throw new Error('Failed to open checkout window. Please check your popup blocker settings.');
-        }
+        // Redirect to Paymob checkout directly (like Tabby)
+        window.location.href = result.checkoutUrl;
 
         // Don't set success state yet - wait for actual payment completion
         // The success state will be set when user returns from successful payment
         setSubmitting(false);
-        
-        // Show a message that payment is in progress
-        showSuccess('Payment window opened. Please complete your payment in the popup window.');
-        
-        // Add a listener to detect when user returns from payment popup
-        const checkPaymentStatus = () => {
-          // Check if the popup window is closed
-          if (checkoutWindow.closed) {
-            // Popup was closed, check if user was redirected to success page
-            const currentUrl = window.location.href;
-            if (currentUrl.includes('/payment/result')) {
-              // User was redirected to payment result page, let that page handle the result
-              return;
-            }
-            
-            // Popup was closed without completion, show a message
-            showError('Payment was cancelled. You can try again or choose a different payment method.');
-            setSubmitting(false);
-          } else {
-            // Popup is still open, check again in 1 second
-            setTimeout(checkPaymentStatus, 1000);
-          }
-        };
-        
-        // Start checking payment status
-        setTimeout(checkPaymentStatus, 1000);
       } else {
         throw new Error('Failed to create payment intention');
       }
