@@ -32,6 +32,15 @@ const PaymentFailure = () => {
     try {
       setLoading(true);
       
+      // Check if this is a Paymob payment
+      const provider = searchParams.get('provider') || (id.startsWith('gymmawy_') ? 'paymob' : 'tabby');
+      
+      if (provider === 'paymob') {
+        console.log('🔍 Detected Paymob payment, fetching status...');
+        await verifyPaymobPayment(id);
+        return;
+      }
+      
       // Get payment status from Tabby
       const result = await tabbyService.handlePaymentFailure(id);
       
@@ -66,6 +75,48 @@ const PaymentFailure = () => {
       showError('Failed to verify payment status');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const verifyPaymobPayment = async (paymentReference) => {
+    try {
+      // Fetch payment status from backend
+      const response = await apiClient.get(`/paymob/payments?reference=${paymentReference}`);
+      
+      if (response.success && response.data.payments.length > 0) {
+        const payment = response.data.payments[0];
+        
+        console.log('🔍 Paymob payment status:', payment);
+        
+        // Check payment status
+        if (payment.status === 'SUCCESS') {
+          // Payment was actually successful - redirect to success page
+          navigate(`/payment/success?payment_id=${paymentReference}&provider=paymob`, { replace: true });
+          return;
+        } else if (payment.status === 'FAILED') {
+          setPaymentStatus({
+            payment_id: payment.transactionId || payment.paymentReference,
+            amount: payment.amount,
+            currency: payment.currency,
+            status: payment.status.toLowerCase(),
+            created_at: payment.processedAt || payment.createdAt,
+            provider: 'Paymob'
+          });
+          
+          // Show failure message
+          showError('Payment was declined. Please try again with a different payment method.');
+        } else if (payment.status === 'PENDING') {
+          // Payment is still processing, redirect to success page
+          navigate(`/payment/success?payment_id=${paymentReference}&provider=paymob`, { replace: true });
+          return;
+        }
+      } else {
+        throw new Error('Payment not found');
+      }
+    } catch (error) {
+      console.error('Paymob payment verification failed:', error);
+      setError('Failed to verify payment status');
+      showError('Failed to verify payment status');
     }
   };
 
@@ -122,15 +173,15 @@ const PaymentFailure = () => {
           <p className="text-gray-600 mb-6">
             {reason === 'rejected' 
               ? (i18n.language === 'ar' 
-                  ? 'نأسف، تابي غير قادرة على الموافقة على هذه العملية. الرجاء استخدام طريقة دفع أخرى.'
-                  : 'Sorry, Tabby is unable to approve this purchase. Please use an alternative payment method for your order.')
+                  ? 'نأسف، غير قادرة على الموافقة على هذه العملية. الرجاء استخدام طريقة دفع أخرى.'
+                  : 'Sorry, we are unable to approve this purchase. Please use an alternative payment method for your order.')
               : reason === 'expired'
               ? (i18n.language === 'ar'
                   ? 'انتهت صلاحية جلسة الدفع. يرجى المحاولة مرة أخرى.'
                   : 'Your payment session has expired. Please try again with a new payment session.')
               : (i18n.language === 'ar'
-                  ? 'نأسف، تابي غير قادرة على الموافقة على هذه العملية. الرجاء استخدام طريقة دفع أخرى.'
-                  : 'Sorry, Tabby is unable to approve this purchase. Please use an alternative payment method for your order.')
+                  ? 'نأسف، غير قادرة على الموافقة على هذه العملية. الرجاء استخدام طريقة دفع أخرى.'
+                  : 'Sorry, we are unable to approve this purchase. Please use an alternative payment method for your order.')
             }
           </p>
           
@@ -150,6 +201,10 @@ const PaymentFailure = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>
                   <span className="font-medium text-red-600 capitalize">{paymentStatus.status}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Provider:</span>
+                  <span className="font-medium">{paymentStatus.provider || 'Tabby'}</span>
                 </div>
                 {paymentStatus.tabby_status && (
                   <div className="flex justify-between">

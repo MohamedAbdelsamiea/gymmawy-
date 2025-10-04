@@ -72,8 +72,9 @@ export const createIntention = async (req, res) => {
 
     // Prepare webhook URLs
     const baseUrl = process.env.BASE_URL || 'http://localhost:3001';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const notificationUrl = `${baseUrl}/api/paymob/webhook`;
-    const redirectionUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/result`;
+    const redirectionUrl = `${frontendUrl}/payment/success?payment_id=${finalSpecialReference}`;
 
     // Create payment intention
     const intentionResult = await paymobService.createIntention({

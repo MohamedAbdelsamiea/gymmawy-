@@ -34,6 +34,13 @@ const PaymentSuccess = () => {
     try {
       setLoading(true);
       
+      // Check if this is a Paymob payment (by checking if it starts with 'gymmawy_')
+      if (id.startsWith('gymmawy_')) {
+        console.log('🔍 Detected Paymob payment, fetching status...');
+        await verifyPaymobPayment(id);
+        return;
+      }
+      
       // If the ID starts with 'temp-', we need to find the actual payment record
       let actualId = id;
       if (id.startsWith('temp-')) {
@@ -92,6 +99,53 @@ const PaymentSuccess = () => {
       showError('Failed to verify payment status');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const verifyPaymobPayment = async (paymentReference) => {
+    try {
+      // Fetch payment status from backend
+      const response = await apiClient.get(`/paymob/payments?reference=${paymentReference}`);
+      
+      if (response.success && response.data.payments.length > 0) {
+        const payment = response.data.payments[0];
+        
+        console.log('🔍 Paymob payment status:', payment);
+        
+        // Check payment status
+        if (payment.status === 'SUCCESS') {
+          setPaymentStatus({
+            payment_id: payment.transactionId || payment.paymentReference,
+            amount: payment.amount,
+            currency: payment.currency,
+            status: payment.status.toLowerCase(),
+            created_at: payment.processedAt || payment.createdAt,
+            provider: 'Paymob'
+          });
+          showSuccess('Payment completed successfully!');
+        } else if (payment.status === 'FAILED') {
+          // Redirect to failure page
+          navigate(`/payment/failure?payment_id=${paymentReference}&provider=paymob`, { replace: true });
+          return;
+        } else if (payment.status === 'PENDING') {
+          // Payment is still processing, show pending state
+          setPaymentStatus({
+            payment_id: payment.transactionId || payment.paymentReference,
+            amount: payment.amount,
+            currency: payment.currency,
+            status: 'processing',
+            created_at: payment.createdAt,
+            provider: 'Paymob'
+          });
+          showSuccess('Payment is being processed...');
+        }
+      } else {
+        throw new Error('Payment not found');
+      }
+    } catch (error) {
+      console.error('Paymob payment verification failed:', error);
+      setError('Failed to verify payment status');
+      showError('Failed to verify payment status');
     }
   };
 
@@ -195,6 +249,10 @@ const PaymentSuccess = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>
                   <span className="font-medium text-green-600 capitalize">{paymentStatus.status}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Provider:</span>
+                  <span className="font-medium">{paymentStatus.provider || 'Tabby'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Date:</span>

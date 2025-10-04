@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../contexts/ToastContext';
 import tabbyService from '../services/tabbyService';
+import apiClient from '../services/apiClient';
 
 const PaymentCancel = () => {
   const [searchParams] = useSearchParams();
@@ -28,6 +29,15 @@ const PaymentCancel = () => {
   const checkPaymentStatus = async (id) => {
     try {
       setLoading(true);
+      
+      // Check if this is a Paymob payment
+      const provider = searchParams.get('provider') || (id.startsWith('gymmawy_') ? 'paymob' : 'tabby');
+      
+      if (provider === 'paymob') {
+        console.log('🔍 Detected Paymob payment, fetching status...');
+        await verifyPaymobPayment(id);
+        return;
+      }
       
       // Get payment status from Tabby
       const result = await tabbyService.handlePaymentCancel(id);
@@ -61,6 +71,48 @@ const PaymentCancel = () => {
       console.error('Payment status check failed:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const verifyPaymobPayment = async (paymentReference) => {
+    try {
+      // Fetch payment status from backend
+      const response = await apiClient.get(`/paymob/payments?reference=${paymentReference}`);
+      
+      if (response.success && response.data.payments.length > 0) {
+        const payment = response.data.payments[0];
+        
+        console.log('🔍 Paymob payment status:', payment);
+        
+        // Check payment status
+        if (payment.status === 'SUCCESS') {
+          // Payment was actually successful - redirect to success page
+          navigate(`/payment/success?payment_id=${paymentReference}&provider=paymob`, { replace: true });
+          return;
+        } else if (payment.status === 'FAILED') {
+          // Payment failed - redirect to failure page
+          navigate(`/payment/failure?payment_id=${paymentReference}&provider=paymob`, { replace: true });
+          return;
+        } else {
+          // Payment was cancelled or is pending
+          setPaymentStatus({
+            payment_id: payment.transactionId || payment.paymentReference,
+            amount: payment.amount,
+            currency: payment.currency,
+            status: payment.status.toLowerCase(),
+            created_at: payment.createdAt,
+            provider: 'Paymob'
+          });
+          
+          // Show cancellation message
+          showInfo('Payment was cancelled. You can try again or choose another payment method.');
+        }
+      } else {
+        throw new Error('Payment not found');
+      }
+    } catch (error) {
+      console.error('Paymob payment verification failed:', error);
+      showInfo('Payment was cancelled. You can try again or choose another payment method.');
     }
   };
 
@@ -134,6 +186,10 @@ const PaymentCancel = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>
                   <span className="font-medium text-yellow-600 capitalize">{paymentStatus.status}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Provider:</span>
+                  <span className="font-medium">{paymentStatus.provider || 'Tabby'}</span>
                 </div>
               </div>
             </div>
