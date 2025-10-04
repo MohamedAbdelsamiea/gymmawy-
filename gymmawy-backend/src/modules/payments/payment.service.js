@@ -1,5 +1,6 @@
 import paymobService from '../../services/paymobService.js';
 import { getPrismaClient } from '../../config/db.js';
+import { generateUserFriendlyPaymentReference } from '../../utils/paymentReference.js';
 
 const prisma = getPrismaClient();
 
@@ -169,7 +170,7 @@ class PaymentService {
           status: 'PENDING',
           gatewayId: paymentData.transactionId,
           transactionId: paymentData.transactionId,
-          paymentReference: `payment_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+          paymentReference: await generateUserFriendlyPaymentReference(),
           userId: paymentData.userId,
           customerInfo: paymentData.customerInfo || null,
           metadata: paymentData.metadata || {},

@@ -1,5 +1,6 @@
 import { getPrismaClient } from "../../config/db.js";
 import { generateSubscriptionNumber, generateUniqueId } from "../../utils/idGenerator.js";
+import { generateUserFriendlyPaymentReference } from "../../utils/paymentReference.js";
 import * as notificationService from "../notifications/notification.service.js";
 import * as couponService from "../coupons/coupon.service.js";
 import * as couponRedemptionService from "../coupons/couponRedemption.service.js";
@@ -327,14 +328,8 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
     // Validate payment data based on payment method
     validatePaymentData(paymentMethod, transactionId, paymentProof);
     
-    // Generate unique payment reference
-    const paymentReference = await generateUniqueId(
-      () => `PAY-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-      async (ref) => {
-        const existing = await prisma.payment.findUnique({ where: { paymentReference: ref } });
-        return !existing;
-      }
-    );
+    // Generate user-friendly payment reference
+    const paymentReference = await generateUserFriendlyPaymentReference();
 
     // Determine payment status based on method
     let paymentStatus = 'PENDING';

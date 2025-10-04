@@ -1,0 +1,62 @@
+import { getPrismaClient } from '../config/db.js';
+
+const prisma = getPrismaClient();
+
+/**
+ * Generate user-friendly payment reference in PAY-xxxx-xxxx format
+ * This is the reference shown to users for support purposes
+ */
+export async function generateUserFriendlyPaymentReference() {
+  let attempts = 0;
+  const maxAttempts = 5;
+  
+  do {
+    attempts++;
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).substr(2, 9).toUpperCase();
+    const paymentReference = `PAY-${timestamp}-${randomSuffix}`;
+    
+    // Check if this payment reference already exists
+    const existingPayment = await prisma.payment.findUnique({
+      where: { paymentReference }
+    });
+    
+    if (!existingPayment) {
+      return paymentReference;
+    }
+    
+    if (attempts >= maxAttempts) {
+      throw new Error("Failed to generate unique payment reference after multiple attempts");
+    }
+  } while (attempts < maxAttempts);
+}
+
+/**
+ * Validate payment reference format
+ * @param {string} reference - Payment reference to validate
+ * @returns {boolean} - Whether the reference is in correct format
+ */
+export function isValidPaymentReference(reference) {
+  const pattern = /^PAY-\d{13}-[A-Z0-9]{9}$/;
+  return pattern.test(reference);
+}
+
+/**
+ * Extract timestamp from payment reference
+ * @param {string} reference - Payment reference
+ * @returns {Date|null} - Creation timestamp or null if invalid
+ */
+export function getPaymentReferenceTimestamp(reference) {
+  if (!isValidPaymentReference(reference)) {
+    return null;
+  }
+  
+  const timestampStr = reference.split('-')[1];
+  const timestamp = parseInt(timestampStr);
+  
+  if (isNaN(timestamp)) {
+    return null;
+  }
+  
+  return new Date(timestamp);
+}

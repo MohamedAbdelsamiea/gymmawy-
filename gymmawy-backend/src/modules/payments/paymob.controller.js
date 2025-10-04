@@ -1,6 +1,7 @@
 import paymobService from '../../services/paymobService.js';
 import { getPrismaClient } from '../../config/db.js';
 import { v4 as uuidv4 } from 'uuid';
+import { generateUserFriendlyPaymentReference } from '../../utils/paymentReference.js';
 
 const prisma = getPrismaClient();
 
@@ -67,8 +68,8 @@ export const createIntention = async (req, res) => {
       });
     }
 
-    // Generate special reference if not provided
-    const finalSpecialReference = specialReference || `gymmawy_${Date.now()}_${uuidv4().substring(0, 8)}`;
+    // Generate user-friendly payment reference if not provided
+    const finalSpecialReference = specialReference || await generateUserFriendlyPaymentReference();
 
     // Prepare webhook URLs
     const baseUrl = process.env.BASE_URL || 'http://localhost:3001';

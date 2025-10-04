@@ -1,5 +1,6 @@
 import { getPrismaClient } from "../../config/db.js";
 import { generateProgrammePurchaseNumber } from "../../utils/idGenerator.js";
+import { generateUserFriendlyPaymentReference } from "../../utils/paymentReference.js";
 import { Decimal } from "@prisma/client/runtime/library";
 import * as notificationService from "../notifications/notification.service.js";
 
@@ -598,28 +599,8 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
     // Create payment record if payment method is provided
     if (paymentMethod && paymentProof) {
       
-      // Generate unique payment reference with retry logic
-      let paymentReference;
-      let attempts = 0;
-      const maxAttempts = 5;
-      
-      do {
-        attempts++;
-        const timestamp = Date.now();
-        const randomSuffix = Math.random().toString(36).substr(2, 9).toUpperCase();
-        paymentReference = `PAY-${timestamp}-${randomSuffix}`;
-        
-        // Check if this payment reference already exists
-        const existingPayment = await tx.payment.findUnique({
-          where: { paymentReference }
-        });
-        
-        if (!existingPayment) break;
-        
-        if (attempts >= maxAttempts) {
-          throw new Error("Failed to generate unique payment reference after multiple attempts");
-        }
-      } while (attempts < maxAttempts);
+      // Generate user-friendly payment reference
+      const paymentReference = await generateUserFriendlyPaymentReference();
       
       const payment = await tx.payment.create({
         data: {
