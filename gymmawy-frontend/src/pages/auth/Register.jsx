@@ -377,6 +377,7 @@ const Register = () => {
           onChange={handleInputChange}
           error={errors.email || (realTimeErrors.email ? t(`register.errors.${realTimeErrors.email}`) : null) || getFieldError(validationErrors, 'email')}
           required
+          dir="ltr"
         />
 
         {/* Phone Input with Country Code */}
@@ -384,7 +385,7 @@ const Register = () => {
           <label className="block text-sm font-medium text-gray-700 mb-2 uppercase">
             {t('register.phone')} <span className="text-red-500">*</span>
           </label>
-          <div className="flex ltr:flex-row rtl:flex-row-reverse">
+          <div className="flex" dir="ltr">
             <CountryCodeSelector
               value={formData.countryCode}
               onChange={handleCountryCodeChange}
@@ -397,10 +398,11 @@ const Register = () => {
                 value={formData.phone}
                 onChange={handleInputChange}
                 placeholder={t('register.phonePlaceholder')}
+                dir="ltr"
                 className={`
                   w-full px-3 py-2 border-b-2 bg-transparent text-lg md:text-xl 
                   focus:outline-none transition-colors duration-200
-                  text-left ltr:rounded-r-md rtl:rounded-l-md
+                  text-left rounded-r-md
                   ${errors.phone || realTimeErrors.phone
                     ? 'border-red-500 text-red-500' 
                     : 'border-gray-300 text-gray-700 focus:border-gymmawy-primary'
@@ -427,10 +429,11 @@ const Register = () => {
             name="birthDate"
             value={formData.birthDate}
             onChange={handleInputChange}
+            dir="ltr"
             className={`
               w-full border-b-2 bg-transparent pt-2 pb-4 text-lg md:text-xl 
               focus:outline-none transition-colors duration-200
-              ltr:text-left rtl:text-right
+              text-left
               ${errors.birthDate || realTimeErrors.birthDate
                 ? 'border-red-500 text-red-500' 
                 : 'border-gray-300 text-gray-700 focus:border-gymmawy-primary'
@@ -459,6 +462,7 @@ const Register = () => {
               value={formData.building}
               onChange={handleInputChange}
               error={errors.building || (realTimeErrors.building ? t(`register.errors.${realTimeErrors.building}`) : null)}
+              dir="ltr"
             />
             <FloatingInput
               label={t('register.street')}
@@ -495,6 +499,7 @@ const Register = () => {
               value={formData.postcode}
               onChange={handleInputChange}
               error={errors.postcode || (realTimeErrors.postcode ? t(`register.errors.${realTimeErrors.postcode}`) : null)}
+              dir="ltr"
             />
           </div>
         </div>

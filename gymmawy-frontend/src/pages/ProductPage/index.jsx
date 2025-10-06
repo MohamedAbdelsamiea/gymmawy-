@@ -135,6 +135,8 @@ const ProductPage = () => {
       hasDiscount: discountPercentage > 0,
       stock: apiProduct.stock || 0,
       image: productImage, // Single image for related products
+      loyaltyPointsAwarded: apiProduct.loyaltyPointsAwarded || 0,
+      loyaltyPointsRequired: apiProduct.loyaltyPointsRequired || 0,
       images: apiProduct.images?.map(img => img.url) || [],
       description: apiProduct.description?.en || apiProduct.description || '',
       sizes: ['S', 'M', 'L', 'XL'], // Default sizes for now

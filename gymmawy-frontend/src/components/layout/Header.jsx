@@ -199,13 +199,13 @@ element.scrollIntoView({ behavior: "smooth" });
                 
                 {/* Profile Dropdown Menu */}
                 {profileDropdownOpen && (
-                  <div className={`absolute ${i18n.language === 'ar' ? 'right-0' : 'right-0'} mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50`}>
+                  <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50`}>
                     {/* Loyalty Points - Only for regular users, not admins */}
                     {user?.role !== 'ADMIN' && user?.role !== 'admin' && (
-                      <div className={`px-4 py-2 text-sm text-gray-600 ${i18n.language === 'ar' ? 'text-right' : 'text-left'}`}>
-                        <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
-                          <Gift className="h-4 w-4 text-gymmawy-accent" />
-                          <span className="text-gymmawy-accent font-medium">
+                      <div className="px-4 py-2.5 text-sm text-gray-600" style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}>
+                        <div className="flex items-center gap-2">
+                          <Gift className="h-4 w-4 flex-shrink-0 text-gymmawy-accent" />
+                          <span className="text-gymmawy-accent font-medium whitespace-nowrap">
                             {user.loyaltyPoints || 0} {t('auth.loyaltyPoints')}
                           </span>
                         </div>
@@ -217,36 +217,40 @@ element.scrollIntoView({ behavior: "smooth" });
                       /* Home Link - Show when in Dashboard */
                       <button
                         onClick={handleHomeNavigation}
-                        className={`block w-full ${i18n.language === 'ar' ? 'text-right' : 'text-left'} px-4 py-2 text-sm text-gray-700 hover:bg-gray-100`}
+                        className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 gap-2"
+                        style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
                       >
-                        <Home className={`inline h-4 w-4 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                        {t('auth.home')}
+                        <Home className="h-4 w-4 flex-shrink-0" />
+                        <span className="whitespace-nowrap">{t('auth.home')}</span>
                       </button>
                     ) : (
                       /* Dashboard Link - Show when in Homepage */
                       <button
                         onClick={handleDashboardNavigation}
-                        className={`block w-full ${i18n.language === 'ar' ? 'text-right' : 'text-left'} px-4 py-2 text-sm text-gray-700 hover:bg-gray-100`}
+                        className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 gap-2"
+                        style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
                       >
-                        <ShoppingBag className={`inline h-4 w-4 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                        {t('auth.dashboard')}
+                        <ShoppingBag className="h-4 w-4 flex-shrink-0" />
+                        <span className="whitespace-nowrap">{t('auth.dashboard')}</span>
                       </button>
                     )}
                     
                     {/* Profile Settings Link */}
                     <button
                       onClick={handleProfileNavigation}
-                      className={`block w-full ${i18n.language === 'ar' ? 'text-right' : 'text-left'} px-4 py-2 text-sm text-gray-700 hover:bg-gray-100`}
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 gap-2"
+                      style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
                     >
-                      <User className={`inline h-4 w-4 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                      {t('auth.profileSettings')}
+                      <User className="h-4 w-4 flex-shrink-0" />
+                      <span className="whitespace-nowrap">{t('auth.profileSettings')}</span>
                     </button>
                     <button
                       onClick={handleLogout}
-                      className={`block w-full ${i18n.language === 'ar' ? 'text-right' : 'text-left'} px-4 py-2 text-sm text-gray-700 hover:bg-gray-100`}
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 gap-2"
+                      style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
                     >
-                      <LogOut className={`inline h-4 w-4 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                      {t('auth.signOut')}
+                      <LogOut className="h-4 w-4 flex-shrink-0" />
+                      <span className="whitespace-nowrap">{t('auth.signOut')}</span>
                     </button>
                   </div>
                 )}

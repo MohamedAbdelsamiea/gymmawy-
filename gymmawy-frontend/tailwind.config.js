@@ -17,8 +17,9 @@ export default {
       },
       fontFamily: {
         'sans': ['Inter', 'system-ui', 'sans-serif'],
-        'arabic': ['Noto Sans Arabic', 'system-ui', 'sans-serif'],
+        'arabic': ['Alexandria', 'Noto Sans Arabic', 'system-ui', 'sans-serif'],
         'inter': ['Inter', 'system-ui', 'sans-serif'],
+        'alexandria': ['Alexandria', 'Noto Sans Arabic', 'system-ui', 'sans-serif'],
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',

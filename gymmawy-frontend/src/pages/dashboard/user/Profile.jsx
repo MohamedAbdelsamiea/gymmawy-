@@ -51,7 +51,7 @@ const parseMobileNumber = (mobileNumber) => {
 };
 
 const Profile = () => {
-  const { t } = useTranslation("dashboard");
+  const { t, i18n } = useTranslation("dashboard");
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -301,7 +301,7 @@ const Profile = () => {
         }
         
         const response = await userService.updateProfile(filteredData);
-        setSuccess(response.message || 'Profile updated successfully');
+        setSuccess(response.message || t('user.profile.updateSuccess'));
         setIsEditing(false);
         
         // Update user context with new data
@@ -416,16 +416,16 @@ const Profile = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
-          <p className="text-gray-600 mt-1">Manage your personal information and account details</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('user.profile.title')}</h1>
+          <p className="text-gray-600 mt-1">{t('user.profile.subtitle')}</p>
         </div>
         {!isEditing && (
           <button
             onClick={() => setIsEditing(true)}
-            className="flex items-center px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary transition-colors"
+            className={`flex items-center gap-2 px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary transition-colors ${i18n.language === 'ar' ? 'flex-row-reverse' : ''}`}
           >
-            <Edit3 className="h-4 w-4 mr-2" />
-            Edit Profile
+            <Edit3 className="h-4 w-4" />
+            {t('user.profile.editProfile')}
           </button>
         )}
       </div>
@@ -454,11 +454,12 @@ const Profile = () => {
                     {user?.firstName?.charAt(0) || 'U'}
                   </span>
                 </div>
-                {isEditing && (
+                {/* Commented out for now - Profile picture upload */}
+                {/* {isEditing && (
                   <button className="absolute bottom-0 right-0 h-8 w-8 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-gray-50">
                     <Camera className="h-4 w-4 text-gray-600" />
                   </button>
-                )}
+                )} */}
               </div>
               <h3 className="text-lg font-semibold text-gray-900">
                 {user?.firstName} {user?.lastName}
@@ -466,7 +467,7 @@ const Profile = () => {
               <p className="text-sm text-gray-500">{user?.email}</p>
               <div className="mt-4 flex items-center justify-center">
                 <Shield className="h-4 w-4 text-green-500 mr-1" />
-                <span className="text-sm text-green-600">Verified Account</span>
+                <span className="text-sm text-green-600">{t('user.profile.verifiedAccount')}</span>
               </div>
             </div>
           </div>
@@ -479,13 +480,13 @@ const Profile = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <User className="h-5 w-5 mr-2 text-gymmawy-primary" />
-                Personal Information
+                {t('user.profile.personalInformation')}
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    First Name
+                    {t('user.profile.firstName')}
                   </label>
                   <input
                     type="text"
@@ -504,7 +505,7 @@ const Profile = () => {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Last Name
+                    {t('user.profile.lastName')}
                   </label>
                   <input
                     type="text"
@@ -523,7 +524,7 @@ const Profile = () => {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address
+                    {t('user.profile.emailAddress')}
                   </label>
                   <input
                     type="email"
@@ -531,6 +532,7 @@ const Profile = () => {
                     value={formData.email ?? ''}
                     onChange={handleInputChange}
                     disabled={!isEditing}
+                    dir="ltr"
                     className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 ${
                       getFieldError('email') ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
                     }`}
@@ -539,15 +541,15 @@ const Profile = () => {
                     <p className="mt-1 text-sm text-red-600">{getErrorMessage('email')}</p>
                   )}
                   <p className="text-xs text-gray-500 mt-1">
-                    Changing your email will require verification of the new address.
+                    {t('user.profile.emailChangeNote')}
                   </p>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone Number
+                    {t('user.profile.phoneNumber')}
                   </label>
-                  <div className="flex">
+                  <div className="flex" dir="ltr">
                     <CountryCodeSelector
                       value={formData.countryCode ?? '+20'}
                       onChange={handleCountryCodeChange}
@@ -561,6 +563,7 @@ const Profile = () => {
                       onChange={handleInputChange}
                       disabled={!isEditing}
                       placeholder="Enter phone number"
+                      dir="ltr"
                       className={`flex-1 px-3 py-2 border rounded-r-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 ${
                         getFieldError('phone') ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 border-l-0'
                       }`}
@@ -573,7 +576,7 @@ const Profile = () => {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date of Birth
+                    {t('user.profile.birthDate')}
                   </label>
                   <input
                     type="date"
@@ -596,7 +599,7 @@ const Profile = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <MapPin className="h-5 w-5 mr-2 text-gymmawy-primary" />
-                Address Information
+                {t('user.profile.addressInformation')}
               </h3>
               
               <div className="space-y-4">
@@ -604,7 +607,7 @@ const Profile = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Building
+                      {t('user.profile.building')}
                     </label>
                     <input
                       type="text"
@@ -612,6 +615,7 @@ const Profile = () => {
                       value={formData.building ?? ''}
                       onChange={handleInputChange}
                       disabled={!isEditing}
+                      dir="ltr"
                       className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 ${
                         getFieldError('building') ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
                       }`}
@@ -622,7 +626,7 @@ const Profile = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Street
+                      {t('user.profile.street')}
                     </label>
                     <input
                       type="text"
@@ -644,7 +648,7 @@ const Profile = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      City
+                      {t('user.profile.city')}
                     </label>
                     <input
                       type="text"
@@ -662,7 +666,7 @@ const Profile = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Country
+                      {t('user.profile.country')}
                     </label>
                     <input
                       type="text"
@@ -680,7 +684,7 @@ const Profile = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Postcode
+                      {t('user.profile.postcode')}
                     </label>
                     <input
                       type="text"
@@ -688,6 +692,7 @@ const Profile = () => {
                       value={formData.postcode ?? ''}
                       onChange={handleInputChange}
                       disabled={!isEditing}
+                      dir="ltr"
                       className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 ${
                         getFieldError('postcode') ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
                       }`}
@@ -702,28 +707,28 @@ const Profile = () => {
 
             {/* Action Buttons */}
             {isEditing && (
-              <div className="flex items-center justify-end space-x-4">
+              <div className={`flex items-center justify-end ${i18n.language === 'ar' ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
                 <button
                   type="button"
                   onClick={handleCancel}
                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  Cancel
+                  {t('user.profile.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex items-center px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary transition-colors disabled:opacity-50"
+                  className={`flex items-center gap-2 px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary transition-colors disabled:opacity-50 ${i18n.language === 'ar' ? 'flex-row-reverse' : ''}`}
                 >
                   {loading ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Saving...
+                      <div className="animate-spin rounded-full h-4 w-4"></div>
+                      {t('user.profile.saving')}
                     </>
                   ) : (
                     <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Save Changes
+                      <Save className="h-4 w-4" />
+                      {t('user.profile.saveChanges')}
                     </>
                   )}
                 </button>

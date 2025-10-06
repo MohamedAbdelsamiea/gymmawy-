@@ -31,7 +31,9 @@ const StorePage = () => {
       discountedPrice: discountedPrice,
       hasDiscount: discountPercentage > 0,
       stock: apiProduct.stock || 0,
-      image: primaryImage?.url || '/assets/common/store/product1-1.png'
+      image: primaryImage?.url || '/assets/common/store/product1-1.png',
+      loyaltyPointsAwarded: apiProduct.loyaltyPointsAwarded || 0,
+      loyaltyPointsRequired: apiProduct.loyaltyPointsRequired || 0
     };
   };
 

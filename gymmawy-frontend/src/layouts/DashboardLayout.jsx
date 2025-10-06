@@ -12,8 +12,6 @@ import {
   Menu,
   X,
   ChevronDown,
-  Bell,
-  Search,
   CreditCard,
   Truck,
   Video,
@@ -24,7 +22,7 @@ import {
 } from 'lucide-react';
 
 const DashboardLayout = ({ children }) => {
-  const { t } = useTranslation("dashboard");
+  const { t, i18n } = useTranslation("dashboard");
   const { user, logout } = useAuth();
   const location = useLocation();
   
@@ -85,9 +83,10 @@ const DashboardLayout = ({ children }) => {
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out
-        lg:translate-x-0 lg:static lg:inset-0 lg:z-auto lg:flex-shrink-0 lg:h-screen
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        fixed inset-y-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out overflow-y-auto
+        ${i18n.language === 'ar' ? 'right-0' : 'left-0'}
+        lg:translate-x-0
+        ${sidebarOpen ? 'translate-x-0' : (i18n.language === 'ar' ? 'translate-x-full' : '-translate-x-full')}
       `}>
         {/* Logo */}
         <div className="flex items-center justify-center h-16 px-6 border-b border-gray-200 relative">
@@ -98,7 +97,7 @@ const DashboardLayout = ({ children }) => {
           />
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden absolute right-4 p-2 rounded-md text-gray-400 hover:text-gray-600"
+            className={`lg:hidden absolute ${i18n.language === 'ar' ? 'left-4' : 'right-4'} p-2 rounded-md text-gray-400 hover:text-gray-600`}
           >
             <X className="h-5 w-5" />
           </button>
@@ -115,18 +114,19 @@ const DashboardLayout = ({ children }) => {
                   to={item.path}
                   onClick={() => setSidebarOpen(false)}
                   className={`
-                    group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200
+                    group flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200
                     ${isActive(item.path)
                       ? 'bg-gymmawy-primary text-white'
                       : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                     }
                   `}
+                  style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
                 >
                   <Icon className={`
-                    mr-3 h-5 w-5 flex-shrink-0
+                    h-5 w-5 flex-shrink-0
                     ${isActive(item.path) ? 'text-white' : 'text-gray-400 group-hover:text-gray-500'}
                   `} />
-                  {item.label}
+                  <span>{item.label}</span>
                 </Link>
               );
             })}
@@ -137,7 +137,7 @@ const DashboardLayout = ({ children }) => {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={`flex-1 flex flex-col min-w-0 ${i18n.language === 'ar' ? 'lg:mr-64' : 'lg:ml-64'}`}>
         {/* Top navbar */}
         <div className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
           <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
@@ -157,34 +157,12 @@ const DashboardLayout = ({ children }) => {
             </div>
 
             {/* Right side actions */}
-            <div className="flex items-center space-x-4">
-              {/* Search - Only for admin users */}
-              {userType === 'admin' && (
-                <div className="hidden md:block">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder={t('common.search')}
-                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Notifications - Only for admin users */}
-              {userType === 'admin' && (
-                <button className="p-2 text-gray-400 hover:text-gray-600 relative">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
-                </button>
-              )}
-
+            <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
               {/* Profile dropdown */}
               <div className="relative">
                 <button
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center space-x-2 p-2 text-sm rounded-lg hover:bg-gray-100"
+                  className={`flex items-center gap-2 p-2 text-sm rounded-lg hover:bg-gray-100 ${i18n.language === 'ar' ? 'flex-row-reverse' : ''}`}
                 >
                   <div className="h-8 w-8 rounded-full bg-gymmawy-primary flex items-center justify-center">
                     <span className="text-sm font-medium text-white">
@@ -199,29 +177,32 @@ const DashboardLayout = ({ children }) => {
 
                 {/* Dropdown menu */}
                 {profileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                  <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50`}>
                     <Link
                       to="/"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 gap-2"
                       onClick={() => setProfileDropdownOpen(false)}
+                      style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
                     >
-                      <Home className="inline h-4 w-4 mr-2" />
-                      {t('common.backToWebsite')}
+                      <Home className="h-4 w-4 flex-shrink-0" />
+                      <span className="whitespace-nowrap">{t('common.backToWebsite')}</span>
                     </Link>
                     <Link
                       to="/dashboard/profile"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 gap-2"
                       onClick={() => setProfileDropdownOpen(false)}
+                      style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
                     >
-                      <UserCheck className="inline h-4 w-4 mr-2" />
-                      {t('common.profileSettings')}
+                      <UserCheck className="h-4 w-4 flex-shrink-0" />
+                      <span className="whitespace-nowrap">{t('common.profileSettings')}</span>
                     </Link>
                     <button
                       onClick={handleLogout}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 gap-2"
+                      style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
                     >
-                      <LogOut className="inline h-4 w-4 mr-2" />
-{t('common.signOut')}
+                      <LogOut className="h-4 w-4 flex-shrink-0" />
+<span className="whitespace-nowrap">{t('common.signOut')}</span>
                     </button>
                   </div>
                 )}

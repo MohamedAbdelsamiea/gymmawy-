@@ -117,6 +117,10 @@ model Product {
   stock                 Int            @default(0)
   isActive              Boolean        @default(true)
   order                 Int?           @default(0)
+  weight                Decimal?       @db.Decimal(10, 2) // Weight in kg
+  length                Decimal?       @db.Decimal(10, 2) // Length in cm
+  width                 Decimal?       @db.Decimal(10, 2) // Width in cm
+  height                Decimal?       @db.Decimal(10, 2) // Height in cm
   cartItems             CartItem[]
   orderItems            OrderItem[]
   images                ProductImage[] @relation("ProductImages")
@@ -166,30 +170,30 @@ model CartItem {
 }
 
 model Order {
-  id               String      @id @default(uuid())
-  userId           String
-  status           OrderStatus @default(PENDING)
-  paymentMethod    String?
-  couponId         String?
-  shippingBuilding String?
-  shippingStreet   String?
-  shippingCity     String?
-  shippingCountry  String?
-  shippingPostcode String?
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
-  trackingNumber   String?
-  orderNumber      String      @unique
-  couponDiscount   Decimal?    @db.Decimal(10, 2)
-  discountPercentage Int       @default(0)
-  deletedAt        DateTime?
-  price            Decimal?    @db.Decimal(10, 2)
-  currency         Currency
-  metadata         Json?
-  coupon           Coupon?     @relation(fields: [couponId], references: [id])
-  user             User        @relation(fields: [userId], references: [id])
-  items            OrderItem[]
-  shipping         Shipping[]
+  id                 String      @id @default(uuid())
+  userId             String
+  status             OrderStatus @default(PENDING)
+  paymentMethod      String?
+  couponId           String?
+  shippingBuilding   String?
+  shippingStreet     String?
+  shippingCity       String?
+  shippingCountry    String?
+  shippingPostcode   String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  trackingNumber     String?
+  orderNumber        String      @unique
+  couponDiscount     Decimal?    @db.Decimal(10, 2)
+  discountPercentage Int         @default(0)
+  deletedAt          DateTime?
+  price              Decimal?    @db.Decimal(10, 2)
+  currency           Currency
+  metadata           Json?
+  coupon             Coupon?     @relation(fields: [couponId], references: [id])
+  user               User        @relation(fields: [userId], references: [id])
+  items              OrderItem[]
+  shipping           Shipping[]
 
   @@index([userId])
   @@index([status])
@@ -283,8 +287,8 @@ model Subscription {
   couponId               String?
   isMedical              Boolean            @default(false)
   currency               Currency?
-  subscriptionPeriodDays Int?               // Store the actual subscription period used
-  giftPeriodDays         Int?               // Store the actual gift period used
+  subscriptionPeriodDays Int? // Store the actual subscription period used
+  giftPeriodDays         Int? // Store the actual gift period used
   coupon                 Coupon?            @relation(fields: [couponId], references: [id])
   subscriptionPlan       SubscriptionPlan   @relation(fields: [subscriptionPlanId], references: [id])
   user                   User               @relation(fields: [userId], references: [id])
@@ -531,25 +535,123 @@ model ReferralReward {
 }
 
 model Shipping {
-  id                String         @id @default(uuid())
+  id                String             @id @default(uuid())
   orderId           String
-  trackingNumber    String         @unique
-  status            ShippingStatus @default(PENDING)
+  trackingNumber    String             @unique
+  status            ShippingStatus     @default(PENDING)
   senderInfo        Json
   recipientInfo     Json
   labelUrl          String?
   estimatedDelivery DateTime?
   actualDelivery    DateTime?
   metadata          Json?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  order             Order          @relation(fields: [orderId], references: [id])
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  // OTO Integration Fields
+  otoOrderId        String?            @unique
+  otoShipmentId     String?            @unique
+  otoStatus         String?
+  deliveryCompany   String?
+  packageWeight     Decimal?           @db.Decimal(10, 2)
+  packageCount      Int?               @default(1)
+  codAmount         Decimal?           @db.Decimal(10, 2)
+  shippingCost      Decimal?           @db.Decimal(10, 2)
+  order             Order              @relation(fields: [orderId], references: [id])
   items             ShippingItem[]
+  otoEvents         OTOTrackingEvent[]
+  otoBoxes          OTOBox[]
 
   @@index([orderId])
   @@index([trackingNumber])
   @@index([status])
   @@index([createdAt])
+  @@index([otoOrderId])
+  @@index([otoShipmentId])
+}
+
+model OTOTrackingEvent {
+  id          String   @id @default(uuid())
+  shippingId  String
+  status      String
+  stage       String?
+  description String?
+  location    String?
+  timestamp   DateTime
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  shipping    Shipping @relation(fields: [shippingId], references: [id], onDelete: Cascade)
+
+  @@index([shippingId])
+  @@index([timestamp])
+  @@index([status])
+}
+
+model OTOBox {
+  id            String   @id @default(uuid())
+  shippingId    String
+  boxName       String
+  weight        Decimal  @db.Decimal(10, 2)
+  height        Decimal? @db.Decimal(10, 2)
+  width         Decimal? @db.Decimal(10, 2)
+  length        Decimal? @db.Decimal(10, 2)
+  dimensionUnit String?  @default("cm")
+  createdAt     DateTime @default(now())
+  shipping      Shipping @relation(fields: [shippingId], references: [id], onDelete: Cascade)
+
+  @@index([shippingId])
+}
+
+model OTOPickupLocation {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  name          String
+  type          String // 'warehouse' or 'branch'
+  contactName   String?
+  contactPhone  String?
+  contactEmail  String?
+  address       String
+  city          String
+  country       String
+  latitude      Decimal? @db.Decimal(10, 7)
+  longitude     Decimal? @db.Decimal(10, 7)
+  isActive      Boolean  @default(true)
+  servingRadius Int? // in km
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([code])
+  @@index([isActive])
+  @@index([city])
+}
+
+model OTODriver {
+  id          String   @id @default(uuid())
+  otoDriverId String   @unique
+  name        String
+  phone       String?
+  email       String?
+  capacity    Int? // max orders per day
+  isActive    Boolean  @default(true)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([otoDriverId])
+  @@index([isActive])
+}
+
+model OTOWebhook {
+  id           String   @id @default(uuid())
+  otoWebhookId String?  @unique
+  url          String
+  events       String[] // Array of event types to listen to
+  isActive     Boolean  @default(true)
+  secretKey    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isActive])
 }
 
 model ShippingItem {
@@ -566,13 +668,13 @@ model ShippingItem {
 }
 
 model Price {
-  id               String           @id
-  amount           Decimal          @db.Decimal(10, 2)
-  currency         Currency
-  purchasableId    String
-  purchasableType  PurchasableType
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime
+  id              String          @id
+  amount          Decimal         @db.Decimal(10, 2)
+  currency        Currency
+  purchasableId   String
+  purchasableType PurchasableType
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime
 
   @@index([currency])
   @@index([purchasableId, purchasableType])

@@ -1,4 +1,4 @@
-import * as service from "./payment.service.js";
+import * as service from "./paymentApproval.service.js";
 import { z } from "zod";
 import { parseOrThrow } from "../../utils/validation.js";
 

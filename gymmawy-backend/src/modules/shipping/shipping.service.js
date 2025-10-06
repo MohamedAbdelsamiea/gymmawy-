@@ -1,6 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import { getPrismaClient } from '../../config/db.js';
+import otoService from '../../services/otoService.js';
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 export const getShippingMethodsService = async () => {
   return prisma.shippingMethod.findMany();
@@ -24,7 +25,68 @@ export const deleteShippingMethodService = async (id) => {
 };
 
 export const trackShipmentService = async (trackingNumber) => {
-  // Mock tracking data - in real app, integrate with shipping provider
+  // First, check if we have this shipment in database
+  const shipping = await prisma.shipping.findUnique({
+    where: { trackingNumber },
+    include: {
+      order: {
+        select: {
+          orderNumber: true,
+          status: true
+        }
+      },
+      otoEvents: {
+        orderBy: { timestamp: 'desc' },
+        take: 10
+      }
+    }
+  });
+
+  // If we have an OTO shipment, fetch real-time tracking
+  if (shipping?.otoOrderId) {
+    try {
+      const otoTracking = await otoService.trackShipment(shipping.otoOrderId);
+      
+      return {
+        trackingNumber,
+        status: shipping.status,
+        otoStatus: shipping.otoStatus,
+        carrier: shipping.deliveryCompany || 'OTO',
+        estimatedDelivery: shipping.estimatedDelivery,
+        actualDelivery: shipping.actualDelivery,
+        currentLocation: otoTracking.data?.currentLocation,
+        history: shipping.otoEvents.map(event => ({
+          status: event.status,
+          timestamp: event.timestamp,
+          location: event.location,
+          description: event.description
+        })),
+        otoData: otoTracking.data
+      };
+    } catch (error) {
+      console.error('Error tracking OTO shipment:', error);
+      // Fall through to return database data
+    }
+  }
+
+  // Return database data if OTO tracking is not available
+  if (shipping) {
+    return {
+      trackingNumber,
+      status: shipping.status,
+      carrier: shipping.deliveryCompany || 'Gymmawy Logistics',
+      estimatedDelivery: shipping.estimatedDelivery,
+      actualDelivery: shipping.actualDelivery,
+      history: shipping.otoEvents.map(event => ({
+        status: event.status,
+        timestamp: event.timestamp,
+        location: event.location,
+        description: event.description
+      }))
+    };
+  }
+
+  // Mock tracking data for shipments not in database
   const trackingData = {
     trackingNumber,
     status: 'IN_TRANSIT',
@@ -103,8 +165,7 @@ export const getShippingInfoService = async (orderId) => {
     where: { id: orderId },
     include: { 
       user: true, 
-      items: { include: { product: true } },
-      shippingMethod: true
+      items: { include: { product: true } }
     }
   });
 
@@ -115,19 +176,60 @@ export const getShippingInfoService = async (orderId) => {
     throw e;
   }
 
+  // Check if we have shipping record with OTO integration
+  const shipping = await prisma.shipping.findFirst({
+    where: { orderId },
+    include: {
+      otoEvents: {
+        orderBy: { timestamp: 'desc' },
+        take: 5
+      },
+      otoBoxes: true
+    }
+  });
+
   const shippingInfo = {
     orderId: order.id,
     orderNumber: order.orderNumber,
     status: order.status,
-    trackingNumber: `TRK${order.id.slice(-8).toUpperCase()}`,
-    shippingMethod: order.shippingMethod?.name || 'Standard Shipping',
-    estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-    shippingAddress: order.shippingAddress,
+    trackingNumber: shipping?.trackingNumber || order.trackingNumber || `TRK${order.id.slice(-8).toUpperCase()}`,
+    estimatedDelivery: shipping?.estimatedDelivery || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    actualDelivery: shipping?.actualDelivery,
+    shippingStatus: shipping?.status,
+    shippingAddress: {
+      building: order.shippingBuilding,
+      street: order.shippingStreet,
+      city: order.shippingCity,
+      country: order.shippingCountry,
+      postcode: order.shippingPostcode
+    },
     items: order.items.map(item => ({
       name: item.product?.name?.en || 'Product',
       quantity: item.quantity,
-      weight: 0 // Default weight since we don't have weight field in Product model
-    }))
+      weight: 0.5 // Default weight - update based on your product model
+    })),
+    // OTO specific data
+    otoIntegrated: !!shipping?.otoOrderId,
+    otoOrderId: shipping?.otoOrderId,
+    otoStatus: shipping?.otoStatus,
+    deliveryCompany: shipping?.deliveryCompany,
+    packageWeight: shipping?.packageWeight,
+    trackingEvents: shipping?.otoEvents?.map(event => ({
+      status: event.status,
+      description: event.description,
+      location: event.location,
+      timestamp: event.timestamp
+    })) || [],
+    boxes: shipping?.otoBoxes?.map(box => ({
+      name: box.boxName,
+      weight: box.weight,
+      dimensions: box.height && box.width && box.length ? {
+        height: box.height,
+        width: box.width,
+        length: box.length,
+        unit: box.dimensionUnit
+      } : null
+    })) || []
   };
 
   return shippingInfo;

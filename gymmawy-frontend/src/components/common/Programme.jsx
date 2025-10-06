@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCurrencyContext } from '../../contexts/CurrencyContext';
+import { Award, Gift, Info } from 'lucide-react';
 import { config } from '../../config';
 
 export default function Programme({ image, name, price, programme }) {
@@ -12,6 +13,14 @@ export default function Programme({ image, name, price, programme }) {
     const { formatPrice, getCurrencyInfo } = useCurrencyContext();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
+    
+    // Debug: Log programme data to check loyalty points
+    console.log('Programme data:', {
+      name,
+      loyaltyPointsAwarded: programme?.loyaltyPointsAwarded,
+      loyaltyPointsRequired: programme?.loyaltyPointsRequired,
+      discountPercentage: programme?.discountPercentage
+    });
 
     // Helper function to calculate discounted price
     const calculateDiscountedPrice = (originalPrice, discountPercentage) => {
@@ -94,19 +103,19 @@ return imagePath;
     };
 
     return (
-      <div className="bg-[#190143] overflow-hidden flex flex-col" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="bg-[#190143] overflow-hidden flex flex-col relative" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
         <img src={getImageUrl(image)} alt={getBilingualText(name, 'Programme')} className="w-full h-auto object-cover" />
          <div className="p-3 sm:p-4 flex flex-col flex-grow text-start" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
           <h3 className="text-lg sm:text-2xl font-bold mb-2">{getBilingualText(name, 'Programme')}</h3>
           
           {/* Price display with discount handling */}
-          <div className="mb-3 sm:mb-4">
+          <div className="mb-3 sm:mb-4 relative">
             {price === 'FREE' || price === 'مجاني' ? (
               <p className="text-xl sm:text-2xl text-orange-500 font-bold">{price}</p>
             ) : programme?.discountPercentage > 0 ? (
               // Display discounted price similar to packages section
               <div className="flex flex-col items-start">
-                <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-1 sm:space-x-2' : 'space-x-1 sm:space-x-2'}`}>
+                <div className={`flex items-center gap-2 ${i18n.language === 'ar' ? 'flex-row-reverse' : ''}`}>
                   <span className="text-sm sm:text-lg text-gray-400 line-through">
                     {(() => {
                       // Get the original price from programme data
@@ -125,15 +134,139 @@ return imagePath;
                   <span className="bg-orange-100 text-orange-800 text-xs sm:text-sm font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
                     -{programme.discountPercentage}%
                   </span>
+                  
+                  {/* Loyalty Points Badge */}
+                  {((programme.loyaltyPointsAwarded > 0 || programme.loyaltyPointsRequired > 0)) && (
+                    <div className="group relative">
+                      {/* Info Icon Trigger */}
+                      <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200">
+                        <Award className="h-3 w-3 text-purple-600" />
+                        <span className="text-xs font-bold text-purple-700">
+                          {i18n.language === 'ar' ? 'نقاط' : 'Points'}
+                        </span>
+                        <Info className="h-3 w-3 text-purple-600" />
+                      </div>
+                      
+                      {/* Hover Card */}
+                      <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} top-full mt-2 w-48 p-2 bg-white rounded-lg shadow-xl border-2 border-purple-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50`}>
+                        {/* Arrow */}
+                        <div className={`absolute -top-2 ${i18n.language === 'ar' ? 'left-4' : 'right-4'} w-4 h-4 bg-white border-l-2 border-t-2 border-purple-200 rotate-45`}></div>
+                        
+                        {/* Content */}
+                        <div className="relative">
+                          <div className="text-center mb-1">
+                            <p className="text-xs text-gray-600 leading-relaxed">
+                              {i18n.language === 'ar' 
+                                ? 'نقاط الولاء المتضمنة'
+                                : 'Loyalty points included'}
+                            </p>
+                          </div>
+                          
+                          <div className="flex items-center justify-around gap-2 pt-2 border-t border-gray-200">
+                            {programme.loyaltyPointsAwarded > 0 && (
+                              <div className="flex items-center gap-1 flex-1 justify-center">
+                                <div className="p-1 bg-green-100 rounded-full">
+                                  <Gift className="h-3 w-3 text-green-600" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
+                                  <span className="text-xs font-bold text-green-700">
+                                    {programme.loyaltyPointsAwarded}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                            {programme.loyaltyPointsRequired > 0 && (
+                              <div className="flex items-center gap-1 flex-1 justify-center">
+                                <div className="p-1 bg-orange-100 rounded-full">
+                                  <Award className="h-3 w-3 text-orange-600" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكلف' : 'Cost'}</span>
+                                  <span className="text-xs font-bold text-orange-700">
+                                    {programme.loyaltyPointsRequired}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <span className="text-xl sm:text-2xl font-bold text-orange-400 mt-1">
                   {price}
                 </span>
               </div>
             ) : (
-              <p className="text-xl sm:text-2xl">
-                {price}
-              </p>
+              <div className="flex flex-col items-start">
+                <div className={`flex items-center gap-2 ${i18n.language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                  <p className="text-xl sm:text-2xl">
+                    {price}
+                  </p>
+                  
+                  {/* Loyalty Points Badge - for non-discounted programmes */}
+                  {((programme?.loyaltyPointsAwarded > 0 || programme?.loyaltyPointsRequired > 0)) && (
+                    <div className="group relative">
+                      {/* Info Icon Trigger */}
+                      <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200">
+                        <Award className="h-3 w-3 text-purple-600" />
+                        <span className="text-xs font-bold text-purple-700">
+                          {i18n.language === 'ar' ? 'نقاط' : 'Points'}
+                        </span>
+                        <Info className="h-3 w-3 text-purple-600" />
+                      </div>
+                      
+                      {/* Hover Card */}
+                      <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} top-full mt-2 w-48 p-2 bg-white rounded-lg shadow-xl border-2 border-purple-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50`}>
+                        {/* Arrow */}
+                        <div className={`absolute -top-2 ${i18n.language === 'ar' ? 'left-4' : 'right-4'} w-4 h-4 bg-white border-l-2 border-t-2 border-purple-200 rotate-45`}></div>
+                        
+                        {/* Content */}
+                        <div className="relative">
+                          <div className="text-center mb-1">
+                            <p className="text-xs text-gray-600 leading-relaxed">
+                              {i18n.language === 'ar' 
+                                ? 'نقاط الولاء المتضمنة'
+                                : 'Loyalty points included'}
+                            </p>
+                          </div>
+                          
+                          <div className="flex items-center justify-around gap-2 pt-2 border-t border-gray-200">
+                            {programme.loyaltyPointsAwarded > 0 && (
+                              <div className="flex items-center gap-1 flex-1 justify-center">
+                                <div className="p-1 bg-green-100 rounded-full">
+                                  <Gift className="h-3 w-3 text-green-600" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
+                                  <span className="text-xs font-bold text-green-700">
+                                    {programme.loyaltyPointsAwarded}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                            {programme.loyaltyPointsRequired > 0 && (
+                              <div className="flex items-center gap-1 flex-1 justify-center">
+                                <div className="p-1 bg-orange-100 rounded-full">
+                                  <Award className="h-3 w-3 text-orange-600" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكلف' : 'Cost'}</span>
+                                  <span className="text-xs font-bold text-orange-700">
+                                    {programme.loyaltyPointsRequired}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
           <button 

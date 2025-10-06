@@ -127,6 +127,18 @@ const SortableRow = ({ product, onEdit, onDelete, onToggleStatus, onAddStock }) 
         </div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm">
+          {(product.loyaltyPointsAwarded > 0 || product.loyaltyPointsRequired > 0) ? (
+            <div>
+              <div className="text-green-600">Award: {product.loyaltyPointsAwarded || 0}</div>
+              <div className="text-orange-600">Required: {product.loyaltyPointsRequired || 0}</div>
+            </div>
+          ) : (
+            <span className="text-gray-400">None</span>
+          )}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
         <ToggleSwitch
           checked={product.isActive}
           onChange={() => onToggleStatus(product.id, product.isActive)}
@@ -537,26 +549,14 @@ const AdminProducts = () => {
         
         if (awarded === 0 && required === 0) {
           return (
-            <span className="text-gray-500 text-sm">None</span>
+            <span className="text-gray-400">None</span>
           );
         }
         
         return (
           <div className="text-sm">
-            <div className="flex items-center">
-              <span className="text-gray-600 mr-1">Awarded:</span>
-              <span className="font-medium text-purple-600">
-                {awarded} pts
-              </span>
-            </div>
-            {required > 0 && (
-              <div className="flex items-center">
-                <span className="text-gray-600 mr-1">Required:</span>
-                <span className="font-medium text-gray-700">
-                  {required} pts
-                </span>
-              </div>
-            )}
+            <div className="text-green-600">Award: {awarded}</div>
+            <div className="text-orange-600">Required: {required}</div>
           </div>
         );
       },
@@ -749,6 +749,9 @@ const AdminProducts = () => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Purchases
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Loyalty Points
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status

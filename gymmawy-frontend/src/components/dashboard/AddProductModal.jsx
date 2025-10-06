@@ -14,6 +14,10 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
     loyaltyPointsAwarded: 0,
     loyaltyPointsRequired: 0,
     stock: 0,
+    weight: '',
+    length: '',
+    width: '',
+    height: '',
   });
   
   // Pricing data for all currencies
@@ -42,6 +46,10 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
         loyaltyPointsAwarded: 0,
         loyaltyPointsRequired: 0,
         stock: 0,
+        weight: '',
+        length: '',
+        width: '',
+        height: '',
       });
       setPricing({
         EGP: '',
@@ -243,6 +251,11 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
         // Always include loyalty points - set to 0 if disabled
         loyaltyPointsAwarded: enableLoyaltyPoints ? (parseFloat(loyaltyPointsAwarded) || 0) : 0,
         loyaltyPointsRequired: enableLoyaltyPoints ? (parseFloat(loyaltyPointsRequired) || 0) : 0,
+        // Shipping dimensions and weight
+        weight: formData.weight ? parseFloat(formData.weight) : null,
+        length: formData.length ? parseFloat(formData.length) : null,
+        width: formData.width ? parseFloat(formData.width) : null,
+        height: formData.height ? parseFloat(formData.height) : null,
       };
       
       console.log('AddProductModal - Sending product data:', productData);
@@ -368,6 +381,80 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
                     {errors.discountPercentage}
                   </p>
                 )}
+              </div>
+            </div>
+          </div>
+
+          {/* Shipping Dimensions & Weight */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900">Shipping Information</h3>
+            <p className="text-sm text-gray-600">These values are used for OTO shipping calculations</p>
+            
+            {/* Weight */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Weight (kg)
+              </label>
+              <input
+                type="number"
+                name="weight"
+                min="0"
+                step="0.01"
+                value={formData.weight}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                placeholder="e.g., 0.5 for 500g"
+              />
+            </div>
+
+            {/* Dimensions - 3 columns */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Length (cm)
+                </label>
+                <input
+                  type="number"
+                  name="length"
+                  min="0"
+                  step="0.01"
+                  value={formData.length}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                  placeholder="e.g., 30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Width (cm)
+                </label>
+                <input
+                  type="number"
+                  name="width"
+                  min="0"
+                  step="0.01"
+                  value={formData.width}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                  placeholder="e.g., 20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Height (cm)
+                </label>
+                <input
+                  type="number"
+                  name="height"
+                  min="0"
+                  step="0.01"
+                  value={formData.height}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                  placeholder="e.g., 5"
+                />
               </div>
             </div>
           </div>

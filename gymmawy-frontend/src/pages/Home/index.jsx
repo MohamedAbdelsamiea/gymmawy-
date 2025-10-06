@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Play, ChevronDown, Plus } from "lucide-react";
+import { Play, ChevronDown, Plus, Gift, Award, Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Slider from "react-slick";
@@ -7,6 +7,7 @@ import * as Accordion from "@radix-ui/react-accordion";
 import { useAsset } from "../../hooks/useAsset";
 import { useLanguage } from "../../hooks/useLanguage";
 import { useAuth } from "../../contexts/AuthContext";
+import { useCurrencyContext } from "../../contexts/CurrencyContext";
 import { getFullImageUrl } from "../../utils/imageUtils";
 import JoinUsButton from "../../components/common/JoinUsButton";
 import VideoPlayer from "../../components/common/VideoPlayer";
@@ -20,6 +21,7 @@ const HomePage = () => {
   const { isArabic } = useLanguage();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { currency: userCurrency } = useCurrencyContext();
   const [isVisible, setIsVisible] = useState(false);
   const [featuredVideo, setFeaturedVideo] = useState(null);
   const [videoLoading, setVideoLoading] = useState(true);
@@ -29,7 +31,6 @@ const HomePage = () => {
   const [plansLoading, setPlansLoading] = useState(true);
   const [selectedPlanOptions, setSelectedPlanOptions] = useState({});
   const [openDropdowns, setOpenDropdowns] = useState({});
-  const [plansCurrency, setPlansCurrency] = useState('EGP');
 
   // Fetch featured video
   useEffect(() => {
@@ -77,7 +78,6 @@ const HomePage = () => {
         setSubscriptionPlans([]); // Clear existing data first
         const response = await subscriptionService.getPlans(i18n.language);
         setSubscriptionPlans(response.items || []);
-        setPlansCurrency(response.currency || 'EGP');
       } catch (error) {
         console.error('Error fetching subscription plans:', error);
       } finally {
@@ -224,7 +224,7 @@ return '';
           image: plan.image,
         },
         type: 'subscription',
-        currency: plansCurrency, // Pass the detected currency
+        currency: userCurrency, // Pass the user's selected currency
       },
     });
   };
@@ -274,7 +274,6 @@ return '';
 
   // Partners section assets
   const partnerEvolve = useAsset("home/partners/evolve.webp", "common");
-  const partnerCalo = useAsset("home/partners/calo.webp", "common");
 
   useEffect(() => {
     setIsVisible(true);
@@ -314,9 +313,9 @@ return '';
               <img
                 src={heroImage}
                 alt="Gymmawy Hero"
-                className="w-full h-auto lg:w-[500px] xl:w-[600px] transition-all duration-2000 ease-out"
+                className="w-full h-auto lg:w-[500px] xl:w-[600px] animate-hero-rise"
               />
-              <div className="absolute bottom-0 w-[320px] h-[320px] lg:w-[450px] lg:h-[450px] bg-[#172b8f] opacity-40 rounded-full blur-[120px] pointer-events-none"></div>
+              <div className="absolute bottom-0 w-[320px] h-[320px] lg:w-[450px] lg:h-[450px] bg-[#172b8f] opacity-40 rounded-full blur-[120px] pointer-events-none animate-glow-pulse"></div>
             </div>
 
             {/* Empty Column */}
@@ -444,7 +443,7 @@ return '';
 
       {/* Membership Section */}
       <section className="py-16 md:py-20 bg-[#ebebeb]">
-        <div className="container mx-auto px-4 md:px-6 lg:px-8">
+        <div className="container mx-auto px-2 md:px-6 lg:px-8">
           <div className="text-center mb-12">
             <p className="text-xl md:text-3xl text-[#190143] mb-10 font-bold text-subtitle">
               {t("membership.title")}
@@ -458,7 +457,7 @@ return '';
             </div>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-col md:flex-row md:flex-wrap items-center justify-center gap-3 md:gap-4">
             {[
               {
                 background: dietCard,
@@ -478,15 +477,13 @@ return '';
             ].map((feature, index) => (
               <div
                 key={index}
-                className="relative rounded-2xl bg-contain bg-no-repeat bg-center overflow-hidden p-10 text-[#ebebeb] transition-all duration-700 ease-out flex flex-col justify-end items-start"
+                className="relative rounded-lg md:rounded-2xl bg-contain bg-no-repeat bg-center overflow-hidden p-6 md:p-10 text-[#ebebeb] transition-all duration-700 ease-out flex flex-col justify-end items-start w-[90%] max-w-[300px] sm:w-[380px] sm:max-w-none h-[420px] sm:h-[520px]"
                 style={{
                   backgroundImage: `url(${feature.background})`,
-                  height: "620px", // fixed height for all cards
-                  width: "380px", // fixed width for all cards
                 }}
               >
                 {/* Bottom Third Text */}
-                <div className="text-left mb-16">
+                <div className="text-left mb-8 md:mb-6 px-2 md:px-0">
                   <h3 className="text-2xl font-bold mb-2 text-main-title">
                     {feature.title}
                   </h3>
@@ -640,14 +637,14 @@ return '';
                 // Use the new allPrices format
                 if (plan.allPrices) {
                   if (selectedOption === 'regular' && plan.allPrices.regular) {
-                    originalPrice = plan.allPrices.regular[plansCurrency] || 0;
+                    originalPrice = plan.allPrices.regular[userCurrency] || 0;
                   } else if (selectedOption === 'medical' && plan.allPrices.medical) {
-                    originalPrice = plan.allPrices.medical[plansCurrency] || 0;
+                    originalPrice = plan.allPrices.medical[userCurrency] || 0;
                   }
                   
                   // Set medical price for display
                   if (plan.allPrices.medical) {
-                    medicalPrice = plan.allPrices.medical[plansCurrency] || 0;
+                    medicalPrice = plan.allPrices.medical[userCurrency] || 0;
                   }
                 }
                 
@@ -694,45 +691,26 @@ return '';
                 const discountedPrice = calculateDiscountedPrice(currentPrice, plan.discountPercentage || 0);
                 const hasDiscount = (plan.discountPercentage || 0) > 0;
                 
-                // Get currency symbol from API response or use default
-                let currencySymbol;
-                const planCurrency = plansCurrency || 'EGP';
-                
-                if (i18n.language === 'ar') {
-                  // Arabic currency symbols
-                  switch (planCurrency) {
-                    case 'USD':
-                      currencySymbol = '$';
-                      break;
-                    case 'SAR':
-                      currencySymbol = i18n.language === 'ar' ? 'ر.س' : 'SAR';
-                      break;
-                    case 'AED':
-                      currencySymbol = i18n.language === 'ar' ? 'د.إ' : 'AED';
-                      break;
-                    case 'EGP':
-                    default:
-                      currencySymbol = i18n.language === 'ar' ? 'جم' : 'L.E';
-                      break;
-                  }
-                } else {
-                  // English currency symbols
-                  switch (planCurrency) {
-                    case 'USD':
-                      currencySymbol = '$';
-                      break;
-                    case 'SAR':
-                      currencySymbol = 'SAR';
-                      break;
-                    case 'AED':
-                      currencySymbol = 'AED';
-                      break;
-                    case 'EGP':
-                    default:
-                      currencySymbol = 'L.E';
-                      break;
-                  }
-                }
+                 // Get currency symbol from API response or use default (formal/standard symbols)
+                 let currencySymbol;
+                 const planCurrency = userCurrency || 'EGP';
+                 
+                 // Use standard currency symbols
+                 switch (planCurrency) {
+                   case 'USD':
+                     currencySymbol = '$';
+                     break;
+                   case 'SAR':
+                     currencySymbol = '﷼'; // Unicode Rial Sign (U+FDFC) - standard for both Arabic and English
+                     break;
+                   case 'AED':
+                     currencySymbol = i18n.language === 'ar' ? 'د.إ' : 'AED';
+                     break;
+                   case 'EGP':
+                   default:
+                     currencySymbol = i18n.language === 'ar' ? 'ج.م' : 'EGP';
+                     break;
+                 }
                 
                 return (
               <div
@@ -781,6 +759,100 @@ return '';
                     </div>
                   )}
 
+                  {/* Loyalty Points - Right under discount */}
+                  {((selectedOption === 'regular' && (plan.loyaltyPointsAwarded > 0 || plan.loyaltyPointsRequired > 0)) ||
+                    (selectedOption === 'medical' && (plan.medicalLoyaltyPointsAwarded > 0 || plan.medicalLoyaltyPointsRequired > 0))) && (
+                    <div className={`absolute ${hasDiscount ? 'top-14' : 'top-6'} ${i18n.language === 'ar' ? 'left-6' : 'right-6'} z-10 group`}>
+                      {/* Info Icon Trigger */}
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200">
+                        <Award className="h-4 w-4 text-purple-600" />
+                        <span className="text-sm font-bold text-purple-700">
+                          {i18n.language === 'ar' ? 'نقاط' : 'Points'}
+                        </span>
+                        <Info className="h-4 w-4 text-purple-500" />
+                      </div>
+                      
+                      {/* Hover Card */}
+                      <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} top-full mt-2 w-64 p-3 bg-white rounded-lg shadow-xl border-2 border-purple-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50`}>
+                        {/* Arrow */}
+                        <div className={`absolute -top-2 ${i18n.language === 'ar' ? 'left-4' : 'right-4'} w-4 h-4 bg-white border-l-2 border-t-2 border-purple-200 rotate-45`}></div>
+                        
+                        {/* Content */}
+                        <div className="relative">
+                          <div className="text-center mb-2">
+                            <p className="text-xs text-gray-600 leading-relaxed">
+                              {i18n.language === 'ar' 
+                                ? 'نقاط الولاء المتضمنة في هذه الباقة'
+                                : 'Loyalty points included with this plan'}
+                            </p>
+                          </div>
+                          
+                          <div className="flex items-center justify-around gap-2 pt-2 border-t border-gray-200">
+                            {selectedOption === 'regular' ? (
+                              <>
+                                {plan.loyaltyPointsAwarded > 0 && (
+                                  <div className="flex items-center gap-1.5 flex-1 justify-center">
+                                    <div className="p-1.5 bg-green-100 rounded-full">
+                                      <Gift className="h-4 w-4 text-green-600" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
+                                      <span className="text-sm font-bold text-green-700">
+                                        {plan.loyaltyPointsAwarded}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+                                {plan.loyaltyPointsRequired > 0 && (
+                                  <div className="flex items-center gap-1.5 flex-1 justify-center">
+                                    <div className="p-1.5 bg-orange-100 rounded-full">
+                                      <Award className="h-4 w-4 text-orange-600" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'التكلفة' : 'Cost'}</span>
+                                      <span className="text-sm font-bold text-orange-700">
+                                        {plan.loyaltyPointsRequired}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                {plan.medicalLoyaltyPointsAwarded > 0 && (
+                                  <div className="flex items-center gap-1.5 flex-1 justify-center">
+                                    <div className="p-1.5 bg-green-100 rounded-full">
+                                      <Gift className="h-4 w-4 text-green-600" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
+                                      <span className="text-sm font-bold text-green-700">
+                                        {plan.medicalLoyaltyPointsAwarded}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+                                {plan.medicalLoyaltyPointsRequired > 0 && (
+                                  <div className="flex items-center gap-1.5 flex-1 justify-center">
+                                    <div className="p-1.5 bg-orange-100 rounded-full">
+                                      <Award className="h-4 w-4 text-orange-600" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'التكلفة' : 'Cost'}</span>
+                                      <span className="text-sm font-bold text-orange-700">
+                                        {plan.medicalLoyaltyPointsRequired}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Plan Image */}
                   <div className="w-14 h-14 mb-4">
                     {plan.imageUrl ? (
@@ -807,17 +879,17 @@ return '';
                   
                   {/* Price with discount display */}
                   <div className="mb-4 mt-2">
-                    {hasDiscount && currentPrice > 0 ? (
-                      <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
-                        <span className="text-3xl font-bold text-gray-500 line-through">
-                          {currentPrice.toFixed(0)} {currencySymbol}
-                        </span>
-                        <span className="text-3xl font-bold text-red-600">
-                          {discountedPrice.toFixed(0)} {currencySymbol}
-                        </span>
-                      </div>
+                      {hasDiscount && currentPrice > 0 ? (
+                        <div className={`flex flex-wrap items-center gap-x-4 gap-y-2 ${i18n.language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                          <span className="font-bold text-gray-500 line-through whitespace-nowrap" style={{ fontSize: '1.8rem' }}>
+                            {currentPrice.toFixed(0)} {currencySymbol}
+                          </span>
+                          <span className="font-bold text-red-600 whitespace-nowrap" style={{ fontSize: '1.8rem' }}>
+                            {discountedPrice.toFixed(0)} {currencySymbol}
+                          </span>
+                        </div>
                     ) : (
-                      <span className="text-3xl font-bold">
+                      <span className="font-bold whitespace-nowrap" style={{ fontSize: '1.8rem' }}>
                         {currentPrice > 0 ? `${currentPrice.toFixed(0)} ${currencySymbol}` : 'Price not available'}
                       </span>
                     )}
@@ -978,18 +1050,11 @@ return '';
             </div>
 
             {/* Logos */}
-            <div className="flex justify-center lg:justify-end space-x-8">
+            <div className="flex justify-center lg:justify-end">
               <div className="w-28 h-14">
                 <img
                   src={partnerEvolve}
                   alt="EVOLVZ"
-                  className="w-full h-full object-contain brightness-0 invert opacity-90"
-                />
-              </div>
-              <div className="w-28 h-14">
-                <img
-                  src={partnerCalo}
-                  alt="CALO"
                   className="w-full h-full object-contain brightness-0 invert opacity-90"
                 />
               </div>
@@ -999,7 +1064,7 @@ return '';
       </section>
 
       {/* FAQ Section */}
-      <section className="py-16 md:py-20 bg-[#ebebeb]">
+      <section className="pt-16 pb-2 md:py-20 bg-[#ebebeb]">
         <div className="container mx-auto px-8 md:px-12 lg:px-20">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-8 items-start">
             {/* Left Title */}

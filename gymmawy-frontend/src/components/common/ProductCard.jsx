@@ -1,5 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Award, Gift, Info } from 'lucide-react';
 import { useAsset } from '../../hooks/useAsset';
 import { config } from '../../config';
 
@@ -34,6 +36,7 @@ const ProductCard = ({
   discountedPriceClassName = "text-2xl font-light text-[#190143]",
   originalPriceClassName = "text-2xl font-light text-gray-500 line-through"
 }) => {
+  const { i18n } = useTranslation();
   // Handle both local assets and API URLs
   const getImageSrc = (imagePath) => {
     if (!imagePath) return '/assets/common/store/product1-1.png';
@@ -96,20 +99,142 @@ const ProductCard = ({
         <div className="text-left mt-8">
           <h3 className={titleClassName}>{product.name}</h3>
           
-          <div>
+          <div className="relative">
             {product.hasDiscount ? (
-              <div className="flex items-start space-x-4">
+              <div className={`flex flex-wrap items-center gap-2 ${i18n.language === 'ar' ? 'flex-row-reverse' : ''}`}>
                 <span className={discountedPriceClassName}>
                   {product.discountedPrice} LE
                 </span>
                 <span className={originalPriceClassName}>
                   {product.price} LE
                 </span>
+                
+                {/* Loyalty Points Badge */}
+                {((product.loyaltyPointsAwarded > 0 || product.loyaltyPointsRequired > 0)) && (
+                  <div className="group relative">
+                    {/* Info Icon Trigger */}
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200">
+                      <Award className="h-3 w-3 text-purple-600" />
+                      <span className="text-xs font-bold text-purple-700">
+                        {i18n.language === 'ar' ? 'نقاط' : 'Points'}
+                      </span>
+                      <Info className="h-3 w-3 text-purple-600" />
+                    </div>
+                    
+                    {/* Hover Card */}
+                    <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} top-full mt-2 w-48 p-2 bg-white rounded-lg shadow-xl border-2 border-purple-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50`}>
+                      {/* Arrow */}
+                      <div className={`absolute -top-2 ${i18n.language === 'ar' ? 'left-4' : 'right-4'} w-4 h-4 bg-white border-l-2 border-t-2 border-purple-200 rotate-45`}></div>
+                      
+                      {/* Content */}
+                      <div className="relative">
+                        <div className="text-center mb-1">
+                          <p className="text-xs text-gray-600 leading-relaxed">
+                            {i18n.language === 'ar' 
+                              ? 'نقاط الولاء المتضمنة'
+                              : 'Loyalty points included'}
+                          </p>
+                        </div>
+                        
+                        <div className="flex items-center justify-around gap-2 pt-2 border-t border-gray-200">
+                          {product.loyaltyPointsAwarded > 0 && (
+                            <div className="flex items-center gap-1 flex-1 justify-center">
+                              <div className="p-1 bg-green-100 rounded-full">
+                                <Gift className="h-3 w-3 text-green-600" />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
+                                <span className="text-xs font-bold text-green-700">
+                                  {product.loyaltyPointsAwarded}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          {product.loyaltyPointsRequired > 0 && (
+                            <div className="flex items-center gap-1 flex-1 justify-center">
+                              <div className="p-1 bg-orange-100 rounded-full">
+                                <Award className="h-3 w-3 text-orange-600" />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكلف' : 'Cost'}</span>
+                                <span className="text-xs font-bold text-orange-700">
+                                  {product.loyaltyPointsRequired}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
-              <span className={priceClassName}>
-                {product.price} LE
-              </span>
+              <div className={`flex flex-wrap items-center gap-2 ${i18n.language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                <span className={priceClassName}>
+                  {product.price} LE
+                </span>
+                
+                {/* Loyalty Points Badge - for non-discounted products */}
+                {((product.loyaltyPointsAwarded > 0 || product.loyaltyPointsRequired > 0)) && (
+                  <div className="group relative">
+                    {/* Info Icon Trigger */}
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200">
+                      <Award className="h-3 w-3 text-purple-600" />
+                      <span className="text-xs font-bold text-purple-700">
+                        {i18n.language === 'ar' ? 'نقاط' : 'Points'}
+                      </span>
+                      <Info className="h-3 w-3 text-purple-600" />
+                    </div>
+                    
+                    {/* Hover Card */}
+                    <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} top-full mt-2 w-48 p-2 bg-white rounded-lg shadow-xl border-2 border-purple-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50`}>
+                      {/* Arrow */}
+                      <div className={`absolute -top-2 ${i18n.language === 'ar' ? 'left-4' : 'right-4'} w-4 h-4 bg-white border-l-2 border-t-2 border-purple-200 rotate-45`}></div>
+                      
+                      {/* Content */}
+                      <div className="relative">
+                        <div className="text-center mb-1">
+                          <p className="text-xs text-gray-600 leading-relaxed">
+                            {i18n.language === 'ar' 
+                              ? 'نقاط الولاء المتضمنة'
+                              : 'Loyalty points included'}
+                          </p>
+                        </div>
+                        
+                        <div className="flex items-center justify-around gap-2 pt-2 border-t border-gray-200">
+                          {product.loyaltyPointsAwarded > 0 && (
+                            <div className="flex items-center gap-1 flex-1 justify-center">
+                              <div className="p-1 bg-green-100 rounded-full">
+                                <Gift className="h-3 w-3 text-green-600" />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
+                                <span className="text-xs font-bold text-green-700">
+                                  {product.loyaltyPointsAwarded}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          {product.loyaltyPointsRequired > 0 && (
+                            <div className="flex items-center gap-1 flex-1 justify-center">
+                              <div className="p-1 bg-orange-100 rounded-full">
+                                <Award className="h-3 w-3 text-orange-600" />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكلف' : 'Cost'}</span>
+                                <span className="text-xs font-bold text-orange-700">
+                                  {product.loyaltyPointsRequired}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
