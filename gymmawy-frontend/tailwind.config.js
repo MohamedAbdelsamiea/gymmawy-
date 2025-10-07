@@ -6,6 +6,9 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        'xlg': '1525px', // Custom breakpoint for header responsiveness
+      },
       colors: {
         'gymmawy': {
           'primary': '#3F0071',

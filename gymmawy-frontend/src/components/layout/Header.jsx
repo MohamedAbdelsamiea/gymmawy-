@@ -146,9 +146,9 @@ element.scrollIntoView({ behavior: "smooth" });
     <header className="bg-[#190143] text-[#ebebeb] shadow-lg">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         {/* Left Navigation */}
-        <nav className="hidden lg:flex items-center justify-end" style={{ width: 'calc(50% - 100px)' }}>
+        <nav className="hidden xlg:flex items-center justify-end" style={{ width: 'calc(50% - 100px)' }}>
           <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-12' : 'space-x-12'}`}>
-            {navItems.slice(0, i18n.language === 'ar' ? 5 : 5).map((item) => (
+            {navItems.slice(0, i18n.language === 'ar' ? 6 : 5).map((item) => (
               <button
                 key={item.key}
                 onClick={() => handleNavigation(item)}
@@ -161,16 +161,16 @@ element.scrollIntoView({ behavior: "smooth" });
         </nav>
 
         {/* Center Logo */}
-        <div className="flex-shrink-0">
-          <button onClick={() => navigate("/")}>
+        <div className="flex-shrink-0 flex items-center">
+          <button onClick={() => navigate("/")} className="flex items-center">
             <img src={logo} alt="Gymmawy Logo" className="h-8 w-auto" />
           </button>
         </div>
 
         {/* Right Navigation */}
-        <nav className="hidden lg:flex items-center justify-start" style={{ width: 'calc(50% - 100px)' }}>
+        <nav className="hidden xlg:flex items-center justify-start" style={{ width: 'calc(50% - 100px)' }}>
           <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-12' : 'space-x-12'}`}>
-            {navItems.slice(i18n.language === 'ar' ? 5 : 5, 8).map((item) => (
+            {navItems.slice(i18n.language === 'ar' ? 6 : 5, 8).map((item) => (
               <button
                 key={item.key}
                 onClick={() => handleNavigation(item)}
@@ -293,7 +293,7 @@ element.scrollIntoView({ behavior: "smooth" });
         {/* Mobile Menu Button */}
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="lg:hidden p-2 hover:bg-white/10 rounded-lg transition-colors duration-300"
+          className="xlg:hidden p-2 hover:bg-white/10 rounded-lg transition-colors duration-300"
         >
           {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
@@ -301,7 +301,7 @@ element.scrollIntoView({ behavior: "smooth" });
 
       {/* Mobile Navigation */}
       {isMenuOpen && (
-        <nav className="lg:hidden pb-4 border-t px-4 border-white/20">
+        <nav className="xlg:hidden pb-4 border-t px-4 border-white/20">
           <div className="flex flex-col space-y-4 pt-4">
             {navItems
               .filter((item) => !item.isToggle)
