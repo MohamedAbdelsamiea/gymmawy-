@@ -1,5 +1,5 @@
 // src/components/Programme.jsx
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -13,6 +13,8 @@ export default function Programme({ image, name, price, programme }) {
     const { formatPrice, getCurrencyInfo } = useCurrencyContext();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
+    const [showLoyaltyCard, setShowLoyaltyCard] = useState(false);
+    const loyaltyCardRef = useRef(null);
     
     // Debug: Log programme data to check loyalty points
     console.log('Programme data:', {
@@ -21,6 +23,22 @@ export default function Programme({ image, name, price, programme }) {
       loyaltyPointsRequired: programme?.loyaltyPointsRequired,
       discountPercentage: programme?.discountPercentage
     });
+
+    // Close loyalty card when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (loyaltyCardRef.current && !loyaltyCardRef.current.contains(event.target)) {
+          setShowLoyaltyCard(false);
+        }
+      };
+
+      if (showLoyaltyCard) {
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+          document.removeEventListener('mousedown', handleClickOutside);
+        };
+      }
+    }, [showLoyaltyCard]);
 
     // Helper function to calculate discounted price
     const calculateDiscountedPrice = (originalPrice, discountPercentage) => {
@@ -104,8 +122,80 @@ return imagePath;
 
     return (
       <div className="bg-[#190143] overflow-hidden flex flex-col relative" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
-        <img src={getImageUrl(image)} alt={getBilingualText(name, 'Programme')} className="w-full h-auto object-cover" />
+        <img 
+          src={getImageUrl(image)} 
+          alt={getBilingualText(name, 'Programme')} 
+          className="w-full h-auto object-cover"
+          loading="lazy"
+        />
          <div className="p-3 sm:p-4 flex flex-col flex-grow text-start" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
+          {/* Loyalty Points Badge - above name on mobile, hidden on desktop */}
+          {((programme?.loyaltyPointsAwarded > 0 || programme?.loyaltyPointsRequired > 0)) && (
+            <div className="block sm:hidden mb-2">
+              <div className="group relative" ref={loyaltyCardRef}>
+                {/* Info Icon Trigger */}
+                <div 
+                  className="flex items-center gap-1.5 px-2 py-1 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200 w-fit"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowLoyaltyCard(!showLoyaltyCard);
+                  }}
+                >
+                  <Award className="h-3 w-3 text-purple-600" />
+                  <span className="text-xs font-bold text-purple-700">
+                    {i18n.language === 'ar' ? 'نقاط' : 'Points'}
+                  </span>
+                </div>
+                
+                {/* Hover Card */}
+                <div className={`absolute ${i18n.language === 'ar' ? 'left-1/2 -translate-x-1/2' : 'right-1/2 translate-x-1/2'} top-full mt-2 w-48 sm:w-48 max-w-[calc(100vw-2rem)] p-2 bg-white rounded-lg shadow-xl border-2 border-purple-200 transition-all duration-300 z-[99999] ${showLoyaltyCard ? 'opacity-100 visible' : 'opacity-0 invisible group-hover:opacity-100 group-hover:visible'}`}>
+                  {/* Arrow */}
+                  <div className={`absolute -top-2 ${i18n.language === 'ar' ? 'left-1/2 -translate-x-1/2' : 'right-1/2 translate-x-1/2'} w-4 h-4 bg-white border-l-2 border-t-2 border-purple-200 rotate-45`}></div>
+                  
+                  {/* Content */}
+                  <div className="relative">
+                    <div className="text-center mb-1">
+                      <p className="text-xs text-gray-600 leading-relaxed">
+                        {i18n.language === 'ar' 
+                          ? 'نقاط الولاء المتضمنة'
+                          : 'Loyalty points included'}
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center justify-around gap-2 pt-2 border-t border-gray-200">
+                      {programme.loyaltyPointsAwarded > 0 && (
+                        <div className="flex items-center gap-1 flex-1 justify-center">
+                          <div className="p-1 bg-green-100 rounded-full">
+                            <Gift className="h-3 w-3 text-green-600" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
+                            <span className="text-xs font-bold text-green-700">
+                              {programme.loyaltyPointsAwarded}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {programme.loyaltyPointsRequired > 0 && (
+                        <div className="flex items-center gap-1 flex-1 justify-center">
+                          <div className="p-1 bg-orange-100 rounded-full">
+                            <Award className="h-3 w-3 text-orange-600" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكلف' : 'Cost'}</span>
+                            <span className="text-xs font-bold text-orange-700">
+                              {programme.loyaltyPointsRequired}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <h3 className="text-lg sm:text-2xl font-bold mb-2">{getBilingualText(name, 'Programme')}</h3>
           
           {/* Price display with discount handling */}
@@ -115,28 +205,34 @@ return imagePath;
             ) : programme?.discountPercentage > 0 ? (
               // Display discounted price similar to packages section
               <div className="flex flex-col items-start">
-                <div className={`flex items-center gap-2 ${i18n.language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                  <span className="text-sm sm:text-lg text-gray-400 line-through">
-                    {(() => {
-                      // Get the original price from programme data
-                      const originalPrice = programme.priceEGP?.originalAmount || 
-                                         programme.priceSAR?.originalAmount || 
-                                         programme.priceAED?.originalAmount || 
-                                         programme.priceUSD?.originalAmount;
-                      
-                      if (originalPrice) {
-                        // Use CurrencyContext to format the original price properly
-                        return formatPrice(originalPrice);
-                      }
-                      return price;
-                    })()}
-                  </span>
-                  <span className="bg-orange-100 text-orange-800 text-xs sm:text-sm font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
-                    -{programme.discountPercentage}%
-                  </span>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    {/* Original Price - first in both languages */}
+                    <span className={`text-sm sm:text-lg text-gray-400 line-through order-1`}>
+                      {(() => {
+                        // Get the original price from programme data
+                        const originalPrice = programme.priceEGP?.originalAmount || 
+                                           programme.priceSAR?.originalAmount || 
+                                           programme.priceAED?.originalAmount || 
+                                           programme.priceUSD?.originalAmount;
+                        
+                        if (originalPrice) {
+                          // Use CurrencyContext to format the original price properly
+                          return formatPrice(originalPrice);
+                        }
+                        return price;
+                      })()}
+                    </span>
+                    
+                    {/* Discount Badge - second in both languages */}
+                    <span className={`bg-orange-100 text-orange-800 text-xs sm:text-sm font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded order-2`} dir="ltr">
+                      -{programme.discountPercentage}%
+                    </span>
+                  </div>
                   
-                  {/* Loyalty Points Badge */}
+                  {/* Loyalty Points Badge - on the opposite side (desktop only) */}
                   {((programme.loyaltyPointsAwarded > 0 || programme.loyaltyPointsRequired > 0)) && (
+                    <div className="hidden sm:block self-start sm:ml-auto">
                     <div className="group relative">
                       {/* Info Icon Trigger */}
                       <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200">
@@ -144,13 +240,12 @@ return imagePath;
                         <span className="text-xs font-bold text-purple-700">
                           {i18n.language === 'ar' ? 'نقاط' : 'Points'}
                         </span>
-                        <Info className="h-3 w-3 text-purple-600" />
                       </div>
                       
                       {/* Hover Card */}
-                      <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} top-full mt-2 w-48 p-2 bg-white rounded-lg shadow-xl border-2 border-purple-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50`}>
+                      <div className={`absolute ${i18n.language === 'ar' ? 'left-1/2 -translate-x-1/2' : 'right-1/2 translate-x-1/2'} top-full mt-2 w-48 max-w-[calc(100vw-2rem)] p-2 bg-white rounded-lg shadow-xl border-2 border-purple-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-active:opacity-100 group-active:visible transition-all duration-300 z-[99999]`}>
                         {/* Arrow */}
-                        <div className={`absolute -top-2 ${i18n.language === 'ar' ? 'left-4' : 'right-4'} w-4 h-4 bg-white border-l-2 border-t-2 border-purple-200 rotate-45`}></div>
+                        <div className={`absolute -top-2 ${i18n.language === 'ar' ? 'left-1/2 -translate-x-1/2' : 'right-1/2 translate-x-1/2'} w-4 h-4 bg-white border-l-2 border-t-2 border-purple-200 rotate-45`}></div>
                         
                         {/* Content */}
                         <div className="relative">
@@ -193,6 +288,7 @@ return imagePath;
                         </div>
                       </div>
                     </div>
+                  </div>
                   )}
                 </div>
                 <span className="text-xl sm:text-2xl font-bold text-orange-400 mt-1">
@@ -201,13 +297,14 @@ return imagePath;
               </div>
             ) : (
               <div className="flex flex-col items-start">
-                <div className={`flex items-center gap-2 ${i18n.language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                   <p className="text-xl sm:text-2xl">
                     {price}
                   </p>
                   
-                  {/* Loyalty Points Badge - for non-discounted programmes */}
+                  {/* Loyalty Points Badge - for non-discounted programmes (desktop only) */}
                   {((programme?.loyaltyPointsAwarded > 0 || programme?.loyaltyPointsRequired > 0)) && (
+                    <div className="hidden sm:block self-start sm:ml-auto">
                     <div className="group relative">
                       {/* Info Icon Trigger */}
                       <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200">
@@ -215,13 +312,12 @@ return imagePath;
                         <span className="text-xs font-bold text-purple-700">
                           {i18n.language === 'ar' ? 'نقاط' : 'Points'}
                         </span>
-                        <Info className="h-3 w-3 text-purple-600" />
                       </div>
                       
                       {/* Hover Card */}
-                      <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} top-full mt-2 w-48 p-2 bg-white rounded-lg shadow-xl border-2 border-purple-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50`}>
+                      <div className={`absolute ${i18n.language === 'ar' ? 'left-1/2 -translate-x-1/2' : 'right-1/2 translate-x-1/2'} top-full mt-2 w-48 max-w-[calc(100vw-2rem)] p-2 bg-white rounded-lg shadow-xl border-2 border-purple-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-active:opacity-100 group-active:visible transition-all duration-300 z-[99999]`}>
                         {/* Arrow */}
-                        <div className={`absolute -top-2 ${i18n.language === 'ar' ? 'left-4' : 'right-4'} w-4 h-4 bg-white border-l-2 border-t-2 border-purple-200 rotate-45`}></div>
+                        <div className={`absolute -top-2 ${i18n.language === 'ar' ? 'left-1/2 -translate-x-1/2' : 'right-1/2 translate-x-1/2'} w-4 h-4 bg-white border-l-2 border-t-2 border-purple-200 rotate-45`}></div>
                         
                         {/* Content */}
                         <div className="relative">
@@ -264,6 +360,7 @@ return imagePath;
                         </div>
                       </div>
                     </div>
+                  </div>
                   )}
                 </div>
               </div>

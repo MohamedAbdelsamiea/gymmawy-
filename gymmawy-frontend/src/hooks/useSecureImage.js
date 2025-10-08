@@ -25,6 +25,15 @@ export const useSecureImage = (imagePath) => {
         // Check if it's already a data URL or external URL
         if (imagePath.startsWith('data:') || imagePath.startsWith('http')) {
           setDataUrl(imagePath);
+          setLoading(false);
+          return;
+        }
+
+        // Check if it's an uploads path (payment proofs, etc.)
+        if (imagePath.startsWith('/uploads/')) {
+          const baseUrl = config.API_BASE_URL.replace('/api', '');
+          setDataUrl(`${baseUrl}${imagePath}`);
+          setLoading(false);
           return;
         }
 

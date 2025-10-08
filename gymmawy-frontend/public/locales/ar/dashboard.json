@@ -126,8 +126,17 @@
   "user": {
     "overview": {
       "title": "مرحباً بعودتك",
-      "subtitle": "مستعد لمواصلة رحلة اللياقة البدنية؟ دعنا نجعل اليوم مهم!",
+      "subtitle": "تتبع مشترياتك ونقاط الولاء",
       "loyaltyPoints": "نقاط الولاء",
+      "purchaseHistory": "تاريخ المشتريات",
+      "date": "التاريخ",
+      "type": "النوع",
+      "items": "العناصر",
+      "amount": "المبلغ",
+      "status": "الحالة",
+      "pointsEarned": "النقاط المكتسبة",
+      "noPurchases": "لا توجد مشتريات بعد",
+      "startShopping": "ابدأ التسوق لترى تاريخ مشترياتك هنا",
       "totalOrders": "إجمالي الطلبات",
       "totalSpent": "إجمالي المصروف",
       "workoutsThisMonth": "تمارين هذا الشهر",

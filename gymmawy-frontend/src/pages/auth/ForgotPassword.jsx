@@ -45,7 +45,7 @@ const ForgotPassword = () => {
       setSuccess(true);
     } catch (error) {
       setErrors({ 
-        general: error.message || 'Failed to send reset email. Please try again.', 
+        general: error.message || t('forgotPassword.errors.sendResetFailed'), 
       });
     } finally {
       setLoading(false);

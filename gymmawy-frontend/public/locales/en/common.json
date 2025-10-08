@@ -28,5 +28,7 @@
   "months": "{{count}} month",
   "months_other": "{{count}} months",
   "days": "{{count}} day",
-  "days_other": "{{count}} days"
+  "days_other": "{{count}} days",
+  "currency": "Currency",
+  "selectCurrency": "Select Currency"
 }

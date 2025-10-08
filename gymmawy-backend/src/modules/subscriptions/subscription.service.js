@@ -151,12 +151,8 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
     paymentMethod,
     paymentProof,
     transactionId,
-    isMedical,
-    currency,
-    subscriptionPeriodDays,
-    giftPeriodDays,
-    planName,
-    planDescription,
+    isMedical = false,
+    currency = 'EGP',
     couponId
   } = subscriptionData;
 
@@ -250,12 +246,10 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
     }
   );
 
-  // Calculate subscription dates using provided data or plan data
+  // Calculate subscription dates using plan data from database
   const start = new Date();
-  
-  // Use provided values if available, otherwise fall back to plan values
-  const finalSubscriptionDays = subscriptionPeriodDays !== undefined ? subscriptionPeriodDays : plan.subscriptionPeriodDays;
-  const finalGiftDays = giftPeriodDays !== undefined ? giftPeriodDays : plan.giftPeriodDays;
+  const finalSubscriptionDays = plan.subscriptionPeriodDays;
+  const finalGiftDays = plan.giftPeriodDays;
   
   const totalDays = finalSubscriptionDays + finalGiftDays;
   const end = new Date(start.getTime() + totalDays * 24 * 60 * 60 * 1000);

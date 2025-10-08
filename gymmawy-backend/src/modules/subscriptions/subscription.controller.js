@@ -30,21 +30,12 @@ export async function createSubscriptionWithPayment(req, res, next) {
     
     const schema = z.object({
       planId: z.string().uuid(),
-      paymentMethod: z.enum(["INSTA_PAY", "VODAFONE_CASH", "TABBY", "TAMARA", "CARD", "CASH"]).optional(),
+      paymentMethod: z.enum(["INSTA_PAY", "VODAFONE_CASH", "TABBY", "TAMARA", "CARD", "CASH", "PAYMOB"]).optional(),
       paymentProof: z.string().min(1).optional(),
       isMedical: z.boolean().optional(),
-      price: z.coerce.number().positive(),
       currency: z.string().default("EGP"),
-      discount: z.coerce.number().min(0).optional(),
-      subscriptionPeriodDays: z.coerce.number().int().min(1).optional(),
-      giftPeriodDays: z.coerce.number().int().min(0).optional(),
-      planName: z.string().optional(),
-      planDescription: z.string().optional(),
-      planDiscountPercentage: z.coerce.number().min(0).max(100).optional(),
-      totalDiscountAmount: z.coerce.number().min(0).optional(),
-      originalPrice: z.coerce.number().positive().optional(),
       couponId: z.string().uuid().nullable().optional(),
-      couponDiscount: z.coerce.number().min(0).optional()
+      // Remove all price fields - backend calculates everything
     });
     const data = parseOrThrow(schema, req.body || {});
     const subscription = await service.createSubscriptionWithPayment(req.user.id, data);

@@ -22,7 +22,6 @@ export async function getRecentLoyaltyTransactions(userId) {
       points: true,
       type: true,
       source: true,
-      reason: true,
       metadata: true,
       createdAt: true
     }

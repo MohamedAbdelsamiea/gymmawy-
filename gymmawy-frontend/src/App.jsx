@@ -5,8 +5,7 @@ import { CurrencyProvider } from './contexts/CurrencyContext.jsx';
 import { CartProvider } from './contexts/CartContext';
 import { AppRoutes } from './routes';
 import { ToastContainer } from './components/common/Toast';
-import CurrencyDetectionBanner from './components/currency/CurrencyDetectionBanner';
-import CurrencyDetectionDemo from './components/currency/CurrencyDetectionDemo';
+import SlimCurrencySelector from './components/SlimCurrencySelector';
 import i18n from './i18n/i18n';
 import { useTranslation } from 'react-i18next';
 import { useEffect, Suspense } from 'react';
@@ -75,8 +74,7 @@ function App() {
               <Router>
                 <RTLHandler />
                 <AppRoutes />
-                <CurrencyDetectionBanner />
-                {process.env.NODE_ENV === 'development' && <CurrencyDetectionDemo />}
+                <SlimCurrencySelector />
                 <ToastContainer />
               </Router>
             </ToastProvider>

@@ -129,13 +129,11 @@ const ContactUs = () => {
     <section className="flex flex-col items-center md:py-20 py-12 bg-[#ebebeb]">
       {/* Title */}
       <div className="flex flex-col items-center mb-12">
-        <h2 className="text-xl md:text-3xl tracking-widest text-[#190143] mb-8">
-          {t("title")}
-        </h2>
         <img
           src={contactText}
           alt="Contact Us"
-          className="mt-3 w-[300px] lg:w-[350px] h-auto w-auto object-contain"
+          className="w-[300px] lg:w-[350px] h-auto w-auto object-contain px-8 md:px-0"
+          loading="lazy"
         />
       </div>
 

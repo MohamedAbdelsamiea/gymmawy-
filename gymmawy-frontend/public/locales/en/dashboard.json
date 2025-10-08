@@ -126,8 +126,17 @@
   "user": {
     "overview": {
       "title": "Welcome back",
-      "subtitle": "Ready to continue your fitness journey? Let's make today count!",
+      "subtitle": "Track your purchases and loyalty points",
       "loyaltyPoints": "Loyalty Points",
+      "purchaseHistory": "Purchase History",
+      "date": "Date",
+      "type": "Type",
+      "items": "Items",
+      "amount": "Amount",
+      "status": "Status",
+      "pointsEarned": "Points Earned",
+      "noPurchases": "No purchases yet",
+      "startShopping": "Start shopping to see your purchase history here",
       "totalOrders": "Total Orders",
       "totalSpent": "Total Spent",
       "workoutsThisMonth": "Workouts This Month",
@@ -310,6 +319,8 @@
     "dashboard": "Dashboard",
     "administrator": "Administrator",
     "member": "Member",
-    "backToWebsite": "Back to Website"
+    "backToWebsite": "Back to Website",
+    "error": "Error",
+    "retry": "Retry"
   }
 }

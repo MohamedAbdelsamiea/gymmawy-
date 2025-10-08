@@ -5,7 +5,7 @@
 
 class CountryDetectionService {
   constructor() {
-    this.supportedCountries = ['EG', 'AE', 'SA'];
+    this.supportedCountries = ['EG', 'AE', 'SA', 'US'];
     this.countryConfigs = {
       'EG': {
         name: 'Egypt',
@@ -24,6 +24,12 @@ class CountryDetectionService {
         currency: 'SAR',
         tabbySupported: true,
         merchantCode: 'SA'
+      },
+      'US': {
+        name: 'United States',
+        currency: 'USD',
+        tabbySupported: false,
+        merchantCode: 'US'
       },
     };
   }

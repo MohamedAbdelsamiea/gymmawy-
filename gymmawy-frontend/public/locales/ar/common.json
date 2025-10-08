@@ -29,5 +29,7 @@
   "months": "{{count}} شهر",
   "months_other": "{{count}} أشهر",
   "days": "{{count}} يوم",
-  "days_other": "{{count}} أيام"
+  "days_other": "{{count}} أيام",
+  "currency": "العملة",
+  "selectCurrency": "اختر العملة"
 }

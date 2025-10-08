@@ -99,8 +99,12 @@ const Login = () => {
         navigate('/');
       }
     } else {
+      // Check if the error is a translation key or a plain message
+      const errorMessage = result.error;
+      const isTranslationKey = errorMessage && errorMessage.includes('login.errors.');
+      
       setErrors({ 
-        general: result.error || t('login.errors.invalidCredentials'), 
+        general: isTranslationKey ? t(errorMessage) : (errorMessage || t('login.errors.invalidCredentials')), 
       });
     }
   };

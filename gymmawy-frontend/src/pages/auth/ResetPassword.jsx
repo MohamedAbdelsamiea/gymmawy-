@@ -132,7 +132,7 @@ const ResetPassword = () => {
       } else {
         // Handle general errors
         setErrors({ 
-          general: getGeneralErrorMessage(error.response?.data || error) || 'Failed to reset password. Please try again or request a new reset link.', 
+          general: getGeneralErrorMessage(error.response?.data || error) || t('resetPassword.errors.resetFailed'), 
         });
         setValidationErrors([]);
       }

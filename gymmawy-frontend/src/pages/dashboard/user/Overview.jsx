@@ -1,123 +1,72 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calendar, Clock, Gift, TrendingUp, Package, CreditCard, Award, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { StatCard, StatusBadge } from '../../../components/dashboard';
+import { Award, Package, ShoppingBag, Calendar } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
-import userService from '../../../services/userService';
-import subscriptionService from '../../../services/subscriptionService';
 import orderService from '../../../services/orderService';
-import loyaltyService from '../../../services/loyaltyService';
+import programmeService from '../../../services/programmeService';
 
 const UserOverview = () => {
   const { t } = useTranslation("dashboard");
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [userStats, setUserStats] = useState({
-    subscription: {
-      plan: 'No Active Plan',
-      status: 'Inactive',
-      expiryDate: null,
-      autoRenew: false
-    },
-    loyaltyPoints: 0,
-    totalOrders: 0,
-    totalSpent: '$0.00'
-  });
-  const [recentActivity, setRecentActivity] = useState([]);
-  const [upcomingEvents, setUpcomingEvents] = useState([]);
-  const [loyaltyTransactions, setLoyaltyTransactions] = useState([]);
-  const [loyaltyStats, setLoyaltyStats] = useState({
-    totalEarned: 0,
-    totalRedeemed: 0,
-    currentBalance: 0
-  });
+  const [purchaseHistory, setPurchaseHistory] = useState([]);
 
   useEffect(() => {
     if (user) {
-      loadDashboardData();
+      loadPurchaseHistory();
     }
   }, [user]);
 
-  const loadDashboardData = async () => {
+  const loadPurchaseHistory = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Load data in parallel
-      const [userStatsResponse, subscriptions, orders, loyaltyTransactionsResponse, loyaltyStatsResponse] = await Promise.allSettled([
-        userService.getUserStats(),
-        subscriptionService.getUserSubscriptions(),
+      // Load all purchases (orders and programmes)
+      const [ordersResponse, programmePurchasesResponse] = await Promise.allSettled([
         orderService.getOrders(),
-        loyaltyService.getRecentTransactions(),
-        loyaltyService.getStats()
+        programmeService.getUserProgrammes()
       ]);
 
-      // Process user stats
-      let stats = {
-        loyaltyPoints: 0,
-        totalOrders: 0,
-        totalSpent: '$0.00',
-        workoutsThisMonth: 0
-      };
+      const purchases = [];
 
-      if (userStatsResponse.status === 'fulfilled' && userStatsResponse.value?.stats) {
-        const userStatsData = userStatsResponse.value.stats;
-        stats = {
-          loyaltyPoints: userStatsData.loyaltyPoints || 0,
-          totalOrders: userStatsData.orders?.total || 0,
-          totalSpent: `$${(userStatsData.spending?.total || 0).toFixed(2)}`,
-          workoutsThisMonth: userStatsData.workoutsThisMonth || 0
-        };
+      // Process orders
+      if (ordersResponse.status === 'fulfilled' && ordersResponse.value?.data) {
+        ordersResponse.value.data.forEach(order => {
+          purchases.push({
+            id: order.id,
+            type: 'order',
+            date: order.createdAt,
+            items: order.items?.map(item => item.product?.name || item.name).join(', ') || 'Order',
+            amount: order.totalPrice || order.amount || 0,
+            currency: order.currency || 'EGP',
+            status: order.status,
+            loyaltyPointsEarned: order.loyaltyPointsEarned || 0
+          });
+        });
       }
 
-      // Process subscriptions
-      let activeSubscription = null;
-      if (subscriptions.status === 'fulfilled' && subscriptions.value?.data?.length > 0) {
-        activeSubscription = subscriptions.value.data.find(sub => sub.status === 'active');
+      // Process programme purchases
+      if (programmePurchasesResponse.status === 'fulfilled' && programmePurchasesResponse.value?.data) {
+        programmePurchasesResponse.value.data.forEach(purchase => {
+          purchases.push({
+            id: purchase.id,
+            type: 'programme',
+            date: purchase.purchaseDate || purchase.createdAt,
+            items: purchase.programme?.name || 'Programme',
+            amount: purchase.amount || 0,
+            currency: purchase.currency || 'EGP',
+            status: purchase.status,
+            loyaltyPointsEarned: 0
+          });
+        });
       }
 
-      // Process orders for recent activity
-      let recentActivities = [];
-      if (orders.status === 'fulfilled' && orders.value?.data) {
-        recentActivities = orders.value.data.slice(0, 4).map((order, index) => ({
-          id: index + 1,
-          action: t('user.overview.orderPlaced'),
-          description: `Order #${order.id} - ${order.status}`,
-          time: formatTimeAgo(order.createdAt),
-          type: 'order'
-        }));
-      }
+      // Sort by date (newest first)
+      purchases.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-      setUserStats({
-        subscription: activeSubscription ? {
-          plan: activeSubscription.plan?.name || 'Unknown Plan',
-          status: activeSubscription.status || 'Inactive',
-          expiryDate: activeSubscription.endDate,
-          autoRenew: activeSubscription.autoRenew || false
-        } : {
-          plan: 'No Active Plan',
-          status: 'Inactive',
-          expiryDate: null,
-          autoRenew: false
-        },
-        ...stats
-      });
-
-      setRecentActivity(recentActivities);
-
-      // Process loyalty transactions
-      if (loyaltyTransactionsResponse.status === 'fulfilled' && loyaltyTransactionsResponse.value.success) {
-        const formattedTransactions = loyaltyTransactionsResponse.value.transactions.map(transaction => 
-          loyaltyService.formatTransaction(transaction)
-        );
-        setLoyaltyTransactions(formattedTransactions);
-      }
-
-      // Process loyalty stats
-      if (loyaltyStatsResponse.status === 'fulfilled' && loyaltyStatsResponse.value.success) {
-        setLoyaltyStats(loyaltyStatsResponse.value.stats);
-      }
+      setPurchaseHistory(purchases);
 
     } catch (err) {
       setError(err.message);
@@ -126,16 +75,31 @@ const UserOverview = () => {
     }
   };
 
-  const formatTimeAgo = (dateString) => {
+  const formatDate = (dateString) => {
     const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${diffInHours} hours ago`;
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays} days ago`;
-    return date.toLocaleDateString();
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'paid':
+      case 'completed':
+      case 'delivered':
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+      case 'processing':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled':
+      case 'failed':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
   if (loading) {
@@ -162,7 +126,7 @@ const UserOverview = () => {
             <h3 className="text-red-800 font-medium">{t('common.error')}</h3>
             <p className="text-red-600 text-sm mt-1">{error}</p>
             <button 
-              onClick={loadDashboardData}
+              onClick={loadPurchaseHistory}
               className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
             >
               {t('common.retry')}
@@ -175,203 +139,109 @@ const UserOverview = () => {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Section */}
+      {/* Welcome Section with Loyalty Points */}
       <div className="bg-gradient-to-r from-gymmawy-primary to-gymmawy-secondary rounded-xl p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">
-          {t('user.overview.title')}, {user?.firstName || user?.name || 'User'}!
-        </h1>
-        <p className="text-gymmawy-light opacity-90">
-          {t('user.overview.subtitle')}
-        </p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title={t('user.overview.loyaltyPoints')}
-          value={userStats.loyaltyPoints.toLocaleString()}
-          icon={Gift}
-          color="purple"
-        />
-        <StatCard
-          title={t('user.overview.totalOrders')}
-          value={userStats.totalOrders}
-          icon={Package}
-          color="blue"
-        />
-        <StatCard
-          title={t('user.overview.totalSpent')}
-          value={userStats.totalSpent}
-          icon={CreditCard}
-          color="green"
-        />
-        <StatCard
-          title={t('user.overview.workoutsThisMonth')}
-          value={userStats.workoutsThisMonth}
-          change="+15%"
-          changeType="positive"
-          icon={TrendingUp}
-          color="orange"
-        />
-      </div>
-
-      {/* Subscription Status */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('user.overview.subscriptionStatus')}</h3>
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-gymmawy-primary bg-opacity-10 rounded-lg">
-              <Package className="h-6 w-6 text-gymmawy-primary" />
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-900">{userStats.subscription.plan}</h4>
-              <p className="text-sm text-gray-600">
-                {userStats.subscription.expiryDate 
-                  ? `${t('user.overview.expiresOn')} ${new Date(userStats.subscription.expiryDate).toLocaleDateString()}`
-                  : t('user.overview.noActiveSubscription')
-                }
-              </p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold">
+              {t('user.overview.title', 'Welcome')}, {user?.firstName || user?.name || 'User'}!
+            </h1>
           </div>
           <div className="text-right">
-            <StatusBadge status={userStats.subscription.status} />
-            <p className="text-sm text-gray-600 mt-1">
-              {userStats.subscription.autoRenew ? t('user.overview.autoRenewalEnabled') : t('user.overview.autoRenewalDisabled')}
-            </p>
+            <div className="flex items-center gap-2 mb-1">
+              <Award className="h-6 w-6" />
+              <span className="text-3xl font-bold">{user?.loyaltyPoints || 0}</span>
+            </div>
+            <p className="text-sm opacity-90">{t('user.overview.loyaltyPoints', 'Loyalty Points')}</p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activity */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('user.overview.recentActivity')}</h3>
-          <div className="space-y-4">
-            {recentActivity.length > 0 ? (
-              recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start space-x-3">
-                  <div className={`w-2 h-2 rounded-full mt-2 ${
-                    activity.type === 'workout' ? 'bg-green-500' :
-                    activity.type === 'order' ? 'bg-blue-500' :
-                    activity.type === 'loyalty' ? 'bg-purple-500' :
-                    'bg-orange-500'
-                  }`}></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                    <p className="text-sm text-gray-600">{activity.description}</p>
-                    <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500 text-sm">{t('user.overview.noRecentActivity')}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Upcoming Events */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('user.overview.upcomingEvents')}</h3>
-          <div className="space-y-4">
-            {upcomingEvents.length > 0 ? (
-              upcomingEvents.map((event) => (
-                <div key={event.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="p-2 bg-gymmawy-primary bg-opacity-10 rounded-lg">
-                    <Calendar className="h-4 w-4 text-gymmawy-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{event.title}</p>
-                    <div className="flex items-center text-xs text-gray-600 mt-1">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {event.date} at {event.time}
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <div className="p-3 bg-gymmawy-primary bg-opacity-10 rounded-lg w-fit mx-auto mb-3">
-                  <Calendar className="h-6 w-6 text-gymmawy-primary" />
-                </div>
-                <p className="text-gray-500 text-sm">{t('user.overview.noUpcomingEvents')}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Loyalty Activity */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Loyalty Activity</h3>
-          <button 
-            onClick={() => window.location.href = '/dashboard/loyalty-history'}
-            className="text-sm text-gymmawy-primary hover:text-gymmawy-primary-dark font-medium flex items-center"
-          >
-            View Full History
-            <ArrowUpRight className="h-4 w-4 ml-1" />
-          </button>
+      {/* Purchase History */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">
+            {t('user.overview.purchaseHistory', 'Purchase History')}
+          </h3>
         </div>
         
-        <div className="space-y-3">
-          {loyaltyTransactions.length > 0 ? (
-            loyaltyTransactions.slice(0, 5).map((transaction) => (
-              <div key={transaction.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
-                <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-lg ${loyaltyService.getTransactionColorClass(transaction)}`}>
-                    {transaction.isEarned ? (
-                      <ArrowUpRight className="h-4 w-4" />
-                    ) : (
-                      <ArrowDownRight className="h-4 w-4" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {transaction.action} {Math.abs(transaction.points)} points
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      {transaction.sourceDisplay} • {transaction.reason || 'No reason provided'}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className={`text-sm font-semibold ${transaction.isEarned ? 'text-green-600' : 'text-red-600'}`}>
-                    {transaction.pointsDisplay}
-                  </p>
-                  <p className="text-xs text-gray-500">{transaction.formattedDate}</p>
-                </div>
-              </div>
-            ))
+        <div className="overflow-x-auto">
+          {purchaseHistory.length > 0 ? (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('user.overview.date', 'Date')}
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('user.overview.type', 'Type')}
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('user.overview.items', 'Items')}
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('user.overview.amount', 'Amount')}
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('user.overview.status', 'Status')}
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('user.overview.pointsEarned', 'Points Earned')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {purchaseHistory.map((purchase) => (
+                  <tr key={`${purchase.type}-${purchase.id}`} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatDate(purchase.date)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {purchase.type === 'order' ? (
+                          <ShoppingBag className="h-4 w-4 text-blue-600 mr-2" />
+                        ) : (
+                          <Package className="h-4 w-4 text-purple-600 mr-2" />
+                        )}
+                        <span className="text-sm text-gray-900 capitalize">{purchase.type}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                      {purchase.items}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {purchase.amount.toFixed(2)} {purchase.currency}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(purchase.status)}`}>
+                        {purchase.status || 'Unknown'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {purchase.loyaltyPointsEarned > 0 ? (
+                        <span className="flex items-center text-green-600 font-semibold">
+                          <Award className="h-4 w-4 mr-1" />
+                          +{purchase.loyaltyPointsEarned}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           ) : (
-            <div className="text-center py-8">
-              <div className="p-3 bg-gymmawy-primary bg-opacity-10 rounded-lg w-fit mx-auto mb-3">
-                <Award className="h-6 w-6 text-gymmawy-primary" />
+            <div className="text-center py-12">
+              <div className="p-4 bg-gray-100 rounded-full w-fit mx-auto mb-4">
+                <ShoppingBag className="h-8 w-8 text-gray-400" />
               </div>
-              <p className="text-gray-500 text-sm">No loyalty activity yet</p>
-              <p className="text-xs text-gray-400 mt-1">Start earning points by making purchases or referring friends!</p>
+              <p className="text-gray-500 text-sm">{t('user.overview.noPurchases', 'No purchases yet')}</p>
+              <p className="text-xs text-gray-400 mt-1">
+                {t('user.overview.startShopping', 'Start shopping to see your purchase history here')}
+              </p>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('user.overview.quickActions')}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="flex items-center justify-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <Package className="h-5 w-5 mr-2 text-gymmawy-primary" />
-            <span className="font-medium">{t('user.overview.startWorkout')}</span>
-          </button>
-          <button className="flex items-center justify-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <Gift className="h-5 w-5 mr-2 text-gymmawy-primary" />
-            <span className="font-medium">{t('user.overview.redeemPoints')}</span>
-          </button>
-          <button className="flex items-center justify-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <CreditCard className="h-5 w-5 mr-2 text-gymmawy-primary" />
-            <span className="font-medium">{t('user.overview.shopNow')}</span>
-          </button>
         </div>
       </div>
     </div>

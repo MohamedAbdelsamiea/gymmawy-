@@ -148,7 +148,8 @@ const TrainingProgramsPage = () => {
         <img
           src={text1}
           alt="Programmes Text"
-          className="w-full h-auto w-auto min-w-xl rtl:max-w-xl ltr:max-w-4xl mx-auto mt-7 md:mt-14 object-contain"
+          loading="lazy"
+          className="w-full h-auto w-auto min-w-xl rtl:max-w-xl ltr:max-w-none sm:ltr:max-w-4xl mx-auto mt-10 mb-10 sm:mt-6 sm:mb-6 object-contain px-4 md:px-0 rtl:scale-100 ltr:scale-150 sm:ltr:scale-100"
         />
         <p className="max-w-7xl text-xl md:text-3xl font-bold mx-auto text-[#190143] md:mb-12 mb-8 md:mt-14 mt-8">
           {t("description")}
@@ -169,6 +170,7 @@ const TrainingProgramsPage = () => {
                       <img
                         src={card.icon}
                         alt="Card Icon"
+                        loading="lazy"
                         className="w-full h-full object-contain"
                       />
                     </div>
@@ -203,7 +205,8 @@ const TrainingProgramsPage = () => {
         <img
           src={text2}
           alt="Programmes Text"
-          className="w-full h-auto rtl:max-w-xl ltr:max-w-5xl mx-auto md:mb-24 mb-8 object-contain"
+          loading="lazy"
+          className="w-full h-auto rtl:max-w-xl ltr:max-w-none sm:ltr:max-w-5xl mx-auto mt-10 mb-10 sm:mt-6 sm:mb-6 object-contain px-4 md:px-0 rtl:scale-100 ltr:scale-150 sm:ltr:scale-100"
         />
 
         <div className="max-w-[1300px] mx-auto px-4">

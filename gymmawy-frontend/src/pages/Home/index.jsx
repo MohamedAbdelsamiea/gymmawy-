@@ -303,7 +303,7 @@ return '';
                 {t("hero.title")}
               </p>
               <div className="w-full max-w-sm mb-4 sm:mb-8">
-                <img src={heroText} alt="Hero Text" className="w-full h-auto" />
+                <img src={heroText} alt="Hero Text" className="w-full h-auto" loading="lazy" />
               </div>
               <JoinUsButton />
             </div>
@@ -313,6 +313,7 @@ return '';
               <img
                 src={heroImage}
                 alt="Gymmawy Hero"
+                loading="eager"
                 className="w-full h-auto lg:w-[500px] xl:w-[600px] animate-hero-rise"
               />
               <div className="absolute bottom-0 w-[320px] h-[320px] lg:w-[450px] lg:h-[450px] bg-[#172b8f] opacity-40 rounded-full blur-[120px] pointer-events-none animate-glow-pulse"></div>
@@ -349,6 +350,7 @@ return '';
               <img
                 src={angryIcon}
                 alt="Gymmawy Icon"
+                loading="lazy"
                 className="w-full h-full object-contain"
               />
             </div>
@@ -356,6 +358,7 @@ return '';
               <img
                 src={whyJoinTitle}
                 alt="Why Join The Gymmawy Fam Today"
+                loading="lazy"
                 className="w-full h-auto"
               />
             </div>
@@ -419,6 +422,7 @@ return '';
                         <img
                           src={card.icon}
                           alt="Card Icon"
+                          loading="lazy"
                           className="w-full h-full object-contain"
                         />
                       </div>
@@ -452,6 +456,7 @@ return '';
               <img
                 src={membershipTitle}
                 alt="Your membership in the Gymmawy community includes"
+                loading="lazy"
                 className="w-full h-auto"
               />
             </div>
@@ -518,6 +523,7 @@ return '';
               <img
                 src={resultsTitle}
                 alt="Gymmawys Results"
+                loading="lazy"
                 className="w-full h-auto"
               />
             </div>
@@ -572,6 +578,7 @@ return '';
                       <img
                         src={getFullImageUrl(transformation.imageUrl)}
                         alt={getTransformationTitle()}
+                        loading="lazy"
                         className="w-full h-auto object-cover rounded-lg shadow-lg transform transition-transform duration-500 hover:scale-105 hover:brightness-110"
                         onError={(e) => {
                           e.target.style.display = 'none';
@@ -606,6 +613,7 @@ return '';
               <img
                 src={packagesTitle}
                 alt={t("packages.title")}
+                loading="lazy"
                 className="w-full h-auto "
               />
             </div>
@@ -859,6 +867,7 @@ return '';
                       <img
                         src={plan.imageUrl.startsWith('http') ? plan.imageUrl : `${config.STATIC_BASE_URL}${plan.imageUrl}`}
                         alt={planName}
+                        loading="lazy"
                         className="w-full h-full object-cover rounded-lg"
                         onError={(e) => {
                           console.error('Image load error:', e);
@@ -1011,6 +1020,7 @@ return '';
               <img
                 src={planTitle}
                 alt="TO ACHIEVE YOUR GOAL, YOU NEED A SIMPLE CLEAR PLAN."
+                loading="lazy"
                 className="w-full h-auto"
               />
             </div>
@@ -1055,6 +1065,7 @@ return '';
                 <img
                   src={partnerEvolve}
                   alt="EVOLVZ"
+                  loading="lazy"
                   className="w-full h-full object-contain brightness-0 invert opacity-90"
                 />
               </div>

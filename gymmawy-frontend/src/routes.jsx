@@ -1,24 +1,24 @@
 import { Routes, Route } from 'react-router-dom';
+import { lazy } from 'react';
 import MainLayout from './layouts/MainLayout';
-import DashboardLayout from './layouts/DashboardLayout';
-import Home from './pages/Home';
-import Programmes from './pages/Programmes';
-import Store from './pages/Store';
-import ShopAll from './pages/ShopAll';
-import ProductPage from './pages/ProductPage';
-import CartPage from './pages/Cart';
-import JoinUs from './pages/JoinUs';
-import ContactUs from './pages/ContactUs';
-import Auth from './pages/Auth';
-import Dashboard from './pages/Dashboard';
-import Checkout from './pages/Checkout';
-import PaymentSuccess from './pages/PaymentSuccess.jsx';
-import PaymentFailure from './pages/PaymentFailure.jsx';
-import PaymentCancel from './pages/PaymentCancel.jsx';
-import PaymobPaymentResult from './components/payment/PaymobPaymentResult.jsx';
-
-
 import { ProtectedRoute } from './components/auth';
+
+// Lazy load all page components
+const Home = lazy(() => import('./pages/Home'));
+const Programmes = lazy(() => import('./pages/Programmes'));
+const Store = lazy(() => import('./pages/Store'));
+const ShopAll = lazy(() => import('./pages/ShopAll'));
+const ProductPage = lazy(() => import('./pages/ProductPage'));
+const CartPage = lazy(() => import('./pages/Cart'));
+const JoinUs = lazy(() => import('./pages/JoinUs'));
+const ContactUs = lazy(() => import('./pages/ContactUs'));
+const Auth = lazy(() => import('./pages/Auth'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess.jsx'));
+const PaymentFailure = lazy(() => import('./pages/PaymentFailure.jsx'));
+const PaymentCancel = lazy(() => import('./pages/PaymentCancel.jsx'));
+const PaymobPaymentResult = lazy(() => import('./components/payment/PaymobPaymentResult.jsx'));
 
 // Public routes with MainLayout
 export const publicRoutes = [

@@ -86,7 +86,7 @@ const StorePage = () => {
   const backgroundImage = useAsset("store/sub-image.png", "common");
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" dir="ltr">
       {/* Hero Section */}
       <section
         className="relative py-8 lg:py-16 overflow-hidden"
@@ -128,7 +128,7 @@ const StorePage = () => {
       </section>
 
       {/* New Arrivals Section */}
-      <section className="py-12 sm:py-16 md:py-20 bg-white">
+      <section className="py-12 sm:py-16 md:py-20 bg-white" dir="ltr">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-left mb-8 sm:mb-10 md:mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-light text-[#190143]">NEW ARRIVALS</h2>

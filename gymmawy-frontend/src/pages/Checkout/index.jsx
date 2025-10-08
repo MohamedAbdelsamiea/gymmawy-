@@ -12,6 +12,18 @@ import tabbyService from '../../services/tabbyService';
 import useTabbyPromo from '../../hooks/useTabbyPromo';
 import countryDetectionService from '../../services/countryDetectionService';
 import { useSecureImage } from '../../hooks/useSecureImage';
+
+// Helper function to get consistent currency symbols
+const getCurrencySymbol = (currency, language = 'en') => {
+  const symbols = {
+    'USD': '$',
+    'SAR': '﷼',
+    'AED': language === 'ar' ? 'د.إ' : 'AED',
+    'EGP': language === 'ar' ? 'ج.م' : 'EGP'
+  };
+  return symbols[currency] || (language === 'ar' ? 'ج.م' : 'EGP');
+};
+
 import { 
   CreditCard, 
   Copy, 
@@ -35,7 +47,7 @@ const Checkout = () => {
   const { isArabic } = useLanguage();
   const { user, isAuthenticated } = useAuth();
   const { showError, showSuccess, showInfo } = useToast();
-  const { currency: detectedCurrency, isLoading: currencyLoading, formatPrice } = useCurrencyContext();
+  const { currency: detectedCurrency, isLoading: currencyLoading, formatPrice, isTabbySupported } = useCurrencyContext();
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -63,8 +75,9 @@ return fallback;
     plan: plan?.name
   });
   
-  // Use passed currency or fallback to detected currency
-  const currency = passedCurrency || detectedCurrency || 'USD';
+  // Use detected currency from CurrencyContext (user can change via currency selector)
+  // This ensures prices update when user changes currency
+  const currency = detectedCurrency || passedCurrency || 'USD';
   
   // Debug: Log the currency being used
   // console.log('🔍 Checkout - Currency from home page:', passedCurrency);
@@ -110,7 +123,8 @@ return fallback;
   const [couponData, setCouponData] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('full');
   const [paymentOption, setPaymentOption] = useState('');
-  const [paymentProof, setPaymentProof] = useState(null);
+  const [paymentProof, setPaymentProof] = useState(null); // Stores the File object
+  const [paymentProofPreview, setPaymentProofPreview] = useState(null); // Stores preview URL
   const [uploadingProof, setUploadingProof] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -121,6 +135,7 @@ return fallback;
   const [tabbyRejectionMessage, setTabbyRejectionMessage] = useState(null);
   const [forceTabbyAvailable, setForceTabbyAvailable] = useState(false);
   const [tabbyPrescoringLoading, setTabbyPrescoringLoading] = useState(false);
+  const [copiedField, setCopiedField] = useState(null); // Track which field was copied
   const [tabbyConfiguration, setTabbyConfiguration] = useState(null);
   
   // Clear any existing rejection message for testing
@@ -211,10 +226,14 @@ return fallback;
     shippingPostcode: ''
   });
 
-  // Use secure image hook for payment proof
-  const { dataUrl: secureImageUrl, loading: imageLoading, error: imageError } = useSecureImage(
-    typeof paymentProof === 'string' ? paymentProof : null
-  );
+  // Cleanup preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (paymentProofPreview) {
+        URL.revokeObjectURL(paymentProofPreview);
+      }
+    };
+  }, [paymentProofPreview]);
 
   // Reset payment option if cash on delivery is selected for non-physical orders
   useEffect(() => {
@@ -464,22 +483,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       });
       
       // Get currency symbol
-      let currencySymbol = 'L.E';
-      switch (defaultCurrency) {
-        case 'USD':
-          currencySymbol = '$';
-          break;
-        case 'SAR':
-          currencySymbol = 'ر.س';
-          break;
-        case 'AED':
-          currencySymbol = i18n.language === 'ar' ? 'د.إ' : 'AED';
-          break;
-        case 'EGP':
-        default:
-          currencySymbol = 'L.E';
-          break;
-      }
+      const currencySymbol = getCurrencySymbol(defaultCurrency, i18n.language);
       
       return {
         amount: amount,
@@ -519,22 +523,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       }
       
       // Get currency symbol
-      let currencySymbol = 'L.E';
-      switch (selectedCurrency) {
-        case 'USD':
-          currencySymbol = '$';
-          break;
-        case 'SAR':
-          currencySymbol = 'ر.س';
-          break;
-        case 'AED':
-          currencySymbol = i18n.language === 'ar' ? 'د.إ' : 'AED';
-          break;
-        case 'EGP':
-        default:
-          currencySymbol = 'L.E';
-          break;
-      }
+      const currencySymbol = getCurrencySymbol(selectedCurrency, i18n.language);
       
       console.log('🔍 Checkout - Individual price fields debug:', {
         currency: currency,
@@ -582,22 +571,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       const amount = plan.allPrices.medical[defaultCurrency] || 0;
       
       // Get currency symbol
-      let currencySymbol = 'L.E';
-      switch (defaultCurrency) {
-        case 'USD':
-          currencySymbol = '$';
-          break;
-        case 'SAR':
-          currencySymbol = 'ر.س';
-          break;
-        case 'AED':
-          currencySymbol = i18n.language === 'ar' ? 'د.إ' : 'AED';
-          break;
-        case 'EGP':
-        default:
-          currencySymbol = 'L.E';
-          break;
-      }
+      const currencySymbol = getCurrencySymbol(defaultCurrency, i18n.language);
       
       return {
         amount: amount,
@@ -1272,37 +1246,39 @@ return;
     }
   };
 
-  // Handle payment proof upload
-  const handleFileUpload = async(e) => {
+  // Handle payment proof file selection (preview only, upload on submit)
+  const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
       try {
         // Validate file using the service
         imageUploadService.validateFile(file, 5); // 5MB max
         
-        // Show loading state
-        setUploadingProof(true);
+        // Store the file object for later upload
+        setPaymentProof(file);
         
-        // Upload the file
-        const uploadResult = await imageUploadService.uploadImage(file, 'payment-proofs');
-        
-        // Store the URL instead of the file object
-        setPaymentProof(uploadResult.upload.url);
+        // Create preview URL for display
+        const previewUrl = URL.createObjectURL(file);
+        setPaymentProofPreview(previewUrl);
       } catch (error) {
-        console.error('Payment proof upload failed:', error);
-        alert(`Upload failed: ${error.message}`);
+        console.error('Payment proof validation failed:', error);
+        alert(`Validation failed: ${error.message}`);
         // Reset the file input
         e.target.value = '';
-      } finally {
-        setUploadingProof(false);
+        setPaymentProof(null);
+        setPaymentProofPreview(null);
       }
     }
   };
 
-  // Handle copy to clipboard
-  const copyToClipboard = (text) => {
+  // Handle copy to clipboard with feedback
+  const copyToClipboard = (text, fieldName) => {
     navigator.clipboard.writeText(text);
-    // You could add a toast notification here
+    setCopiedField(fieldName);
+    // Clear the "Copied!" message after 1 second
+    setTimeout(() => {
+      setCopiedField(null);
+    }, 1000);
   };
 
   // Render order summary content
@@ -1843,21 +1819,31 @@ return;
     }
 
     try {
-      // Use paymentProof directly if provided (now it's a URL string)
-      const paymentProofUrl = paymentProof;
+      // Upload payment proof if provided (File object)
+      let paymentProofUrl = null;
+      if (paymentProof) {
+        try {
+          setUploadingProof(true);
+          const uploadResult = await imageUploadService.uploadImage(paymentProof, 'payment-proofs');
+          paymentProofUrl = uploadResult.upload.url;
+          console.log('✅ Payment proof uploaded:', paymentProofUrl);
+        } catch (uploadError) {
+          console.error('❌ Payment proof upload failed:', uploadError);
+          showError(i18n.language === 'ar' 
+            ? 'فشل رفع إثبات الدفع. يرجى المحاولة مرة أخرى.' 
+            : 'Failed to upload payment proof. Please try again.');
+          setSubmitting(false);
+          setUploadingProof(false);
+          return;
+        } finally {
+          setUploadingProof(false);
+        }
+      }
 
       if (type === 'subscription') {
-        // Calculate current price and discount
-        const currentPrice = getPrice();
-        const discount = getDiscount();
         const isMedical = selectedDuration === 'medical';
         
-        // Calculate total discount amount and percentage
-        const totalDiscountAmount = getDiscount().totalDiscount;
-        const totalDiscountPercentage = subtotal > 0 ? (totalDiscountAmount / subtotal) * 100 : 0;
-        const finalAmount = total; // This is the discounted amount
-        
-        // Create subscription with pricing data
+        // Send only essential data - let backend calculate all prices
         const subscriptionData = {
           planId: plan.id,
           paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONE_CASH' : 
@@ -1865,24 +1851,10 @@ return;
                         paymentOption === 'paymob_card' ? 'PAYMOB' :
                         paymentOption === 'paymob_apple' ? 'PAYMOB' :
                         paymentOption?.toUpperCase(),
-          // Additional subscription details
           isMedical: isMedical,
-          currency: currentPrice?.currency || 'EGP',
-          // Required pricing fields
-          price: finalAmount, // This is the final amount after discounts
-          originalPrice: subtotal, // Original price before discounts
-          discount: totalDiscountAmount, // Total discount amount
-          planDiscountPercentage: plan?.discountPercentage || 0,
-          totalDiscountAmount: totalDiscountAmount,
-          // Duration information
-          subscriptionPeriodDays: durationData.subscriptionDays,
-          giftPeriodDays: durationData.giftDays,
-          // Plan details for reference
-          planName: typeof plan.name === 'object' ? plan.name?.en || plan.name?.ar || 'Plan' : plan.name,
-          planDescription: typeof plan.description === 'object' ? plan.description?.en || plan.description?.ar || '' : plan.description,
-          // Coupon information
+          currency: currency, // Current selected currency
+          // Coupon information - backend will validate and calculate discount
           couponId: couponValid && couponData ? couponData.id : null,
-          couponDiscount: couponValid && couponData ? couponDiscount : 0,
         };
 
         // Only include paymentProof if it has a value
@@ -1891,13 +1863,8 @@ return;
         }
 
         // Debug: Log subscription data being sent
-        console.log('🔍 Subscription data being sent:', subscriptionData);
-        console.log('🔍 Price values:', {
-          finalAmount,
-          subtotal,
-          totalDiscountAmount,
-          planDiscountPercentage: plan?.discountPercentage || 0
-        });
+        console.log('🔍 Subscription data being sent to backend:', subscriptionData);
+        console.log('✅ Backend will calculate and validate all prices');
 
         const result = await checkoutService.createSubscription(subscriptionData);
         // console.log('Subscription created:', result);
@@ -2419,19 +2386,22 @@ return;
                       </div>
                     </label>
 
-                    <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value="installments"
-                        checked={paymentMethod === 'installments'}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
-                      />
-                      <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'}`}>
-                        <span className="text-sm font-medium text-gray-900">{t('checkout.payInInstallments')}</span>
-                      </div>
-                    </label>
+                    {/* Only show installments option for AED and SAR */}
+                    {isTabbySupported && (
+                      <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="installments"
+                          checked={paymentMethod === 'installments'}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
+                        />
+                        <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'}`}>
+                          <span className="text-sm font-medium text-gray-900">{t('checkout.payInInstallments')}</span>
+                        </div>
+                      </label>
+                    )}
                   </div>
                 </div>
 
@@ -2606,11 +2576,15 @@ return;
                         <span>rawdakhairy@instapay</span>
                         <button
                           type="button"
-                          onClick={() => copyToClipboard('rawdakhairy@instapay')}
+                          onClick={() => copyToClipboard('rawdakhairy@instapay', 'instapay')}
                           className="flex items-center text-purple-600 hover:text-purple-800"
                         >
                           <Copy className={`h-4 w-4 ${i18n.language === 'ar' ? 'ml-1' : 'mr-1'}`} />
-                          {t('checkout.copy')}
+                          {copiedField === 'instapay' ? (
+                            i18n.language === 'ar' ? 'تم النسخ!' : 'Copied!'
+                          ) : (
+                            t('checkout.copy')
+                          )}
                         </button>
                       </div>
                       <ol className="list-decimal list-inside space-y-1">
@@ -2630,11 +2604,15 @@ return;
                         <span>01060599054 - 01014454237</span>
                         <button
                           type="button"
-                          onClick={() => copyToClipboard('01060599054 - 01014454237')}
+                          onClick={() => copyToClipboard('01060599054 - 01014454237', 'vodafone')}
                           className="flex items-center text-red-600 hover:text-red-800"
                         >
                           <Copy className={`h-4 w-4 ${i18n.language === 'ar' ? 'ml-1' : 'mr-1'}`} />
-                          {t('checkout.copy')}
+                          {copiedField === 'vodafone' ? (
+                            i18n.language === 'ar' ? 'تم النسخ!' : 'Copied!'
+                          ) : (
+                            t('checkout.copy')
+                          )}
                         </button>
                       </div>
                       <ol className="list-decimal list-inside space-y-1">
@@ -2707,40 +2685,9 @@ return;
                           <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-3">
                                 <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                                  {typeof paymentProof === 'string' ? (
-                                    imageLoading ? (
-                                      <div className="w-full h-full flex items-center justify-center">
-                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gymmawy-primary"></div>
-                                      </div>
-                                    ) : imageError ? (
-                                      <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                                        </svg>
-                                      </div>
-                                    ) : secureImageUrl ? (
-                                      <img 
-                                        src={secureImageUrl}
-                                        alt="Payment proof preview" 
-                                        className="w-full h-full object-cover rounded"
-                                        onError={(e) => {
-                                          console.error('Image load error:', e);
-                                          e.target.style.display = 'none';
-                                        }}
-                                        onLoad={() => {
-                                          // Image loaded successfully
-                                        }}
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                        </svg>
-                                      </div>
-                                    )
-                                  ) : (
+                                  {paymentProofPreview ? (
                                     <img 
-                                      src={URL.createObjectURL(paymentProof)} 
+                                      src={paymentProofPreview} 
                                       alt="Payment proof preview" 
                                       className="w-full h-full object-cover rounded"
                                       onError={(e) => {
@@ -2748,28 +2695,35 @@ return;
                                         e.target.style.display = 'none';
                                       }}
                                     />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                      </svg>
+                                    </div>
                                   )}
                                 </div>
                               <div>
                                 <p className="text-sm font-medium text-gray-900">
-                                  {typeof paymentProof === 'string' ? 
-                                    (imageLoading ? t('checkout.loadingPreview') : 
-                                     imageError ? t('checkout.previewError') : 
-                                     t('checkout.paymentProofUploaded')) : 
-                                    paymentProof.name}
+                                  {paymentProof?.name || t('checkout.paymentProofSelected')}
                                 </p>
                                 <p className="text-xs text-gray-500">
-                                  {typeof paymentProof === 'string' ? 
-                                    (imageLoading ? t('checkout.pleaseWait') : 
-                                     imageError ? t('checkout.unableToLoadPreview') : 
-                                     t('checkout.readyForSubmission')) : 
-                                    `${(paymentProof.size / 1024 / 1024).toFixed(2)} MB`}
+                                  {paymentProof?.size ? `${(paymentProof.size / 1024 / 1024).toFixed(2)} MB` : ''}
+                                  {' • '}
+                                  {t('checkout.willUploadOnSubmit', 'Will upload when you place order')}
                                 </p>
                               </div>
                             </div>
                             <button
                               type="button"
-                              onClick={() => setPaymentProof(null)}
+                              onClick={() => {
+                                setPaymentProof(null);
+                                setPaymentProofPreview(null);
+                                // Revoke the object URL to free memory
+                                if (paymentProofPreview) {
+                                  URL.revokeObjectURL(paymentProofPreview);
+                                }
+                              }}
                               className="text-red-500 hover:text-red-700"
                             >
                               <XCircle className="h-5 w-5" />

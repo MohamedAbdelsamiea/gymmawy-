@@ -149,10 +149,10 @@ export const CurrencyProvider = ({ children }) => {
   // Get currency info
   const getCurrencyInfo = (curr = currency) => {
     const currencyInfo = {
-      'EGP': { code: 'EGP', symbol: 'L.E', symbolAr: 'جم', name: 'Egyptian Pound', country: 'Egypt' },
-      'AED': { code: 'AED', symbol: 'AED', symbolAr: 'د.إ', name: 'UAE Dirham', country: 'UAE' },
-      'SAR': { code: 'SAR', symbol: 'SAR', symbolAr: 'ر.س', name: 'Saudi Riyal', country: 'Saudi Arabia' },
-      'USD': { code: 'USD', symbol: '$', symbolAr: '$', name: 'US Dollar', country: 'United States' }
+      'EGP': { code: 'EGP', symbol: 'EGP', symbolAr: 'ج.م', name: 'Egyptian Pound', country: 'Egypt', flag: '🇪🇬' },
+      'AED': { code: 'AED', symbol: 'AED', symbolAr: 'د.إ', name: 'UAE Dirham', country: 'UAE', flag: '🇦🇪' },
+      'SAR': { code: 'SAR', symbol: '﷼', symbolAr: '﷼', name: 'Saudi Riyal', country: 'Saudi Arabia', flag: '🇸🇦' },
+      'USD': { code: 'USD', symbol: '$', symbolAr: '$', name: 'US Dollar', country: 'United States', flag: '🇺🇸' }
     };
     
     return currencyInfo[curr] || currencyInfo['EGP'];
@@ -165,10 +165,13 @@ export const CurrencyProvider = ({ children }) => {
     }
 
     const currencyInfo = getCurrencyInfo(curr);
-    const symbol = i18n.language === 'ar' ? currencyInfo.symbolAr : currencyInfo.symbol;
+    // Use language-specific symbols for EGP and AED, same symbol for SAR and USD
+    const symbol = (curr === 'EGP' || curr === 'AED') 
+      ? (i18n.language === 'ar' ? currencyInfo.symbolAr : currencyInfo.symbol)
+      : currencyInfo.symbol;
     const formattedAmount = typeof amount === 'number' ? amount.toFixed(2) : amount;
     
-    return showSymbol ? `${symbol} ${formattedAmount}` : formattedAmount;
+    return showSymbol ? `${formattedAmount} ${symbol}` : formattedAmount;
   };
 
   // Convert price between currencies (simplified rates)
@@ -187,19 +190,22 @@ export const CurrencyProvider = ({ children }) => {
     return amount * rate;
   };
 
-  // Get Tabby-compatible currency (Tabby supports AED, SAR)
+  // Get Tabby-compatible currency (Tabby supports ONLY AED, SAR)
   const getTabbyCurrency = () => {
     const tabbySupportedCurrencies = ['AED', 'SAR'];
     if (tabbySupportedCurrencies.includes(currency)) {
       return currency;
     }
-    // Convert EGP to AED for Tabby
-    return 'AED';
+    // Return null for unsupported currencies (don't convert)
+    return null;
   };
 
   // Get Tabby-compatible price
   const getTabbyPrice = (price) => {
     const tabbyCurrency = getTabbyCurrency();
+    if (!tabbyCurrency) {
+      return null; // Return null for unsupported currencies
+    }
     if (currency === tabbyCurrency) {
       return price;
     }
@@ -229,7 +235,8 @@ export const CurrencyProvider = ({ children }) => {
     // Computed values
     currencyInfo: getCurrencyInfo(),
     tabbyCurrency: getTabbyCurrency(),
-    isTabbySupported: ['AED', 'SAR'].includes(currency)
+    // ONLY AED and SAR support Tabby - EGP and USD do NOT
+    isTabbySupported: currency === 'AED' || currency === 'SAR'
   };
 
   return (

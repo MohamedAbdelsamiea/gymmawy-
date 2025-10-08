@@ -16,18 +16,18 @@ class AuthService {
       
       // Provide user-friendly error messages
       if (error.message.includes('Invalid credentials')) {
-        throw new Error('Invalid email or password. Please check your credentials and try again.');
+        throw new Error('login.errors.invalidCredentials');
       } else if (error.message.includes('Account locked')) {
-        throw new Error('Your account has been temporarily locked due to multiple failed login attempts. Please try again later.');
+        throw new Error('login.errors.accountLocked');
       } else if (error.message.includes('Email and password required')) {
-        throw new Error('Please enter both email and password.');
+        throw new Error('login.errors.emailPasswordRequired');
       } else if (error.message.includes('No refresh token available')) {
-        throw new Error('Invalid email or password. Please check your credentials and try again.');
+        throw new Error('login.errors.invalidCredentials');
       } else if (error.message.includes('HTTP error! status: 401')) {
-        throw new Error('Invalid email or password. Please check your credentials and try again.');
+        throw new Error('login.errors.invalidCredentials');
       } else {
         // For any other error, provide a generic user-friendly message
-        throw new Error('Login failed. Please check your credentials and try again.');
+        throw new Error('login.errors.loginFailed');
       }
     }
   }

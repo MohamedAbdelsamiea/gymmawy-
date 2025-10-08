@@ -17,7 +17,7 @@ const EmailVerification = () => {
 
   const handleResendEmail = async() => {
     if (!email) {
-      setError('Email address not found. Please try registering again.');
+      setError(t('verifyEmail.errors.emailNotFound'));
       return;
     }
 

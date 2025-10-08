@@ -13,8 +13,8 @@ export const CURRENCY_CONFIG = {
     rtlPosition: 'suffix',
   },
   SAR: {
-    symbol: 'SAR',
-    symbolAr: 'ر.س',
+    symbol: '﷼',
+    symbolAr: '﷼',
     unicode: '\uFDFC', // ﷼ (proper SAR symbol)
     icon: Coins,
     position: 'suffix', // comes after number
@@ -29,9 +29,9 @@ export const CURRENCY_CONFIG = {
     rtlPosition: 'prefix',
   },
   EGP: {
-    symbol: 'LE',
-    symbolAr: 'جم',
-    unicode: 'LE',
+    symbol: 'EGP',
+    symbolAr: 'ج.م',
+    unicode: 'ج.م',
     icon: Banknote,
     position: 'suffix',
     rtlPosition: 'prefix',
@@ -52,7 +52,12 @@ export const getCurrencySymbol = (currency, language = 'en', useUnicode = false)
     return config.unicode;
   }
   
-  return language === 'ar' ? config.symbolAr : config.symbol;
+  // Use language-specific symbols for EGP and AED, same symbol for SAR and USD
+  if (currency === 'EGP' || currency === 'AED') {
+    return language === 'ar' ? config.symbolAr : config.symbol;
+  }
+  
+  return config.symbol;
 };
 
 /**

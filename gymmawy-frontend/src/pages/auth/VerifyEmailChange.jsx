@@ -20,13 +20,13 @@ const VerifyEmailChange = () => {
     if (token && email) {
       handleVerifyEmailChange();
     } else {
-      setError('Invalid verification link. Please check your email and try again.');
+      setError(t('verifyEmail.errors.invalidLink'));
     }
   }, [token, email]);
 
   const handleVerifyEmailChange = async() => {
     if (!token || !email) {
-      setError('Invalid verification link. Please check your email and try again.');
+      setError(t('verifyEmail.errors.invalidLink'));
       return;
     }
 
@@ -42,9 +42,9 @@ const VerifyEmailChange = () => {
       }, 3000);
     } catch (error) {
       if (error.message?.includes('expired') || error.message?.includes('invalid')) {
-        setError('This verification link has expired or is invalid. Please request a new email change.');
+        setError(t('verifyEmail.errors.expiredLink'));
       } else {
-        setError(error.message || 'Email change verification failed. Please try again.');
+        setError(error.message || t('verifyEmail.errors.verificationFailed'));
       }
     } finally {
       setLoading(false);

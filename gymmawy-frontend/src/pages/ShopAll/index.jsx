@@ -103,9 +103,9 @@ const ShopAllPage = () => {
   const darkTypo = useAsset("store/for a real gymmawy dark.png", "common"); // Dark typo as requested
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white" dir="ltr">
       {/* Typo Section - Centered at top */}
-      <section className="py-8 sm:py-12 md:py-16 bg-white">
+      <section className="py-8 sm:py-12 md:py-16 bg-white" dir="ltr">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="flex justify-center items-center">
             <img src={darkTypo} alt="FOR A REAL GYMMAWY" className="h-auto max-w-full scale-90 sm:scale-95 md:scale-100" />
@@ -114,7 +114,7 @@ const ShopAllPage = () => {
       </section>
 
       {/* Products Section - 2 columns */}
-      <section className="py-6 sm:py-8 bg-white">
+      <section className="py-6 sm:py-8 bg-white" dir="ltr">
         <div className="container mx-auto px-4 sm:px-6">
           {loading && page === 1 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
