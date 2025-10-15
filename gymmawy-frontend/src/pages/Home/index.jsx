@@ -284,7 +284,7 @@ return '';
       {/* Hero Section */}
       {/* Hero Section */}
       <section
-        className="relative py-4 lg:py-8 overflow-hidden"
+        className="relative pb-4 lg:pb-8 pt-0 overflow-hidden"
         style={{
           backgroundImage: `url(${heroBg})`,
           backgroundSize: "cover",
@@ -314,7 +314,7 @@ return '';
                 src={heroImage}
                 alt="Gymmawy Hero"
                 loading="eager"
-                className="w-full h-auto lg:w-[500px] xl:w-[600px] animate-hero-rise"
+                className="w-full h-auto lg:w-[500px] xl:w-[600px] animate-hero-rise mt-8 lg:mt-12"
               />
               <div className="absolute bottom-0 w-[320px] h-[320px] lg:w-[450px] lg:h-[450px] bg-[#172b8f] opacity-40 rounded-full blur-[120px] pointer-events-none animate-glow-pulse"></div>
             </div>

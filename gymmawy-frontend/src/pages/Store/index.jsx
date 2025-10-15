@@ -89,7 +89,7 @@ const StorePage = () => {
     <div className="min-h-screen" dir="ltr">
       {/* Hero Section */}
       <section
-        className="relative py-8 lg:py-16 overflow-hidden"
+        className="relative pb-8 lg:pb-16 pt-0 overflow-hidden"
         style={{
           backgroundImage: `url(${heroBg})`,
           backgroundSize: "cover",
@@ -104,7 +104,7 @@ const StorePage = () => {
                 i18n.language === "en" ? 1 : 4
               } lg:col-span-1 flex flex-col justify-end mb-16 h-full sm:h-auto`}
             >
-              <div className="w-full flex flex-col justify-end h-full sm:h-auto sm:justify-start">
+              <div className="w-full flex flex-col justify-end h-full sm:h-auto sm:justify-start mt-8 lg:mt-12">
                 <div className="mb-6 sm:mb-8 md:mb-10 lg:mb-14">
                     <img src={heroText} alt="FOR A REAL GYMMAWY" className="h-auto sm:scale-[1.4] md:scale-[1.6] origin-left" />
                 </div>

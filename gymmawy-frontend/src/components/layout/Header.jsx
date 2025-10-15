@@ -220,7 +220,7 @@ const Header = () => {
   const isInDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/checkout');
 
   return (
-    <header className="bg-[#190143] text-[#ebebeb] shadow-lg">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#190143] text-[#ebebeb] shadow-lg">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         {/* Left Navigation */}
         <nav className="hidden xlg:flex items-center justify-end" style={{ width: 'calc(50% - 100px)' }}>

@@ -13,7 +13,7 @@ const MainLayout = ({ children }) => {
   return (
     <div className="flex flex-col min-h-screen bg-[#ebebeb]">
       <Header />
-      <main className="flex-1">
+      <main className="flex-1 pt-14">
         {children}
       </main>
       <Footer backgroundColor={isStorePage || isShopAllPage || isProductPage || isCartPage ? 'bg-white' : 'bg-[#ebebeb]'} />
