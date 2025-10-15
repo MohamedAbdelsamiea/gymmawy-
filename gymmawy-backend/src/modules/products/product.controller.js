@@ -23,7 +23,8 @@ export async function listProducts(req, res, next) {
   try {
     const base = parseOrThrow(paginationSchema.extend({ 
       categoryId: z.string().uuid().optional(),
-      currency: z.enum(['EGP', 'SAR', 'AED', 'USD']).optional()
+      currency: z.enum(['EGP', 'SAR', 'AED', 'USD']).optional(),
+      hasLoyaltyPoints: z.string().optional()
     }), req.query);
     const { skip, take } = buildPagination(base);
     const result = await service.listProducts({ 
@@ -31,7 +32,8 @@ export async function listProducts(req, res, next) {
       take, 
       q: base.q, 
       categoryId: base.categoryId,
-      currency: base.currency || req.currency
+      currency: base.currency || req.currency,
+      hasLoyaltyPoints: base.hasLoyaltyPoints
     });
     res.json({
       ...result,

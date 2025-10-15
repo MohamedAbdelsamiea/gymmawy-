@@ -1,5 +1,8 @@
 import { getPrismaClient } from '../../config/db.js';
 import autoShipmentService from '../../services/autoShipmentService.js';
+import { activateOrder } from '../orders/order.service.js';
+import { approveSubscription } from '../subscriptions/subscription.service.js';
+import { approveProgrammePurchase } from '../programmes/programme.service.js';
 
 const prisma = getPrismaClient();
 
@@ -102,7 +105,7 @@ export async function approvePayment(paymentId, adminId) {
     let subscription = null;
     let programmePurchase = null;
 
-    // Handle different paymentable types
+    // Handle different paymentable types and award loyalty points
     if (payment.paymentableType === 'ORDER') {
       // Update order status to PAID
       order = await tx.order.update({
@@ -131,6 +134,27 @@ export async function approvePayment(paymentId, adminId) {
 
     return { payment: updatedPayment, order, subscription, programmePurchase };
   });
+
+  // Award loyalty points after payment approval
+  try {
+    if (result.order) {
+      console.log(`🎁 Awarding loyalty points for order ${result.order.id}`);
+      await activateOrder(result.order.id, adminId);
+      console.log(`✅ Loyalty points awarded for order ${result.order.id}`);
+    } else if (result.subscription) {
+      console.log(`🎁 Awarding loyalty points for subscription ${result.subscription.id}`);
+      await approveSubscription(result.subscription.id);
+      console.log(`✅ Loyalty points awarded for subscription ${result.subscription.id}`);
+    } else if (result.programmePurchase) {
+      console.log(`🎁 Awarding loyalty points for programme purchase ${result.programmePurchase.id}`);
+      await approveProgrammePurchase(result.programmePurchase.id);
+      console.log(`✅ Loyalty points awarded for programme purchase ${result.programmePurchase.id}`);
+    }
+  } catch (error) {
+    console.error(`❌ Failed to award loyalty points:`, error.message);
+    // Don't fail the payment approval if loyalty points awarding fails
+    result.loyaltyPointsError = error.message;
+  }
 
   // After transaction, create shipment automatically for orders
   if (result.order) {

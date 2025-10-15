@@ -6,6 +6,9 @@ import { getFrontendUrl } from '../../utils/urls.js';
 import paymentService from './payment.service.js';
 import * as subscriptionService from '../subscriptions/subscription.service.js';
 import * as programmeService from '../programmes/programme.service.js';
+import { approveSubscription } from '../subscriptions/subscription.service.js';
+import { approveProgrammePurchase } from '../programmes/programme.service.js';
+import { activateOrder } from '../orders/order.service.js';
 import { TABBY_TEST_CREDENTIALS, TABBY_TEST_SCENARIOS } from '../../config/tabbyTesting.js';
 import { buildTabbyHistory } from './tabbyHistoryService.js';
 
@@ -767,6 +770,16 @@ async function createPurchaseRecord(payment) {
     const subscription = await subscriptionService.createSubscriptionWithPayment(userId, subscriptionData);
     console.log(`Subscription created (PENDING approval): ${subscription.id}`);
     
+    // Auto-approve subscription and award loyalty points for successful payment
+    try {
+      console.log(`🎁 Auto-approving subscription ${subscription.id} and awarding loyalty points`);
+      await approveSubscription(subscription.id);
+      console.log(`✅ Subscription ${subscription.id} auto-approved and loyalty points awarded`);
+    } catch (error) {
+      console.error(`❌ Failed to auto-approve subscription ${subscription.id}:`, error.message);
+      // Don't fail the webhook if auto-approval fails - admin can approve manually
+    }
+    
   } else if (paymentableType === 'PROGRAMME') {
     // Create programme purchase - will be PENDING until admin approval
     const programmeData = {
@@ -795,7 +808,28 @@ async function createPurchaseRecord(payment) {
       }
     });
     
+    // Auto-approve programme purchase and award loyalty points for successful payment
+    try {
+      console.log(`🎁 Auto-approving programme purchase ${programmePurchase.id} and awarding loyalty points`);
+      await approveProgrammePurchase(programmePurchase.id);
+      console.log(`✅ Programme purchase ${programmePurchase.id} auto-approved and loyalty points awarded`);
+    } catch (error) {
+      console.error(`❌ Failed to auto-approve programme purchase ${programmePurchase.id}:`, error.message);
+      // Don't fail the webhook if auto-approval fails - admin can approve manually
+    }
+    
     console.log(`Programme purchase ${programmePurchase.id} set to PENDING status - awaiting admin approval`);
+    
+  } else if (paymentableType === 'ORDER') {
+    // For orders, we need to activate them and award loyalty points
+    try {
+      console.log(`🎁 Auto-activating order ${paymentableId} and awarding loyalty points`);
+      await activateOrder(paymentableId, 'system'); // Use 'system' as adminId for automated approval
+      console.log(`✅ Order ${paymentableId} auto-activated and loyalty points awarded`);
+    } catch (error) {
+      console.error(`❌ Failed to auto-activate order ${paymentableId}:`, error.message);
+      // Don't fail the webhook if auto-activation fails - admin can approve manually
+    }
     
   } else {
     console.warn(`Unknown paymentable type: ${paymentableType}. No purchase record created.`);

@@ -44,14 +44,22 @@ function validatePaymentData(paymentMethod, transactionId, paymentProofUrl) {
 }
 
 export async function listPlans(req) {
-  const { lang = 'en' } = req.query;
+  const { lang = 'en', hasLoyaltyPoints } = req.query;
+  
+  // Build where clause
+  const whereClause = {
+    deletedAt: null,
+    isActive: true
+  };
+  
+  // Filter by loyalty points if requested
+  if (hasLoyaltyPoints === 'true') {
+    whereClause.loyaltyPointsRequired = { gt: 0 };
+  }
   
   // Get all active subscription plans
   const plans = await prisma.subscriptionPlan.findMany({
-    where: {
-      deletedAt: null,
-      isActive: true
-    },
+    where: whereClause,
     include: {
       benefits: {
         where: {

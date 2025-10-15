@@ -24,14 +24,15 @@ export const getProgrammesController = async (req, res) => {
 
 export const listProgrammesController = async (req, res) => {
   try {
-    const { skip, take, q, sortBy, sortOrder, currency } = req.query;
+    const { skip, take, q, sortBy, sortOrder, currency, hasLoyaltyPoints } = req.query;
     const result = await listProgrammes({ 
       skip: skip ? parseInt(skip) : undefined,
       take: take ? parseInt(take) : undefined,
       q,
       sortBy,
       sortOrder,
-      currency: currency || req.currency
+      currency: currency || req.currency,
+      hasLoyaltyPoints
     });
     res.json({
       ...result,

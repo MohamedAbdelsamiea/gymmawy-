@@ -12,6 +12,7 @@ const ProductPage = lazy(() => import('./pages/ProductPage'));
 const CartPage = lazy(() => import('./pages/Cart'));
 const JoinUs = lazy(() => import('./pages/JoinUs'));
 const ContactUs = lazy(() => import('./pages/ContactUs'));
+const Rewards = lazy(() => import('./pages/Rewards'));
 const Auth = lazy(() => import('./pages/Auth'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Checkout = lazy(() => import('./pages/Checkout'));
@@ -30,6 +31,7 @@ export const publicRoutes = [
   { path: '/cart', element: <MainLayout><CartPage /></MainLayout> },
   { path: '/join-us', element: <MainLayout><JoinUs /></MainLayout> },
   { path: '/contact', element: <MainLayout><ContactUs /></MainLayout> },
+  { path: '/rewards', element: <MainLayout><Rewards /></MainLayout> },
   { path: '/auth/*', element: <MainLayout><Auth /></MainLayout> },
   { path: '/payment/success', element: <MainLayout><PaymentSuccess /></MainLayout> },
   { path: '/payment/failure', element: <MainLayout><PaymentFailure /></MainLayout> },

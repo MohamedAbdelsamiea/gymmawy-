@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Menu, X, Globe, User, LogOut, ShoppingBag, Gift, Home, ShoppingCart } from "lucide-react";
+import { Menu, X, Globe, User, LogOut, ShoppingBag, Gift, Home, ShoppingCart, ChevronDown } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import languageEventService from "../../services/languageEventService";
 import { useCart } from "../../contexts/CartContext";
@@ -13,22 +13,39 @@ const Header = () => {
   const { getCartTotals } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [homeDropdownOpen, setHomeDropdownOpen] = useState(false);
   const [navItems, setNavItems] = useState([]);
+  const [isHomeDropdownToggling, setIsHomeDropdownToggling] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const profileDropdownRef = useRef(null);
+  const homeDropdownRef = useRef(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
+      // Only close dropdowns if clicking outside both dropdowns and not on navigation items
+      const isClickOnNavItem = event.target.closest('nav') || 
+                               event.target.closest('button') ||
+                               event.target.closest('[role="button"]');
+      
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
         setProfileDropdownOpen(false);
+      }
+      
+      // Only close home dropdown if clicking outside it AND not on a navigation element
+      if (homeDropdownRef.current && 
+          !homeDropdownRef.current.contains(event.target) && 
+          !isClickOnNavItem) {
+        setHomeDropdownOpen(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
   }, []);
 
@@ -37,6 +54,24 @@ const Header = () => {
     setNavItems(getNavItems());
   }, [i18n.language]);
 
+  // Close home dropdown when mobile menu closes
+  useEffect(() => {
+    if (!isMenuOpen) {
+      setHomeDropdownOpen(false);
+      setIsHomeDropdownToggling(false);
+    }
+  }, [isMenuOpen]);
+
+  // Reset toggling flag when dropdown state changes
+  useEffect(() => {
+    if (!homeDropdownOpen) {
+      const timer = setTimeout(() => {
+        setIsHomeDropdownToggling(false);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [homeDropdownOpen]);
+
   // Get navigation items based on language
   const getNavItems = () => {
     const isArabic = i18n.language === 'ar';
@@ -44,12 +79,10 @@ const Header = () => {
     if (isArabic) {
       // Arabic: Store moved to right side
       return [
-        { key: "packages", sectionId: "packages", isSection: true },
+        { key: "home", isDropdown: true },
         { key: "trainingPrograms", path: "/programmes", isPage: true },
-        { key: "transformations", sectionId: "results", isSection: true },
-        { key: "subscribeNow", sectionId: "packages", isSection: true },
         { key: "store", path: "/store", isPage: true },
-        { key: "partners", sectionId: "partners", isSection: true },
+        { key: "rewards", path: "/rewards", isPage: true },
         { key: "joinTheTeam", sectionId: "packages", isSection: true },
         { key: "contactUs", path: "/contact", isPage: true },
         { key: "languageToggle", isToggle: true },
@@ -57,12 +90,10 @@ const Header = () => {
     } else {
       // English: Store stays in left side
       return [
-        { key: "packages", sectionId: "packages", isSection: true },
+        { key: "home", isDropdown: true },
         { key: "trainingPrograms", path: "/programmes", isPage: true },
-        { key: "transformations", sectionId: "results", isSection: true },
-        { key: "subscribeNow", sectionId: "packages", isSection: true },
         { key: "store", path: "/store", isPage: true },
-        { key: "partners", sectionId: "partners", isSection: true },
+        { key: "rewards", path: "/rewards", isPage: true },
         { key: "joinTheTeam", sectionId: "packages", isSection: true },
         { key: "contactUs", path: "/contact", isPage: true },
         { key: "languageToggle", isToggle: true },
@@ -70,12 +101,38 @@ const Header = () => {
     }
   };
 
+  // Get home dropdown items (sections on home page)
+  const getHomeDropdownItems = () => {
+    return [
+      { key: "transformations", sectionId: "results" },
+      { key: "packages", sectionId: "packages" },
+      { key: "partners", sectionId: "partners" },
+    ];
+  };
+
 
 
   const handleNavigation = (item) => {
     if (item.isToggle || item.isLogo) {
-return;
-}
+      return;
+    }
+
+    if (item.isDropdown) {
+      // Prevent rapid toggling
+      if (isHomeDropdownToggling) {
+        return;
+      }
+      
+      setIsHomeDropdownToggling(true);
+      setHomeDropdownOpen(!homeDropdownOpen);
+      
+      // Reset the flag after a short delay
+      setTimeout(() => {
+        setIsHomeDropdownToggling(false);
+      }, 300);
+      
+      return;
+    }
 
     if (item.isSection) {
       if (location.pathname !== "/") {
@@ -83,20 +140,40 @@ return;
         setTimeout(() => {
           const element = document.getElementById(item.sectionId);
           if (element) {
-element.scrollIntoView({ behavior: "smooth" });
-}
+            element.scrollIntoView({ behavior: "smooth" });
+          }
         }, 100);
       } else {
         const element = document.getElementById(item.sectionId);
         if (element) {
-element.scrollIntoView({ behavior: "smooth" });
-}
+          element.scrollIntoView({ behavior: "smooth" });
+        }
       }
       setIsMenuOpen(false);
+      setHomeDropdownOpen(false);
     } else if (item.isPage) {
       navigate(item.path);
       setIsMenuOpen(false);
     }
+  };
+
+  const handleHomeSectionNavigation = (sectionItem) => {
+    if (location.pathname !== "/") {
+      navigate("/");
+      setTimeout(() => {
+        const element = document.getElementById(sectionItem.sectionId);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 100);
+    } else {
+      const element = document.getElementById(sectionItem.sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+    setHomeDropdownOpen(false);
+    setIsMenuOpen(false);
   };
 
   const toggleLanguage = () => {
@@ -148,14 +225,48 @@ element.scrollIntoView({ behavior: "smooth" });
         {/* Left Navigation */}
         <nav className="hidden xlg:flex items-center justify-end" style={{ width: 'calc(50% - 100px)' }}>
           <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-12' : 'space-x-12'}`}>
-            {navItems.slice(0, i18n.language === 'ar' ? 6 : 5).map((item) => (
-              <button
-                key={item.key}
-                onClick={() => handleNavigation(item)}
-                className="hover:text-white transition-colors duration-300 font-medium whitespace-nowrap"
-              >
-                {t(`nav.${item.key}`)}
-              </button>
+            {navItems.slice(0, i18n.language === 'ar' ? 4 : 4).map((item) => (
+              item.isDropdown ? (
+                <div key={item.key} className="relative" ref={homeDropdownRef}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleNavigation(item);
+                    }}
+                    className="hover:text-white transition-colors duration-300 font-medium whitespace-nowrap flex items-center gap-1"
+                  >
+                    {t(`nav.${item.key}`)}
+                    <ChevronDown size={16} className={`transition-transform duration-200 ${homeDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  {/* Home Dropdown Menu */}
+                  {homeDropdownOpen && (
+                    <div className={`absolute ${i18n.language === 'ar' ? 'right-0' : 'left-0'} mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50`}>
+                      {getHomeDropdownItems().map((dropdownItem) => (
+                        <button
+                          key={dropdownItem.key}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleHomeSectionNavigation(dropdownItem);
+                          }}
+                          className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 gap-2"
+                          style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
+                        >
+                          <span className="whitespace-nowrap">{t(`nav.${dropdownItem.key}`)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  key={item.key}
+                  onClick={() => handleNavigation(item)}
+                  className="hover:text-white transition-colors duration-300 font-medium whitespace-nowrap"
+                >
+                  {t(`nav.${item.key}`)}
+                </button>
+              )
             ))}
           </div>
         </nav>
@@ -170,7 +281,7 @@ element.scrollIntoView({ behavior: "smooth" });
         {/* Right Navigation */}
         <nav className="hidden xlg:flex items-center justify-start" style={{ width: 'calc(50% - 100px)' }}>
           <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-12' : 'space-x-12'}`}>
-            {navItems.slice(i18n.language === 'ar' ? 6 : 5, 8).map((item) => (
+            {navItems.slice(i18n.language === 'ar' ? 4 : 4, 6).map((item) => (
               <button
                 key={item.key}
                 onClick={() => handleNavigation(item)}
@@ -306,13 +417,64 @@ element.scrollIntoView({ behavior: "smooth" });
             {navItems
               .filter((item) => !item.isToggle)
               .map((item) => (
-                <button
-                  key={item.key}
-                  onClick={() => handleNavigation(item)}
-                  className="hover:text-white transition-colors duration-300 font-medium text-left"
-                >
-                  {t(`nav.${item.key}`)}
-                </button>
+                item.isDropdown ? (
+                  <div key={item.key} className="flex flex-col">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleNavigation(item);
+                      }}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      className="hover:text-white transition-colors duration-300 font-medium text-left flex items-center gap-2 touch-manipulation"
+                      style={{ WebkitTapHighlightColor: 'transparent' }}
+                    >
+                      {t(`nav.${item.key}`)}
+                      <ChevronDown size={16} className={`transition-transform duration-200 ${homeDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {/* Mobile Home Dropdown Items */}
+                    {homeDropdownOpen && (
+                      <div className="ml-4 mt-2 flex flex-col space-y-2">
+                        {getHomeDropdownItems().map((dropdownItem) => (
+                          <button
+                            key={dropdownItem.key}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleHomeSectionNavigation(dropdownItem);
+                            }}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            className="hover:text-white transition-colors duration-300 font-medium text-left text-sm opacity-80 block w-full touch-manipulation"
+                            style={{ WebkitTapHighlightColor: 'transparent' }}
+                          >
+                            {t(`nav.${dropdownItem.key}`)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    key={item.key}
+                    onClick={(e) => {
+                      // Only close dropdown if it's open and this is not the home dropdown
+                      if (homeDropdownOpen && item.key !== 'home') {
+                        setHomeDropdownOpen(false);
+                      }
+                      handleNavigation(item);
+                    }}
+                    className="hover:text-white transition-colors duration-300 font-medium text-left"
+                  >
+                    {t(`nav.${item.key}`)}
+                  </button>
+                )
               ))}
             
             {/* Mobile Authentication Section */}
@@ -341,6 +503,7 @@ element.scrollIntoView({ behavior: "smooth" });
                 {/* Dashboard Link */}
                 <button
                   onClick={() => {
+                    setHomeDropdownOpen(false);
                     handleDashboardNavigation();
                     setIsMenuOpen(false);
                   }}
@@ -352,6 +515,7 @@ element.scrollIntoView({ behavior: "smooth" });
                 
                 <button
                   onClick={() => {
+                    setHomeDropdownOpen(false);
                     handleDashboardNavigation();
                     setIsMenuOpen(false);
                   }}
@@ -362,6 +526,7 @@ element.scrollIntoView({ behavior: "smooth" });
                 </button>
                 <button
                   onClick={() => {
+                    setHomeDropdownOpen(false);
                     handleLogout();
                     setIsMenuOpen(false);
                   }}
@@ -375,6 +540,7 @@ element.scrollIntoView({ behavior: "smooth" });
               <div className="border-t border-white/20 pt-4 space-y-3">
                 <button
                   onClick={() => {
+                    setHomeDropdownOpen(false);
                     navigate('/auth/login');
                     setIsMenuOpen(false);
                   }}
@@ -388,6 +554,7 @@ element.scrollIntoView({ behavior: "smooth" });
             {/* Mobile Cart Button */}
             <button
               onClick={() => {
+                setHomeDropdownOpen(false);
                 navigate('/cart');
                 setIsMenuOpen(false);
               }}
@@ -403,7 +570,10 @@ element.scrollIntoView({ behavior: "smooth" });
             </button>
             
             <button
-              onClick={toggleLanguage}
+              onClick={() => {
+                setHomeDropdownOpen(false);
+                toggleLanguage();
+              }}
               className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'} hover:text-white transition-colors duration-300 font-medium ${i18n.language === 'ar' ? 'text-right' : 'text-left'}`}
             >
               <Globe size={20} />

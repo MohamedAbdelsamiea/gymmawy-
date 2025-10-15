@@ -34,6 +34,7 @@ import imageRoutes from "./modules/images/image.routes.js";
 import videoRoutes from "./modules/videos/video.routes.js";
 import uploadRoutes from "./modules/uploads/upload.routes.js";
 import loyaltyRoutes from "./modules/loyalty/loyalty.routes.js";
+import rewardsRoutes from "./modules/rewards/rewards.routes.js";
 import currencyRoutes from "./modules/currency/currency.routes.js";
 import priceRoutes from "./modules/prices/price.routes.js";
 import fileRoutes from "./routes/fileRoutes.js";
@@ -112,6 +113,7 @@ app.use("/api/images", imageRoutes);
 app.use("/api/videos", videoRoutes);
 app.use("/api/uploads", uploadRoutes);
 app.use("/api/loyalty", loyaltyRoutes);
+app.use("/api/rewards", rewardsRoutes);
 app.use("/api/currency", currencyRoutes);
 app.use("/api/prices", priceRoutes);
 

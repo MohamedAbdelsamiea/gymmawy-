@@ -9,6 +9,7 @@ import { config } from '../../config';
 import checkoutService from '../../services/checkoutService';
 import imageUploadService from '../../services/imageUploadService';
 import tabbyService from '../../services/tabbyService';
+import rewardsService from '../../services/rewardsService';
 import useTabbyPromo from '../../hooks/useTabbyPromo';
 import countryDetectionService from '../../services/countryDetectionService';
 import { useSecureImage } from '../../hooks/useSecureImage';
@@ -68,6 +69,28 @@ return fallback;
   // Get data from location state (plan, product, or cart items)
   const { plan, product, cartItems, type, currency: passedCurrency, buyNow, subtotal: cartSubtotal, shipping: cartShipping, total: cartTotal, fromPaymentFailure, paymentFailureReason, fromPaymentCancel } = location.state || {};
   
+  // Check for loyalty redemption data from sessionStorage
+  const [loyaltyData, setLoyaltyData] = useState(null);
+  const [isLoyaltyRedemption, setIsLoyaltyRedemption] = useState(false);
+  
+  // Check for loyalty redemption data on component mount
+  useEffect(() => {
+    const loyaltyCheckoutData = sessionStorage.getItem('loyaltyCheckoutData');
+    if (loyaltyCheckoutData) {
+      try {
+        const parsedData = JSON.parse(loyaltyCheckoutData);
+        if (parsedData.type === 'loyalty') {
+          setLoyaltyData(parsedData);
+          setIsLoyaltyRedemption(true);
+          console.log('🎁 Loyalty redemption detected:', parsedData);
+        }
+      } catch (error) {
+        console.error('Error parsing loyalty checkout data:', error);
+        sessionStorage.removeItem('loyaltyCheckoutData');
+      }
+    }
+  }, []);
+
   // Debug: Log currency detection
   console.log('🔍 Checkout - Currency detection:', {
     detectedCurrency,
@@ -1742,14 +1765,90 @@ return;
     }
   };
 
+  // Handle loyalty redemption
+  const handleLoyaltyRedemption = async () => {
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      // Validate shipping details for loyalty redemption
+      if (!shippingDetails.firstName || !shippingDetails.lastName || !shippingDetails.phone) {
+        const errorMessage = i18n.language === 'ar' 
+          ? 'يرجى ملء جميع البيانات المطلوبة للتوصيل' 
+          : 'Please fill in all required shipping details';
+        setError(errorMessage);
+        showError(errorMessage);
+        setSubmitting(false);
+        return;
+      }
+
+      // Prepare shipping address for backend
+      const shippingAddress = {
+        firstName: shippingDetails.firstName,
+        lastName: shippingDetails.lastName,
+        phone: shippingDetails.phone,
+        building: shippingDetails.shippingBuilding || '',
+        street: shippingDetails.shippingStreet || '',
+        city: shippingDetails.shippingCity || '',
+        country: shippingDetails.shippingCountry || '',
+        postcode: shippingDetails.shippingPostcode || ''
+      };
+
+      console.log('🎁 Processing loyalty redemption:', {
+        rewardId: loyaltyData.rewardId,
+        category: loyaltyData.category,
+        shippingAddress
+      });
+
+      // Call the rewards service to process redemption
+      const result = await rewardsService.redeemReward(
+        loyaltyData.rewardId,
+        loyaltyData.category,
+        shippingAddress
+      );
+
+      if (result.success) {
+        // Clear the loyalty data from session storage
+        sessionStorage.removeItem('loyaltyCheckoutData');
+        
+        // Show success message
+        const successMessage = i18n.language === 'ar' 
+          ? 'تم استبدال المكافأة بنجاح!' 
+          : 'Reward redeemed successfully!';
+        showSuccess(successMessage);
+
+        // Navigate to success page or dashboard
+        navigate('/dashboard', { 
+          state: { 
+            fromLoyaltyRedemption: true,
+            orderNumber: result.data.order.orderNumber,
+            remainingPoints: result.data.remainingPoints
+          }
+        });
+      } else {
+        throw new Error(result.error || 'Redemption failed');
+      }
+
+    } catch (error) {
+      console.error('❌ Loyalty redemption error:', error);
+      const errorMessage = error.message || (i18n.language === 'ar' 
+        ? 'فشل في استبدال المكافأة. يرجى المحاولة مرة أخرى.' 
+        : 'Failed to redeem reward. Please try again.');
+      setError(errorMessage);
+      showError(errorMessage);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Handle form submission
   const handleSubmit = async(e) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
 
-    // Client-side validation for payment option selection
-    if (!paymentOption) {
+    // Client-side validation for payment option selection (skip for loyalty redemptions)
+    if (!isLoyaltyRedemption && !paymentOption) {
       const errorMessage = i18n.language === 'ar' 
         ? 'يرجى اختيار طريقة الدفع' 
         : 'Please select a payment method';
@@ -1759,8 +1858,8 @@ return;
       return;
     }
 
-    // Client-side validation for payment proof
-    if ((paymentOption === 'instapay' || paymentOption === 'vodafone') && !paymentProof) {
+    // Client-side validation for payment proof (skip for loyalty redemptions)
+    if (!isLoyaltyRedemption && (paymentOption === 'instapay' || paymentOption === 'vodafone') && !paymentProof) {
       const errorMessage = i18n.language === 'ar' 
         ? 'يرجى رفع إثبات الدفع قبل إرسال الطلب' 
         : 'Please upload payment proof before submitting your order';
@@ -1787,6 +1886,12 @@ return;
     // Handle Paymob payments separately
     if (paymentOption === 'paymob_card' || paymentOption === 'paymob_apple') {
       await handlePaymobPayment();
+      return;
+    }
+
+    // Handle loyalty redemption separately
+    if (isLoyaltyRedemption && loyaltyData) {
+      await handleLoyaltyRedemption();
       return;
     }
 
@@ -2057,9 +2162,19 @@ return;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 sm:pb-8 lg:pb-8 overflow-x-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 min-h-full">
-        {/* Header */}
-        <div className="mb-8">
+      {/* Header - Fixed */}
+      <div 
+        className="bg-gray-50 border-b border-gray-200 shadow-sm"
+        style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          zIndex: 9999,
+          backgroundColor: 'rgb(249, 250, 251)'
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <button
             onClick={() => navigate(-1)}
             className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
@@ -2067,9 +2182,45 @@ return;
             <ArrowLeft className={`h-5 w-5 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
             {t('checkout.back')}
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">{t('checkout.title')}</h1>
-          <p className="text-gray-600 mt-2">{t('checkout.subtitle')}</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {isLoyaltyRedemption 
+              ? (i18n.language === 'ar' ? 'استبدال المكافأة' : 'Redeem Reward')
+              : t('checkout.title')
+            }
+          </h1>
+          <p className="text-gray-600 mt-2">
+            {isLoyaltyRedemption 
+              ? (i18n.language === 'ar' 
+                  ? 'أكمل بياناتك لاستبدال المكافأة بنقاط الولاء الخاصة بك'
+                  : 'Complete your details to redeem your reward with loyalty points'
+                )
+              : t('checkout.subtitle')
+            }
+          </p>
+          {isLoyaltyRedemption && loyaltyData && (
+            <div className="mt-4 p-4 bg-gymmawy-primary/10 border border-gymmawy-primary/20 rounded-lg">
+              <div className="flex items-center">
+                <Package className={`h-5 w-5 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'} text-gymmawy-primary`} />
+                <span className="text-sm font-medium text-gray-900">
+                  {i18n.language === 'ar' ? 'المكافأة:' : 'Reward:'} {loyaltyData.rewardName}
+                </span>
+              </div>
+              <div className="flex items-center mt-2">
+                <span className="text-sm text-gray-600">
+                  {i18n.language === 'ar' ? 'النقاط المطلوبة:' : 'Points Required:'} {loyaltyData.pointsRequired}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* Add padding to compensate for fixed header */}
+      <div style={{ paddingTop: '160px' }}></div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 min-h-full">
+        {/* Content */}
+        <div className="mb-8"></div>
 
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-8 sm:pb-0">
@@ -2224,8 +2375,9 @@ return;
                 </div>
               )}
 
-              {/* Coupon Code */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              {/* Coupon Code - Hide for loyalty redemptions */}
+              {!isLoyaltyRedemption && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <Tag className={`h-5 w-5 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'} text-gymmawy-primary`} />
                   {t('checkout.couponCode')}
@@ -2271,7 +2423,8 @@ return;
                     </span>
                   </div>
                 )}
-              </div>
+                </div>
+              )}
 
               {/* Shipping Details - Only for cart and product orders */}
               {(type === 'cart' || type === 'product') && (
@@ -2353,13 +2506,15 @@ return;
                 </div>
               )}
 
-              {/* Order Summary - Mobile Only (before payment method) */}
-              <div className="lg:hidden mb-6">
+              {/* Order Summary - Mobile Only (before payment method) - Hide for loyalty redemptions */}
+              {!isLoyaltyRedemption && (
+                <div className="lg:hidden mb-6">
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('checkout.orderSummary')}</h3>
                   {renderOrderSummary()}
                 </div>
               </div>
+              )}
 
 
               {/* Payment Method */}
@@ -2405,8 +2560,8 @@ return;
                   </div>
                 </div>
 
-                {/* Payment Options */}
-                {paymentMethod === 'full' && (
+                {/* Payment Options - Hide for loyalty redemptions */}
+                {paymentMethod === 'full' && !isLoyaltyRedemption && (
                   <div className="space-y-4">
                     <h4 className="font-medium text-gray-900">{t('checkout.choosePaymentOption')}</h4>
                     
@@ -2752,29 +2907,36 @@ return;
               <div className="flex justify-end pb-12 sm:pb-0">
                 <button
                   type="submit"
-                  disabled={submitting || !paymentOption || paymentOption === 'tamara'}
+                  disabled={submitting || (!isLoyaltyRedemption && (!paymentOption || paymentOption === 'tamara'))}
                   className="px-8 py-3 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
                   {submitting ? (
                     <>
                       <div className={`animate-spin rounded-full h-4 w-4 border-b-2 border-white ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`}></div>
-                      {t('checkout.processing')}
+                      {isLoyaltyRedemption 
+                        ? (i18n.language === 'ar' ? 'جاري الاستبدال...' : 'Redeeming...')
+                        : t('checkout.processing')
+                      }
                     </>
                   ) : (
-                    t('checkout.placeOrder')
+                    isLoyaltyRedemption 
+                      ? (i18n.language === 'ar' ? 'استبدال المكافأة' : 'Redeem Reward')
+                      : t('checkout.placeOrder')
                   )}
                 </button>
               </div>
             </form>
           </div>
 
-          {/* Order Summary - Desktop Only */}
-          <div className="hidden lg:block lg:col-span-1">
+          {/* Order Summary - Desktop Only - Hide for loyalty redemptions */}
+          {!isLoyaltyRedemption && (
+            <div className="hidden lg:block lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('checkout.orderSummary')}</h3>
               {renderOrderSummary()}
             </div>
           </div>
+          )}
         </div>
       </div>
       

@@ -6,12 +6,13 @@ import * as notificationService from "../notifications/notification.service.js";
 
 const prisma = getPrismaClient();
 
-export async function listProgrammes({ skip, take, q, sortBy, sortOrder, currency }) {
+export async function listProgrammes({ skip, take, q, sortBy, sortOrder, currency, hasLoyaltyPoints }) {
   const where = {
     AND: [
       { isActive: true },
       { deletedAt: null },
       q ? { name: { contains: q, mode: 'insensitive' } } : {},
+      hasLoyaltyPoints === 'true' ? { loyaltyPointsRequired: { gt: 0 } } : {},
     ],
   };
   const orderBy = sortBy ? { [sortBy]: sortOrder || "desc" } : { order: "asc" };

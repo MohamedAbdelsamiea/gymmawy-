@@ -188,6 +188,10 @@ model Order {
   discountPercentage Int         @default(0)
   deletedAt          DateTime?
   price              Decimal?    @db.Decimal(10, 2)
+  totalAmount        Decimal?    @db.Decimal(10, 2)
+  paymentReference   String?
+  shippingAddress    Json?
+  language           String      @default("en")
   currency           Currency
   metadata           Json?
   coupon             Coupon?     @relation(fields: [couponId], references: [id])
@@ -201,6 +205,7 @@ model Order {
   @@index([trackingNumber])
   @@index([deletedAt])
   @@index([couponId])
+  @@index([paymentReference])
 }
 
 model OrderItem {
@@ -209,14 +214,21 @@ model OrderItem {
   quantity           Int            @default(1)
   size               String?        @default("M")
   discountPercentage Int            @default(0)
-  productId          String
+  productId          String?
+  rewardId           String?
+  category           String?
+  name               String?
+  price              Decimal?       @db.Decimal(10, 2)
   totalPrice         Decimal        @db.Decimal(10, 2)
+  loyaltyPointsUsed  Int?
   order              Order          @relation(fields: [orderId], references: [id])
-  product            Product        @relation(fields: [productId], references: [id])
+  product            Product?       @relation(fields: [productId], references: [id])
   shippingItems      ShippingItem[]
 
   @@index([orderId])
   @@index([productId])
+  @@index([rewardId])
+  @@index([category])
 }
 
 model SubscriptionPlan {

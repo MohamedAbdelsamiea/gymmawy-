@@ -5,7 +5,7 @@ const Footer = ({ backgroundColor = 'bg-[#ebebeb]' }) => {
   const { t } = useTranslation('footer'); // using "footer" namespace
 
   return (
-    <section className={`py-16 md:py-20 ${backgroundColor}`}>
+    <section className={`py-16 md:py-20 sm:pb-16 ${backgroundColor}`}>
       <div className="container mx-auto px-8 md:px-12 lg:px-20">
         {/* Bottom grid: Social + Company / Get in Touch */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">

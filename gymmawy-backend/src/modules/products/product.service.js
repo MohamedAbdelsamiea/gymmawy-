@@ -10,11 +10,12 @@ export async function createCategory({ name }) {
   return prisma.category.create({ data: { name } });
 }
 
-export async function listProducts({ skip, take, q, categoryId, currency, isActive = true }) {
+export async function listProducts({ skip, take, q, categoryId, currency, isActive = true, hasLoyaltyPoints }) {
   const where = {
     AND: [
       categoryId ? { categoryId } : {},
       isActive !== undefined ? { isActive } : {},
+      hasLoyaltyPoints === 'true' ? { loyaltyPointsRequired: { gt: 0 } } : {},
     ],
   };
   const [items, total] = await Promise.all([

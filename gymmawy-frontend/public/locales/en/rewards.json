@@ -1,0 +1,48 @@
+{
+  "title": "Rewards Center",
+  "subtitle": "Redeem your loyalty points for amazing rewards",
+  "yourPoints": "Your Points",
+  "points": "points",
+  "redeem": "Redeem Now",
+  "redeeming": "Redeeming...",
+  "redemptionSuccess": "Reward redeemed successfully!",
+  "locked": {
+    "title": "Not Enough Points",
+    "message": "You need {{pointsNeeded}} more points to redeem \"{{rewardName}}\".",
+    "morePoints": "more points needed",
+    "button": "OK"
+  },
+  "loginRequired": {
+    "title": "Join Our Rewards Program",
+    "description": "Sign in to your account to start earning and redeeming loyalty points for exclusive rewards!",
+    "login": "Sign In",
+    "signup": "Create Account"
+  },
+  "noRewards": {
+    "title": "No Rewards Available",
+    "description": "No rewards available for redemption at the moment."
+  },
+  "noPackages": {
+    "title": "No Packages Available",
+    "description": "No packages available for redemption at the moment."
+  },
+  "noProducts": {
+    "title": "No Products Available", 
+    "description": "No products available for redemption at the moment."
+  },
+  "noProgrammes": {
+    "title": "No Programmes Available",
+    "description": "No programmes available for redemption at the moment."
+  },
+  "categories": {
+    "packages": "Packages",
+    "products": "Products",
+    "programmes": "Programmes"
+  },
+  "pointsInfo": {
+    "currentPoints": "Current Points",
+    "requiredPoints": "Required Points", 
+    "pointsNeeded": "Points Needed"
+  },
+  "locked": "Locked"
+}
