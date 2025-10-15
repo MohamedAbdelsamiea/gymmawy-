@@ -41,7 +41,9 @@ import {
   User,
   Package,
   Truck,
+  Plus,
 } from 'lucide-react';
+import * as Accordion from "@radix-ui/react-accordion";
 
 const Checkout = () => {
   const { t, i18n } = useTranslation(['checkout', 'common']);
@@ -1404,23 +1406,39 @@ return;
       {/* Benefits section - only show for subscriptions */}
       {type === 'subscription' && (
       <div>
-        <h5 className="font-medium text-gray-900 mb-2">{t('checkout.benefits')}</h5>
-        <ul className="text-sm text-gray-600 space-y-1">
-          {plan.benefits?.map((benefit, index) => {
-            const benefitDescription = typeof benefit === 'string' ? benefit : 
-              (benefit.description ? 
-                (typeof benefit.description === 'string' ? benefit.description : 
-                  (i18n.language === 'ar' ? 
-                    (benefit.description?.ar || benefit.description?.en || '') :
-                    (benefit.description?.en || benefit.description?.ar || ''))) : '');
-            return (
-              <li key={index} className="flex items-start">
-                <CheckCircle className={`h-4 w-4 text-green-500 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'} mt-0.5 flex-shrink-0`} />
-                {benefitDescription}
-              </li>
-            );
-          })}
-        </ul>
+        <Accordion.Root type="single" collapsible className="w-full">
+          <Accordion.Item value="benefits">
+            <Accordion.Header>
+              <Accordion.Trigger className="group flex items-center justify-between w-full py-3 text-left text-gray-900 font-medium leading-snug focus:outline-none hover:text-gray-700 transition-colors">
+                <span>
+                  {t('checkout.benefits')}
+                  <span className="text-xs text-gray-500 font-normal">
+                    {i18n.language === 'ar' ? ' (اضغط للتوسع)' : ' (click to expand)'}
+                  </span>
+                </span>
+                <Plus className="h-4 w-4 text-gray-500 font-bold transition-transform duration-300 group-data-[state=open]:rotate-45 flex-shrink-0" />
+              </Accordion.Trigger>
+            </Accordion.Header>
+            <Accordion.Content className="pb-3 text-sm text-gray-600">
+              <ul className="space-y-1">
+                {plan.benefits?.map((benefit, index) => {
+                  const benefitDescription = typeof benefit === 'string' ? benefit : 
+                    (benefit.description ? 
+                      (typeof benefit.description === 'string' ? benefit.description : 
+                        (i18n.language === 'ar' ? 
+                          (benefit.description?.ar || benefit.description?.en || '') :
+                          (benefit.description?.en || benefit.description?.ar || ''))) : '');
+                  return (
+                    <li key={index} className="flex items-start">
+                      <CheckCircle className={`h-4 w-4 text-green-500 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'} mt-0.5 flex-shrink-0`} />
+                      {benefitDescription}
+                    </li>
+                  );
+                })}
+              </ul>
+            </Accordion.Content>
+          </Accordion.Item>
+        </Accordion.Root>
       </div>
       )}
 
