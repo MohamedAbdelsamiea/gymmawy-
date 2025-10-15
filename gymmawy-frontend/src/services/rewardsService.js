@@ -33,7 +33,7 @@ class RewardsService {
   }
 
   /**
-   * Get packages that can be redeemed with loyalty points
+   * Get packages that can be redeemed with Gymmawy Points
    * @param {Object} filters - Optional filters
    * @returns {Promise<Object>} Package rewards
    */
@@ -51,7 +51,7 @@ class RewardsService {
   }
 
   /**
-   * Get products that can be redeemed with loyalty points
+   * Get products that can be redeemed with Gymmawy Points
    * @param {Object} filters - Optional filters
    * @returns {Promise<Object>} Product rewards
    */
@@ -69,7 +69,7 @@ class RewardsService {
   }
 
   /**
-   * Get programmes that can be redeemed with loyalty points
+   * Get programmes that can be redeemed with Gymmawy Points
    * @param {Object} filters - Optional filters
    * @returns {Promise<Object>} Programme rewards
    */
@@ -142,14 +142,14 @@ class RewardsService {
   }
 
   /**
-   * Get user's loyalty points balance
+   * Get user's Gymmawy Points balance
    * @returns {Promise<Object>} User's points balance
    */
   async getLoyaltyPoints() {
     try {
       return await apiClient.get('/user/loyalty-points');
     } catch (error) {
-      throw new Error(`Loyalty points fetch error: ${error.message}`);
+      throw new Error(`Gymmawy Points fetch error: ${error.message}`);
     }
   }
 }

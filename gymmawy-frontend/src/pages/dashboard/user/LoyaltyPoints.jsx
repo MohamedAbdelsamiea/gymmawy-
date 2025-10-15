@@ -142,7 +142,7 @@ const UserLoyaltyPoints = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Loyalty Points</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Gymmawy Points</h1>
           <p className="text-gray-600 mt-1">Manage your points and rewards</p>
         </div>
       </div>

@@ -9,14 +9,14 @@
       "revenue": "Revenue",
       "newUsersThisMonth": "New Users This Month",
       "productsInStore": "Products in Store",
-      "loyaltyPointsIssued": "Loyalty Points Issued",
+      "loyaltyPointsIssued": "Gymmawy Points Issued",
       "subscriptionTrend": "Subscription Trend",
       "leadsConversion": "Leads Conversion",
       "recentActivity": "Recent Activity",
       "newSubscription": "New subscription",
       "orderCompleted": "Order completed",
       "leadConverted": "Lead converted",
-      "loyaltyPointsEarned": "Loyalty points earned"
+      "loyaltyPointsEarned": "Gymmawy Points earned"
     },
     "subscriptions": {
       "title": "Subscriptions Management",
@@ -97,8 +97,8 @@
       "lastModified": "Last Modified"
     },
     "loyalty": {
-      "title": "Loyalty Points Management",
-      "subtitle": "Track and manage loyalty points and rewards",
+      "title": "Gymmawy Points Management",
+      "subtitle": "Track and manage Gymmawy Points and rewards",
       "addReward": "Add Reward",
       "totalPointsIssued": "Total Points Issued",
       "pointsRedeemed": "Points Redeemed",
@@ -126,8 +126,8 @@
   "user": {
     "overview": {
       "title": "Welcome back",
-      "subtitle": "Track your purchases and loyalty points",
-      "loyaltyPoints": "Loyalty Points",
+      "subtitle": "Track your purchases and Gymmawy Points",
+      "loyaltyPoints": "Gymmawy Points",
       "purchaseHistory": "Purchase History",
       "date": "Date",
       "type": "Type",
@@ -181,7 +181,7 @@
       "no": "No"
     },
     "loyaltyPoints": {
-      "title": "Loyalty Points",
+      "title": "Gymmawy Points",
       "subtitle": "Manage your points and rewards",
       "currentPoints": "Current Points",
       "member": "Member",

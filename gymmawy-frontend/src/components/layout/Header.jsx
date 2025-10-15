@@ -326,7 +326,7 @@ const Header = () => {
                 {/* Profile Dropdown Menu */}
                 {profileDropdownOpen && (
                   <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50`}>
-                    {/* Loyalty Points - Only for regular users, not admins */}
+                    {/* Gymmawy Points - Only for regular users, not admins */}
                     {user?.role !== 'ADMIN' && user?.role !== 'admin' && (
                       <div className="px-4 py-2.5 text-sm text-gray-600" style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}>
                         <div className="flex items-center gap-2">
@@ -505,7 +505,7 @@ const Header = () => {
                   <span>{user?.firstName}</span>
                 </div>
                 
-                {/* Loyalty Points - Only for regular users, not admins */}
+                {/* Gymmawy Points - Only for regular users, not admins */}
                 {user?.role !== 'ADMIN' && user?.role !== 'admin' && (
                   <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'} text-sm`}>
                     <Gift className="h-4 w-4 text-gymmawy-accent" />

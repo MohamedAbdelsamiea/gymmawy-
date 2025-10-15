@@ -798,7 +798,7 @@ return '';
                     </div>
                   )}
 
-                  {/* Loyalty Points - Right under discount */}
+                  {/* Gymmawy Points - Right under discount */}
                   {((selectedOption === 'regular' && (plan.loyaltyPointsAwarded > 0 || plan.loyaltyPointsRequired > 0)) ||
                     (selectedOption === 'medical' && (plan.medicalLoyaltyPointsAwarded > 0 || plan.medicalLoyaltyPointsRequired > 0))) && (
                     <div className={`absolute ${hasDiscount ? 'top-14' : 'top-6'} ${i18n.language === 'ar' ? 'left-6' : 'right-6'} z-10 group`}>
@@ -821,8 +821,8 @@ return '';
                           <div className="text-center mb-2">
                             <p className="text-xs text-gray-600 leading-relaxed">
                               {i18n.language === 'ar' 
-                                ? 'نقاط الولاء المتضمنة في هذه الباقة'
-                                : 'Loyalty points included with this plan'}
+                                ? 'نقاط جيماوي المتضمنة في هذه الباقة'
+                                : 'Gymmawy Points included with this plan'}
                             </p>
                           </div>
                           

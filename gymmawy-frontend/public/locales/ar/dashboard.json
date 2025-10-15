@@ -9,14 +9,14 @@
       "revenue": "الإيرادات",
       "newUsersThisMonth": "مستخدمين جدد هذا الشهر",
       "productsInStore": "المنتجات في المتجر",
-      "loyaltyPointsIssued": "نقاط الولاء الصادرة",
+      "loyaltyPointsIssued": "نقاط جيماوي الصادرة",
       "subscriptionTrend": "اتجاه الاشتراكات",
       "leadsConversion": "تحويل العملاء المحتملين",
       "recentActivity": "النشاط الأخير",
       "newSubscription": "اشتراك جديد",
       "orderCompleted": "تم إكمال الطلب",
       "leadConverted": "تم تحويل العميل المحتمل",
-      "loyaltyPointsEarned": "تم كسب نقاط الولاء"
+      "loyaltyPointsEarned": "تم كسب نقاط جيماوي"
     },
     "subscriptions": {
       "title": "إدارة الاشتراكات",
@@ -97,8 +97,8 @@
       "lastModified": "آخر تعديل"
     },
     "loyalty": {
-      "title": "إدارة نقاط الولاء",
-      "subtitle": "تتبع وإدارة نقاط الولاء والمكافآت",
+      "title": "إدارة نقاط جيماوي",
+      "subtitle": "تتبع وإدارة نقاط جيماوي والمكافآت",
       "addReward": "إضافة مكافأة",
       "totalPointsIssued": "إجمالي النقاط الصادرة",
       "pointsRedeemed": "النقاط المستردة",
@@ -126,8 +126,8 @@
   "user": {
     "overview": {
       "title": "مرحباً بعودتك",
-      "subtitle": "تتبع مشترياتك ونقاط الولاء",
-      "loyaltyPoints": "نقاط الولاء",
+      "subtitle": "تتبع مشترياتك ونقاط جيماوي",
+      "loyaltyPoints": "نقاط جيماوي",
       "purchaseHistory": "تاريخ المشتريات",
       "date": "التاريخ",
       "type": "النوع",
@@ -181,7 +181,7 @@
       "no": "لا"
     },
     "loyaltyPoints": {
-      "title": "نقاط الولاء",
+      "title": "نقاط جيماوي",
       "subtitle": "إدارة نقاطك ومكافآتك",
       "currentPoints": "النقاط الحالية",
       "member": "عضو",

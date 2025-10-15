@@ -16,7 +16,7 @@ export default function Programme({ image, name, price, programme }) {
     const [showLoyaltyCard, setShowLoyaltyCard] = useState(false);
     const loyaltyCardRef = useRef(null);
     
-    // Debug: Log programme data to check loyalty points
+    // Debug: Log programme data to check Gymmawy Points
     console.log('Programme data:', {
       name,
       loyaltyPointsAwarded: programme?.loyaltyPointsAwarded,
@@ -129,7 +129,7 @@ return imagePath;
           loading="lazy"
         />
          <div className="p-3 sm:p-4 flex flex-col flex-grow text-start" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
-          {/* Loyalty Points Badge - above name on mobile, hidden on desktop */}
+          {/* Gymmawy Points Badge - above name on mobile, hidden on desktop */}
           {((programme?.loyaltyPointsAwarded > 0 || programme?.loyaltyPointsRequired > 0)) && (
             <div className="block sm:hidden mb-2">
               <div className="group relative" ref={loyaltyCardRef}>
@@ -157,8 +157,8 @@ return imagePath;
                     <div className="text-center mb-1">
                       <p className="text-xs text-gray-600 leading-relaxed">
                         {i18n.language === 'ar' 
-                          ? 'نقاط الولاء المتضمنة'
-                          : 'Loyalty points included'}
+                          ? 'نقاط جيماوي المتضمنة'
+                          : 'Gymmawy Points included'}
                       </p>
                     </div>
                     
@@ -230,7 +230,7 @@ return imagePath;
                     </span>
                   </div>
                   
-                  {/* Loyalty Points Badge - on the opposite side (desktop only) */}
+                  {/* Gymmawy Points Badge - on the opposite side (desktop only) */}
                   {((programme.loyaltyPointsAwarded > 0 || programme.loyaltyPointsRequired > 0)) && (
                     <div className="hidden sm:block self-start sm:ml-auto">
                     <div className="group relative">
@@ -252,8 +252,8 @@ return imagePath;
                           <div className="text-center mb-1">
                             <p className="text-xs text-gray-600 leading-relaxed">
                               {i18n.language === 'ar' 
-                                ? 'نقاط الولاء المتضمنة'
-                                : 'Loyalty points included'}
+                                ? 'نقاط جيماوي المتضمنة'
+                                : 'Gymmawy Points included'}
                             </p>
                           </div>
                           
@@ -302,7 +302,7 @@ return imagePath;
                     {price}
                   </p>
                   
-                  {/* Loyalty Points Badge - for non-discounted programmes (desktop only) */}
+                  {/* Gymmawy Points Badge - for non-discounted programmes (desktop only) */}
                   {((programme?.loyaltyPointsAwarded > 0 || programme?.loyaltyPointsRequired > 0)) && (
                     <div className="hidden sm:block self-start sm:ml-auto">
                     <div className="group relative">
@@ -324,8 +324,8 @@ return imagePath;
                           <div className="text-center mb-1">
                             <p className="text-xs text-gray-600 leading-relaxed">
                               {i18n.language === 'ar' 
-                                ? 'نقاط الولاء المتضمنة'
-                                : 'Loyalty points included'}
+                                ? 'نقاط جيماوي المتضمنة'
+                                : 'Gymmawy Points included'}
                             </p>
                           </div>
                           

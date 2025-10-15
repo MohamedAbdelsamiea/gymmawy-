@@ -293,8 +293,8 @@ const LoyaltyPoints = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Loyalty Points Management</h1>
-          <p className="text-gray-600 mt-1">Track and manage loyalty points and rewards</p>
+          <h1 className="text-2xl font-bold text-gray-900">Gymmawy Points Management</h1>
+          <p className="text-gray-600 mt-1">Track and manage Gymmawy Points and rewards</p>
         </div>
         <button className="flex items-center px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary transition-colors">
           <Plus className="h-4 w-4 mr-2" />

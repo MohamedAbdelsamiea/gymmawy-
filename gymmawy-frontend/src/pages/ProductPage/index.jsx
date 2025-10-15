@@ -421,7 +421,7 @@ const ProductPage = () => {
                 </div>
               )}
 
-              {/* Size Selection + Loyalty Points */}
+              {/* Size Selection + Gymmawy Points */}
               <div className="mb-6">
                 <h3 className="text-base font-medium text-[#190143] mb-3">Size</h3>
                 
@@ -443,7 +443,7 @@ const ProductPage = () => {
                     ))}
                   </div>
                   
-                  {/* Loyalty Points Badge */}
+                  {/* Gymmawy Points Badge */}
                   {(transformedProduct.loyaltyPointsAwarded > 0 || transformedProduct.loyaltyPointsRequired > 0) && (
                     <div className="group relative">
                       <div className="flex items-center gap-2 px-4 py-2 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200">
@@ -454,7 +454,7 @@ const ProductPage = () => {
                         <div className={`absolute -top-2 ${i18n.language === 'ar' ? 'left-4' : 'right-4'} w-4 h-4 bg-white border-l-2 border-t-2 border-purple-200 rotate-45`}></div>
                         <div className="relative">
                           <div className="text-center mb-1">
-                            <p className="text-xs text-gray-600 leading-relaxed">{i18n.language === 'ar' ? 'نقاط الولاء المتضمنة' : 'Loyalty points included'}</p>
+                            <p className="text-xs text-gray-600 leading-relaxed">{i18n.language === 'ar' ? 'نقاط جيماوي المتضمنة' : 'Gymmawy Points included'}</p>
                           </div>
                           <div className="flex items-center justify-around gap-2 pt-2 border-t border-gray-200">
                             {transformedProduct.loyaltyPointsAwarded > 0 && (

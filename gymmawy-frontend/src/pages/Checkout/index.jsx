@@ -2209,8 +2209,8 @@ return;
           <p className="text-gray-600 mt-2">
             {isLoyaltyRedemption 
               ? (i18n.language === 'ar' 
-                  ? 'أكمل بياناتك لاستبدال المكافأة بنقاط الولاء الخاصة بك'
-                  : 'Complete your details to redeem your reward with loyalty points'
+                  ? 'أكمل بياناتك لاستبدال المكافأة بنقاط جيماوي الخاصة بك'
+                  : 'Complete your details to redeem your reward with Gymmawy Points'
                 )
               : t('checkout.subtitle')
             }

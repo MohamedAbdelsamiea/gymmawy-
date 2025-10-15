@@ -1,6 +1,6 @@
 {
   "title": "Rewards Center",
-  "subtitle": "Redeem your loyalty points for amazing rewards",
+  "subtitle": "Redeem your Gymmawy Points for amazing rewards",
   "yourPoints": "Your Points",
   "points": "points",
   "redeem": "Redeem Now",
@@ -14,7 +14,7 @@
   },
   "loginRequired": {
     "title": "Join Our Rewards Program",
-    "description": "Sign in to your account to start earning and redeeming loyalty points for exclusive rewards!",
+    "description": "Sign in to your account to start earning and redeeming Gymmawy Points for exclusive rewards!",
     "login": "Sign In",
     "signup": "Create Account"
   },

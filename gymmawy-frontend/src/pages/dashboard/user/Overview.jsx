@@ -139,7 +139,7 @@ const UserOverview = () => {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Section with Loyalty Points */}
+      {/* Welcome Section with Gymmawy Points */}
       <div className="bg-gradient-to-r from-gymmawy-primary to-gymmawy-secondary rounded-xl p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
@@ -152,7 +152,7 @@ const UserOverview = () => {
               <Award className="h-6 w-6" />
               <span className="text-3xl font-bold">{user?.loyaltyPoints || 0}</span>
             </div>
-            <p className="text-sm opacity-90">{t('user.overview.loyaltyPoints', 'Loyalty Points')}</p>
+            <p className="text-sm opacity-90">{t('user.overview.loyaltyPoints', 'Gymmawy Points')}</p>
           </div>
         </div>
       </div>

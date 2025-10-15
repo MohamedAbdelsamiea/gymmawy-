@@ -41,7 +41,7 @@ const RewardsPage = () => {
         // Note: Subscriptions might require authentication, so we handle it gracefully
         const [packagesResponse, productsResponse, programmesResponse] = await Promise.allSettled([
           rewardsService.getPackageRewards({ language: i18n.language }).catch(err => {
-            console.log('Packages endpoint requires authentication or has no loyalty items:', err.message);
+            console.log('Packages endpoint requires authentication or has no Gymmawy Points items:', err.message);
             return null; // Return null for packages if auth required
           }),
           rewardsService.getProductRewards({ language: i18n.language }),
@@ -75,7 +75,7 @@ const RewardsPage = () => {
         // Process packages (handle case where auth is required)
         if (packagesResponse.status === 'fulfilled' && packagesResponse.value && packagesResponse.value.items) {
           fetchedRewards.packages = packagesResponse.value.items
-            .filter(item => (item.loyaltyPointsRequired || item.pointsRequired || 0) > 0) // Only show items with loyalty points
+            .filter(item => (item.loyaltyPointsRequired || item.pointsRequired || 0) > 0) // Only show items with Gymmawy Points
             .map(item => ({
               id: item.id,
               name: getBilingualText(item.name || item.title, 'Package'),
@@ -89,7 +89,7 @@ const RewardsPage = () => {
         // Process products
         if (productsResponse.status === 'fulfilled' && productsResponse.value && productsResponse.value.items) {
           fetchedRewards.products = productsResponse.value.items
-            .filter(item => (item.loyaltyPointsRequired || item.pointsRequired || 0) > 0) // Only show items with loyalty points
+            .filter(item => (item.loyaltyPointsRequired || item.pointsRequired || 0) > 0) // Only show items with Gymmawy Points
             .map(item => {
             // Handle product images - products use an images array with isPrimary flag
             const primaryImage = item.images?.find(img => img.isPrimary) || item.images?.[0];
@@ -112,7 +112,7 @@ const RewardsPage = () => {
         // Process programmes
         if (programmesResponse.status === 'fulfilled' && programmesResponse.value && programmesResponse.value.items) {
           fetchedRewards.programmes = programmesResponse.value.items
-            .filter(item => (item.loyaltyPointsRequired || item.pointsRequired || 0) > 0) // Only show items with loyalty points
+            .filter(item => (item.loyaltyPointsRequired || item.pointsRequired || 0) > 0) // Only show items with Gymmawy Points
             .map(item => ({
             id: item.id,
             name: getBilingualText(item.name || item.title, 'Programme'),
@@ -364,8 +364,8 @@ const RewardsPage = () => {
                           {!isAuthenticated ? (
                             <p className="text-xs">
                               {isArabic 
-                                ? 'سجل الدخول إلى حسابك لبدء كسب واستبدال نقاط الولاء للحصول على مكافآت حصرية!'
-                                : 'Sign in to your account to start earning and redeeming loyalty points for exclusive rewards!'
+                                ? 'سجل الدخول إلى حسابك لبدء كسب واستبدال نقاط جيماوي للحصول على مكافآت حصرية!'
+                                : 'Sign in to your account to start earning and redeeming Gymmawy Points for exclusive rewards!'
                               }
                             </p>
                           ) : (
