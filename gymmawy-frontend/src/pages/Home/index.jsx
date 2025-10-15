@@ -282,7 +282,6 @@ return '';
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      {/* Hero Section */}
       <section
         className="relative pb-4 lg:pb-8 pt-0 overflow-hidden"
         style={{
@@ -292,12 +291,13 @@ return '';
         }}
       >
         <div className="container mx-auto px-3 md:px-2 lg:px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-4 items-end min-h-[500px] lg:min-h-[700px]">
+          {/* Desktop Layout */}
+          <div className="hidden lg:grid grid-cols-4 items-end min-h-[700px]">
             {/* Text Column */}
             <div
-              className={`order-2 md:order-${
+              className={`${
                 !isArabic ? 1 : 4
-              } lg:col-span-1 flex flex-col justify-end mb-16`}
+              } col-span-1 flex flex-col justify-end mb-16`}
             >
               <p className="text-2xl font-archivo font-normal text-[#ebebeb] mb-4 sm:mb-8">
                 {t("hero.title")}
@@ -309,22 +309,49 @@ return '';
             </div>
 
             {/* Hero Image Column */}
-            <div className="order-1 md:order-2 lg:col-span-2 flex justify-center relative p-0">
+            <div className="col-span-2 flex justify-center relative p-0">
               <img
                 src={heroImage}
                 alt="Gymmawy Hero"
                 loading="eager"
-                className="w-full h-auto lg:w-[500px] xl:w-[600px] animate-hero-rise mt-8 lg:mt-12"
+                className="w-[500px] xl:w-[600px] animate-hero-rise mt-12"
               />
-              <div className="absolute bottom-0 w-[320px] h-[320px] lg:w-[450px] lg:h-[450px] bg-[#172b8f] opacity-40 rounded-full blur-[120px] pointer-events-none animate-glow-pulse"></div>
+              <div className="absolute bottom-0 w-[450px] h-[450px] bg-[#172b8f] opacity-40 rounded-full blur-[120px] pointer-events-none animate-glow-pulse"></div>
             </div>
 
             {/* Empty Column */}
             <div
-              className={`order-3 md:order-${
+              className={`${
                 !isArabic ? 4 : 1
-              } lg:col-span-1`}
+              } col-span-1`}
             ></div>
+          </div>
+
+          {/* Mobile Layout - Text over bottom 30% of hero image */}
+          <div className="lg:hidden relative min-h-[650px]">
+            {/* Hero Image */}
+            <div className="flex justify-center relative p-0">
+              <img
+                src={heroImage}
+                alt="Gymmawy Hero"
+                loading="eager"
+                className="w-full h-auto animate-hero-rise mt-8"
+              />
+              <div className="absolute bottom-0 w-[320px] h-[320px] bg-[#172b8f] opacity-40 rounded-full blur-[120px] pointer-events-none animate-glow-pulse"></div>
+            </div>
+
+            {/* Text Content - Positioned over bottom 30% of image */}
+            <div className="absolute bottom-0 left-0 right-0 px-3 pb-4">
+              <div>
+                <p className="text-2xl font-archivo font-normal text-[#ebebeb] mb-4">
+                  {t("hero.title")}
+                </p>
+                <div className="w-full max-w-sm mb-4">
+                  <img src={heroText} alt="Hero Text" className="w-full h-auto" loading="lazy" />
+                </div>
+                <JoinUsButton />
+              </div>
+            </div>
           </div>
         </div>
       </section>
