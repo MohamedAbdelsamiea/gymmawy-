@@ -363,8 +363,12 @@ return '';
             {t("why-join.title")}
           </p>
           <h2
-            className="text-3xl leading-normal md:text-4xl md:leading-normal lg:text-5xl lg:leading-normal font-semibold text-[#190143] mx-auto"
+            className="hidden lg:block text-3xl leading-normal md:text-4xl md:leading-normal lg:text-5xl lg:leading-normal font-semibold text-[#190143] mx-auto"
             dangerouslySetInnerHTML={{ __html: t("why-join.description") }}
+          ></h2>
+          <h2
+            className="block lg:hidden text-2xl leading-normal font-semibold text-[#190143] mx-auto"
+            dangerouslySetInnerHTML={{ __html: t("why-join.descriptionMobile") }}
           ></h2>
         </div>
       </section>
@@ -489,7 +493,7 @@ return '';
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row md:flex-wrap items-center justify-center gap-3 md:gap-4">
+          <div className="flex flex-col md:flex-row md:flex-wrap items-center justify-center md:gap-4">
             {[
               {
                 background: dietCard,

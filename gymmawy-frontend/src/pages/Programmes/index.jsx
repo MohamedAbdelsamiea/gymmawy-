@@ -151,8 +151,11 @@ const TrainingProgramsPage = () => {
           loading="lazy"
           className="w-full h-auto w-auto min-w-xl rtl:max-w-xl ltr:max-w-none sm:ltr:max-w-4xl mx-auto mt-10 mb-10 sm:mt-6 sm:mb-6 object-contain px-4 md:px-0 rtl:scale-100 ltr:scale-150 sm:ltr:scale-100"
         />
-        <p className="max-w-7xl text-xl md:text-3xl font-bold mx-auto text-[#190143] md:mb-12 mb-8 md:mt-14 mt-8">
+        <p className="hidden lg:block max-w-7xl text-xl md:text-3xl font-bold mx-auto text-[#190143] md:mb-12 mb-8 md:mt-14 mt-8">
           {t("description")}
+        </p>
+        <p className="block lg:hidden max-w-7xl text-lg font-bold mx-auto text-[#190143] md:mb-12 mb-8 md:mt-14 mt-8 px-4">
+          {t("descriptionMobile")}
         </p>
 
         {/* Reused Feature Cards */}
