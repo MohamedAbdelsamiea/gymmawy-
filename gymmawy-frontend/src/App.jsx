@@ -6,6 +6,7 @@ import { CartProvider } from './contexts/CartContext';
 import { AppRoutes } from './routes';
 import { ToastContainer } from './components/common/Toast';
 import SlimCurrencySelector from './components/SlimCurrencySelector';
+import ScrollToTop from './components/common/ScrollToTop';
 import i18n from './i18n/i18n';
 import { useTranslation } from 'react-i18next';
 import { useEffect, Suspense } from 'react';
@@ -72,6 +73,7 @@ function App() {
           <CartProvider>
             <ToastProvider>
               <Router>
+                <ScrollToTop />
                 <RTLHandler />
                 <AppRoutes />
                 <SlimCurrencySelector />

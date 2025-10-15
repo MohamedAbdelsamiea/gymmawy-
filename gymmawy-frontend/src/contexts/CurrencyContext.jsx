@@ -151,7 +151,16 @@ export const CurrencyProvider = ({ children }) => {
     const currencyInfo = {
       'EGP': { code: 'EGP', symbol: 'EGP', symbolAr: 'ج.م', name: 'Egyptian Pound', country: 'Egypt', flag: '🇪🇬' },
       'AED': { code: 'AED', symbol: 'AED', symbolAr: 'د.إ', name: 'UAE Dirham', country: 'UAE', flag: '🇦🇪' },
-      'SAR': { code: 'SAR', symbol: '﷼', symbolAr: '﷼', name: 'Saudi Riyal', country: 'Saudi Arabia', flag: '🇸🇦' },
+      'SAR': { 
+        code: 'SAR', 
+        symbol: '﷼', 
+        symbolAr: '﷼', 
+        symbolFallback: 'SAR',
+        name: 'Saudi Riyal', 
+        country: 'Saudi Arabia', 
+        flag: '🇸🇦',
+        useUnicode: true
+      },
       'USD': { code: 'USD', symbol: '$', symbolAr: '$', name: 'US Dollar', country: 'United States', flag: '🇺🇸' }
     };
     
@@ -165,13 +174,32 @@ export const CurrencyProvider = ({ children }) => {
     }
 
     const currencyInfo = getCurrencyInfo(curr);
-    // Use language-specific symbols for EGP and AED, same symbol for SAR and USD
-    const symbol = (curr === 'EGP' || curr === 'AED') 
-      ? (i18n.language === 'ar' ? currencyInfo.symbolAr : currencyInfo.symbol)
-      : currencyInfo.symbol;
+    
+    // Handle SAR symbol with fallback
+    let symbol;
+    if (curr === 'SAR') {
+      // Use Unicode Rial Sign with CSS fallback support
+      symbol = i18n.language === 'ar' ? currencyInfo.symbolAr : currencyInfo.symbol;
+    } else if (curr === 'EGP' || curr === 'AED') {
+      // Use language-specific symbols for EGP and AED
+      symbol = i18n.language === 'ar' ? currencyInfo.symbolAr : currencyInfo.symbol;
+    } else {
+      // Default for USD and others
+      symbol = currencyInfo.symbol;
+    }
+    
     const formattedAmount = typeof amount === 'number' ? amount.toFixed(2) : amount;
     
     return showSymbol ? `${formattedAmount} ${symbol}` : formattedAmount;
+  };
+
+  // Get SAR symbol component props for rendering
+  const getSARSymbolProps = () => {
+    return {
+      symbol: '&#xFDFC;',
+      fallback: 'SAR',
+      className: 'sar-symbol'
+    };
   };
 
   // Convert price between currencies (simplified rates)
@@ -231,6 +259,7 @@ export const CurrencyProvider = ({ children }) => {
     convertPrice,
     getTabbyCurrency,
     getTabbyPrice,
+    getSARSymbolProps,
     
     // Computed values
     currencyInfo: getCurrencyInfo(),

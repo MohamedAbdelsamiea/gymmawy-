@@ -273,7 +273,22 @@ const Header = () => {
 
         {/* Center Logo */}
         <div className="flex-shrink-0 flex items-center">
-          <button onClick={() => navigate("/")} className="flex items-center">
+          <button 
+            onClick={() => {
+              if (location.pathname === "/") {
+                // If already on home page, scroll to top
+                window.scrollTo({
+                  top: 0,
+                  left: 0,
+                  behavior: 'smooth'
+                });
+              } else {
+                // Navigate to home page
+                navigate("/");
+              }
+            }} 
+            className="flex items-center"
+          >
             <img src={logo} alt="Gymmawy Logo" className="h-8 w-auto" />
           </button>
         </div>

@@ -313,6 +313,36 @@ html {
   background: #2a0a5a;
 }
 
+/* SAR Currency Symbol Fallback */
+.sar-symbol {
+  font-family: 'Arial Unicode MS', 'Lucida Grande', 'Tahoma', 'DejaVu Sans', sans-serif;
+  font-variant: normal;
+  text-rendering: optimizeLegibility;
+  -webkit-font-feature-settings: "liga" 1;
+  font-feature-settings: "liga" 1;
+  position: relative;
+  display: inline-block;
+}
+
+/* Ensure proper rendering of Rial Sign */
+.sar-symbol {
+  unicode-bidi: bidi-override;
+  direction: rtl;
+}
+
+/* Fallback styling for better compatibility */
+@font-face {
+  font-family: 'RialSymbol';
+  src: local('Arial Unicode MS'), local('Lucida Grande'), local('Tahoma');
+  unicode-range: U+FDFC;
+}
+
+/* Force proper font rendering for SAR symbol */
+.sar-symbol,
+.sar-symbol * {
+  font-family: 'RialSymbol', 'Arial Unicode MS', 'Lucida Grande', 'Tahoma', sans-serif !important;
+}
+
 /* Improved typography */
 .text-main-title {
   font-family: 'Inter', 'Arial Black', system-ui, sans-serif;

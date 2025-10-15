@@ -159,7 +159,7 @@ const TrainingProgramsPage = () => {
         </p>
 
         {/* Reused Feature Cards */}
-        <div className="max-w-[1300px] mx-auto px-4">
+        <div className="max-w-[1300px] mx-auto px-8 md:px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-8">
             {featureCards.map((card, index) => (
               <div
