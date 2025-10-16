@@ -571,7 +571,29 @@ const Register = () => {
             className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300 rounded mt-1"
           />
           <label htmlFor="agreeTerms" className="ltr:ml-2 rtl:mr-2 text-sm text-gray-600">
-            {t('register.agreeTerms')}
+            {i18n.language === 'ar' ? (
+              <>
+                <span>أوافق على </span>
+                <Link to="/terms" className="text-gymmawy-primary hover:underline">
+                  شروط الخدمة
+                </Link>
+                <span> و </span>
+                <Link to="/privacy" className="text-gymmawy-primary hover:underline">
+                  سياسة الخصوصية
+                </Link>
+              </>
+            ) : (
+              <>
+                <span>I agree to the </span>
+                <Link to="/terms" className="text-gymmawy-primary hover:underline">
+                  Terms of Service
+                </Link>
+                <span> and </span>
+                <Link to="/privacy" className="text-gymmawy-primary hover:underline">
+                  Privacy Policy
+                </Link>
+              </>
+            )}
           </label>
         </div>
         {errors.terms && (

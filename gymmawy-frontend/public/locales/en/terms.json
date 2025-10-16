@@ -1,0 +1,27 @@
+{
+  "title": "Terms and Conditions",
+  "programDelivery": {
+    "title": "Program Delivery Policy",
+    "deliveryTime": "Programs are delivered within 7 days after the client submits their answers to all assessments.",
+    "responseTime": "Client messages are responded to within 24–48 hours, throughout the week except on Fridays and Saturdays."
+  },
+  "refundPolicy": {
+    "title": "Subscription Refund Policy",
+    "received": {
+      "title": "Programs Received:",
+      "description": "Once the client has received the programs, the subscription fee is non-refundable."
+    },
+    "notReceived": {
+      "title": "Programs Not Yet Delivered:",
+      "description": "If the programs have not yet been delivered, 50% of the subscription fee may be refunded after management approval."
+    }
+  },
+  "guaranteePolicy": {
+    "title": "Gymmawy Guarantee Policy",
+    "description": "If the client subscribes to a package of no less than three months, completes all assessments, follows all programs and instructions provided by the service providers, and still does not achieve any progress toward the desired goal, the subscription fee will be fully refunded."
+  },
+  "conductPolicy": {
+    "title": "Client Conduct Policy",
+    "description": "All clients must adhere to proper behavior and refrain from using any offensive language or gestures while communicating with the Gymmawy team. In case of violation, the client's subscription will be canceled, and the subscription fee refunded after deducting the value of services already provided."
+  }
+}

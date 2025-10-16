@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { Youtube, Instagram } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Footer = ({ backgroundColor = 'bg-[#ebebeb]' }) => {
   const { t } = useTranslation('footer'); // using "footer" namespace
 
   return (
-    <section className={`py-16 md:py-20 sm:pb-16 ${backgroundColor}`}>
+    <section className={`pb-8 ${backgroundColor}`}>
       <div className="container mx-auto px-8 md:px-12 lg:px-20">
         {/* Bottom grid: Social + Company / Get in Touch */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
@@ -42,8 +43,8 @@ const Footer = ({ backgroundColor = 'bg-[#ebebeb]' }) => {
           <div className="grid grid-cols-2 gap-8 text-[#190143]">
             <div>
               <h3 className="text-lg font-bold mb-2">{t('company')}</h3>
-              <a href="#" className="block hover:text-[#2a0a5a] mb-2">{t('privacyPolicy')}</a>
-              <a href="#" className="block hover:text-[#2a0a5a] mb-2">{t('termsConditions')}</a>
+              <Link to="/privacy" className="block hover:text-[#2a0a5a] mb-2">{t('privacyPolicy')}</Link>
+              <Link to="/terms" className="block hover:text-[#2a0a5a] mb-2">{t('termsConditions')}</Link>
             </div>
             <div>
               <h3 className="text-lg font-bold mb-2">{t('getInTouch')}</h3>

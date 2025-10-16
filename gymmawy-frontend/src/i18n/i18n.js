@@ -31,7 +31,7 @@ i18n
     },
     load: 'languageOnly',
     preload: ['en', 'ar'],
-    ns: ['translation', 'common', 'header', 'footer', 'checkout', 'currency', 'rewards'],
+    ns: ['translation', 'common', 'header', 'footer', 'checkout', 'currency', 'rewards', 'terms', 'privacy'],
     defaultNS: 'translation',
   });
 

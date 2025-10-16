@@ -12,6 +12,8 @@ const ProductPage = lazy(() => import('./pages/ProductPage'));
 const CartPage = lazy(() => import('./pages/Cart'));
 const JoinUs = lazy(() => import('./pages/JoinUs'));
 const ContactUs = lazy(() => import('./pages/ContactUs'));
+const TermsAndConditions = lazy(() => import('./pages/TermsAndConditions'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const Rewards = lazy(() => import('./pages/Rewards'));
 const Auth = lazy(() => import('./pages/Auth'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -31,6 +33,8 @@ export const publicRoutes = [
   { path: '/cart', element: <MainLayout><CartPage /></MainLayout> },
   { path: '/join-us', element: <MainLayout><JoinUs /></MainLayout> },
   { path: '/contact', element: <MainLayout><ContactUs /></MainLayout> },
+  { path: '/terms', element: <MainLayout><TermsAndConditions /></MainLayout> },
+  { path: '/privacy', element: <MainLayout><PrivacyPolicy /></MainLayout> },
   { path: '/rewards', element: <MainLayout><Rewards /></MainLayout> },
   { path: '/auth/*', element: <MainLayout><Auth /></MainLayout> },
   { path: '/payment/success', element: <MainLayout><PaymentSuccess /></MainLayout> },

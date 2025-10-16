@@ -11,6 +11,8 @@ import TabbyPromo from '../../components/payment/TabbyPromo';
 import useTabbyPromo from '../../hooks/useTabbyPromo';
 import { useTranslation } from 'react-i18next';
 import { useCurrencyContext } from '../../contexts/CurrencyContext';
+import AuthRequiredModal from '../../components/modals/AuthRequiredModal';
+import useAuthRequired from '../../hooks/useAuthRequired';
 
 const ProductPage = () => {
   const { id } = useParams();
@@ -18,6 +20,7 @@ const ProductPage = () => {
   const { isAuthenticated } = useAuth();
   const { showSuccess, showError } = useToast();
   const { addToCart, loading: cartLoading } = useCart();
+  const { requireAuth, showAuthModal, closeAuthModal } = useAuthRequired();
   const { isSupported: isTabbySupported, currentCountry } = useTabbyPromo();
   const { i18n } = useTranslation();
   const { currency, formatPrice, getCurrencyInfo } = useCurrencyContext();
@@ -202,65 +205,59 @@ const ProductPage = () => {
   };
 
   const handleAddToCart = async () => {
-    if (!isAuthenticated) {
-      navigate('/auth/login');
-      return;
-    }
+    requireAuth(async () => {
+      // User is authenticated, proceed with adding to cart
+      if (!transformedProduct) {
+        showError('Product not loaded');
+        return;
+      }
 
-    if (!transformedProduct) {
-      showError('Product not loaded');
-      return;
-    }
+      if (transformedProduct.stock === 0) {
+        showError('This product is out of stock');
+        return;
+      }
 
-    if (transformedProduct.stock === 0) {
-      showError('This product is out of stock');
-      return;
-    }
-
-    try {
-      await addToCart(transformedProduct.id, quantity, selectedSize);
-      showSuccess(`Added ${quantity} ${transformedProduct.name} (Size: ${selectedSize}) to cart`);
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      showError(error.message || 'Failed to add product to cart');
-    }
+      try {
+        await addToCart(transformedProduct.id, quantity, selectedSize);
+        showSuccess(`Added ${quantity} ${transformedProduct.name} (Size: ${selectedSize}) to cart`);
+      } catch (error) {
+        console.error('Error adding to cart:', error);
+        showError(error.message || 'Failed to add product to cart');
+      }
+    });
   };
 
   const handleBuyNow = () => {
-    if (!isAuthenticated) {
-      navigate('/auth/login', { 
-        state: { from: '/checkout', product: transformedProduct, type: 'product' }, 
-      });
-      return;
-    }
+    requireAuth(() => {
+      // User is authenticated, proceed with buy now
+      if (!transformedProduct) {
+        showError('Product not loaded');
+        return;
+      }
 
-    if (!transformedProduct) {
-      showError('Product not loaded');
-      return;
-    }
+      if (transformedProduct.stock === 0) {
+        showError('This product is out of stock');
+        return;
+      }
 
-    if (transformedProduct.stock === 0) {
-      showError('This product is out of stock');
-      return;
-    }
-
-    // Navigate to checkout with product data for immediate purchase
-    navigate('/checkout', {
-      state: {
-        product: {
-          id: transformedProduct.id,
-          name: transformedProduct.name,
-          price: transformedProduct.price,
-          discountedPrice: transformedProduct.discountedPrice,
-          hasDiscount: transformedProduct.hasDiscount,
-          image: transformedProduct.image,
-          quantity: quantity,
-          size: selectedSize,
-          stock: transformedProduct.stock,
+      // Navigate to checkout with product data for immediate purchase
+      navigate('/checkout', {
+        state: {
+          product: {
+            id: transformedProduct.id,
+            name: transformedProduct.name,
+            price: transformedProduct.price,
+            discountedPrice: transformedProduct.discountedPrice,
+            hasDiscount: transformedProduct.hasDiscount,
+            image: transformedProduct.image,
+            quantity: quantity,
+            size: selectedSize,
+            stock: transformedProduct.stock,
+          },
+          type: 'product',
+          buyNow: true, // Flag to indicate this is a buy now purchase
         },
-        type: 'product',
-        buyNow: true, // Flag to indicate this is a buy now purchase
-      },
+      });
     });
   };
 
@@ -699,6 +696,12 @@ const ProductPage = () => {
           <div className="h-px bg-[#190143]"></div>
         </div>
       </div>
+
+      {/* Auth Required Modal */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={closeAuthModal}
+      />
     </div>
   );
 };

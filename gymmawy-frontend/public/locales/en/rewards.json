@@ -13,8 +13,8 @@
     "button": "OK"
   },
   "loginRequired": {
-    "title": "Join Our Rewards Program",
-    "description": "Sign in to your account to start earning and redeeming Gymmawy Points for exclusive rewards!",
+    "title": "Sign In Required",
+    "description": "In order to complete this action, you need to sign in to your account.",
     "login": "Sign In",
     "signup": "Create Account"
   },

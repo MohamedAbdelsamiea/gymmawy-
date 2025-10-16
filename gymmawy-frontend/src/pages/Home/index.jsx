@@ -14,6 +14,8 @@ import VideoPlayer from "../../components/common/VideoPlayer";
 import videoService from "../../services/videoService";
 import transformationService from "../../services/transformationService";
 import subscriptionService from "../../services/subscriptionService";
+import AuthRequiredModal from "../../components/modals/AuthRequiredModal";
+import useAuthRequired from "../../hooks/useAuthRequired";
 import { config } from "../../config";
 
 const HomePage = () => {
@@ -22,6 +24,7 @@ const HomePage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { currency: userCurrency } = useCurrencyContext();
+  const { requireAuth, showAuthModal, closeAuthModal } = useAuthRequired();
   const [isVisible, setIsVisible] = useState(false);
   const [featuredVideo, setFeaturedVideo] = useState(null);
   const [videoLoading, setVideoLoading] = useState(true);
@@ -202,30 +205,25 @@ return '';
 
   // Handle subscription plan selection
   const handleChoosePlan = (plan) => {
-    
-    if (!isAuthenticated) {
-      navigate('/auth/login', { 
-        state: { from: '/checkout', plan, type: 'subscription' }, 
-      });
-      return;
-    }
-
-    navigate('/checkout', {
-      state: {
-        plan: {
-          id: plan.id,
-          name: plan.name,
-          description: plan.description,
-          allPrices: plan.allPrices,
-          subscriptionPeriodDays: plan.subscriptionPeriodDays,
-          giftPeriodDays: plan.giftPeriodDays,
-          discountPercentage: plan.discountPercentage,
-          benefits: plan.benefits || [],
-          image: plan.image,
+    requireAuth(() => {
+      // User is authenticated, proceed with plan selection
+      navigate('/checkout', {
+        state: {
+          plan: {
+            id: plan.id,
+            name: plan.name,
+            description: plan.description,
+            allPrices: plan.allPrices,
+            subscriptionPeriodDays: plan.subscriptionPeriodDays,
+            giftPeriodDays: plan.giftPeriodDays,
+            discountPercentage: plan.discountPercentage,
+            benefits: plan.benefits || [],
+            image: plan.image,
+          },
+          type: 'subscription',
+          currency: userCurrency, // Pass the user's selected currency
         },
-        type: 'subscription',
-        currency: userCurrency, // Pass the user's selected currency
-      },
+      });
     });
   };
 
@@ -1149,6 +1147,12 @@ return '';
           </div>
         </div>
       </section>
+
+      {/* Auth Required Modal */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={closeAuthModal}
+      />
     </div>
   );
 };

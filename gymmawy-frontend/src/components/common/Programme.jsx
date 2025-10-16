@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCurrencyContext } from '../../contexts/CurrencyContext';
 import { Award, Gift, Info } from 'lucide-react';
+import AuthRequiredModal from '../modals/AuthRequiredModal';
+import useAuthRequired from '../../hooks/useAuthRequired';
 import { config } from '../../config';
 
 export default function Programme({ image, name, price, programme }) {
@@ -12,6 +14,7 @@ export default function Programme({ image, name, price, programme }) {
     const { user, isAuthenticated } = useAuth();
     const { formatPrice, getCurrencyInfo } = useCurrencyContext();
     const navigate = useNavigate();
+    const { requireAuth, showAuthModal, closeAuthModal } = useAuthRequired();
     const [loading, setLoading] = useState(false);
     const [showLoyaltyCard, setShowLoyaltyCard] = useState(false);
     const loyaltyCardRef = useRef(null);
@@ -85,38 +88,33 @@ return imagePath;
     };
 
     const handlePurchase = () => {
-      if (!isAuthenticated) {
-        // Redirect to login with return path
-        navigate('/auth/login', { 
-          state: { from: '/checkout', plan: programme, type: 'programme' }, 
-        });
-        return;
-      }
+      requireAuth(() => {
+        // User is authenticated, proceed with purchase
+        if (!programme?.id) {
+          alert('Programme information is not available');
+          return;
+        }
 
-      if (!programme?.id) {
-        alert('Programme information is not available');
-        return;
-      }
-
-      // Navigate to checkout with programme data
-      navigate('/checkout', {
-        state: {
-          plan: {
-            id: programme.id,
-            name: programme.name,
-            price: programme.price,
-            priceEGP: programme.priceEGP,
-            priceSAR: programme.priceSAR,
-            priceAED: programme.priceAED,
-            priceUSD: programme.priceUSD,
-            discountPercentage: programme.discountPercentage || 0,
-            benefits: programme.benefits || [],
-            image: programme.image || programme.imageUrl,
-            imageUrl: programme.imageUrl,
-            description: programme.description,
+        // Navigate to checkout with programme data
+        navigate('/checkout', {
+          state: {
+            plan: {
+              id: programme.id,
+              name: programme.name,
+              price: programme.price,
+              priceEGP: programme.priceEGP,
+              priceSAR: programme.priceSAR,
+              priceAED: programme.priceAED,
+              priceUSD: programme.priceUSD,
+              discountPercentage: programme.discountPercentage || 0,
+              benefits: programme.benefits || [],
+              image: programme.image || programme.imageUrl,
+              imageUrl: programme.imageUrl,
+              description: programme.description,
+            },
+            type: 'programme',
           },
-          type: 'programme',
-        },
+        });
       });
     };
 
@@ -374,6 +372,12 @@ return imagePath;
             {loading ? t("purchasing") : t("button")}
           </button>
         </div>
+
+        {/* Auth Required Modal */}
+        <AuthRequiredModal
+          isOpen={showAuthModal}
+          onClose={closeAuthModal}
+        />
       </div>
     );
   }
