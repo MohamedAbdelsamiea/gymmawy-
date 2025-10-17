@@ -13,30 +13,43 @@ const Header = () => {
   const { getCartTotals } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [mobileProfileDropdownOpen, setMobileProfileDropdownOpen] = useState(false);
   const [homeDropdownOpen, setHomeDropdownOpen] = useState(false);
   const [navItems, setNavItems] = useState([]);
   const [isHomeDropdownToggling, setIsHomeDropdownToggling] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const profileDropdownRef = useRef(null);
+  const mobileProfileDropdownRef = useRef(null);
   const homeDropdownRef = useRef(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Only close dropdowns if clicking outside both dropdowns and not on navigation items
-      const isClickOnNavItem = event.target.closest('nav') || 
-                               event.target.closest('button') ||
-                               event.target.closest('[role="button"]');
+      // Check if click is on desktop profile dropdown button or inside desktop profile dropdown
+      const isClickOnDesktopProfileButton = profileDropdownRef.current && 
+        profileDropdownRef.current.contains(event.target);
       
-      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+      // Check if click is on mobile profile dropdown button or inside mobile profile dropdown
+      const isClickOnMobileProfileButton = mobileProfileDropdownRef.current && 
+        mobileProfileDropdownRef.current.contains(event.target);
+      
+      // Check if click is on home dropdown button or inside home dropdown
+      const isClickOnHomeButton = homeDropdownRef.current && 
+        homeDropdownRef.current.contains(event.target);
+      
+      // Only close desktop profile dropdown if clicking outside it
+      if (profileDropdownRef.current && !isClickOnDesktopProfileButton) {
         setProfileDropdownOpen(false);
       }
       
-      // Only close home dropdown if clicking outside it AND not on a navigation element
-      if (homeDropdownRef.current && 
-          !homeDropdownRef.current.contains(event.target) && 
-          !isClickOnNavItem) {
+      // Only close mobile profile dropdown if clicking outside it
+      if (mobileProfileDropdownRef.current && !isClickOnMobileProfileButton) {
+        setMobileProfileDropdownOpen(false);
+      }
+      
+      // Only close home dropdown if clicking outside it
+      if (homeDropdownRef.current && !isClickOnHomeButton) {
         setHomeDropdownOpen(false);
       }
     };
@@ -221,7 +234,7 @@ const Header = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#190143] text-[#ebebeb] shadow-lg">
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <div className="container mx-auto px-4 py-4 flex items-center justify-between xlg:justify-between">
         {/* Left Navigation */}
         <nav className="hidden xlg:flex items-center justify-end" style={{ width: 'calc(50% - 100px)' }}>
           <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-12' : 'space-x-12'}`}>
@@ -271,8 +284,8 @@ const Header = () => {
           </div>
         </nav>
 
-        {/* Center Logo */}
-        <div className="flex-shrink-0 flex items-center">
+        {/* Center Logo - Desktop */}
+        <div className="hidden xlg:flex flex-shrink-0 items-center">
           <button 
             onClick={() => {
               if (location.pathname === "/") {
@@ -290,6 +303,123 @@ const Header = () => {
             className="flex items-center"
           >
             <img src={logo} alt="Gymmawy Logo" className="h-8 w-auto" />
+          </button>
+        </div>
+
+        {/* Mobile Layout: Logo + Avatar + Burger Menu */}
+        <div className="xlg:hidden flex items-center justify-between w-full">
+          {/* Mobile Logo */}
+          <div className="flex-shrink-0">
+            <button 
+              onClick={() => {
+                if (location.pathname === "/") {
+                  // If already on home page, scroll to top
+                  window.scrollTo({
+                    top: 0,
+                    left: 0,
+                    behavior: 'smooth'
+                  });
+                } else {
+                  // Navigate to home page
+                  navigate("/");
+                }
+              }} 
+              className="flex items-center"
+            >
+              <img src={logo} alt="Gymmawy Logo" className="h-8 w-auto" />
+            </button>
+          </div>
+
+          {/* Mobile Avatar - Centered */}
+          {user && (
+            <div className="flex items-center">
+              <div className="relative" ref={mobileProfileDropdownRef}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMobileProfileDropdownOpen(!mobileProfileDropdownOpen);
+                  }}
+                  className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'} hover:text-white transition-colors duration-300 font-medium whitespace-nowrap`}
+                >
+                  <div className="h-8 w-8 rounded-full bg-gymmawy-accent flex items-center justify-center">
+                    <span className="text-sm font-medium text-white">
+                      {user?.firstName?.charAt(0) || 'U'}
+                    </span>
+                  </div>
+                  <span>{user?.firstName}</span>
+                  <ChevronDown 
+                    size={16} 
+                    className={`transition-transform duration-200 ${mobileProfileDropdownOpen ? 'rotate-180' : ''} ${i18n.language === 'ar' ? 'mr-1' : 'ml-1'}`} 
+                  />
+                </button>
+                
+                {/* Mobile Profile Dropdown Menu */}
+                {mobileProfileDropdownOpen && (
+                  <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50`}>
+                    {/* Gymmawy Points - Only for regular users, not admins */}
+                    {user?.role !== 'ADMIN' && user?.role !== 'admin' && (
+                      <div className="px-4 py-2.5 text-sm text-gray-600" style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}>
+                        <div className="flex items-center gap-2">
+                          <Gift className="h-4 w-4 flex-shrink-0 text-gymmawy-accent" />
+                          <span className="text-gymmawy-accent font-medium whitespace-nowrap">
+                            {user.loyaltyPoints || 0} {t('auth.loyaltyPoints')}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Conditional Navigation Link */}
+                    {isInDashboard ? (
+                      /* Home Link - Show when in Dashboard */
+                      <button
+                        onClick={handleHomeNavigation}
+                        className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 gap-2"
+                        style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
+                      >
+                        <Home className="h-4 w-4 flex-shrink-0" />
+                        <span className="whitespace-nowrap">{t('auth.home')}</span>
+                      </button>
+                    ) : (
+                      /* Dashboard Link - Show when in Homepage */
+                      <button
+                        onClick={handleDashboardNavigation}
+                        className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 gap-2"
+                        style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
+                      >
+                        <ShoppingBag className="h-4 w-4 flex-shrink-0" />
+                        <span className="whitespace-nowrap">{t('auth.dashboard')}</span>
+                      </button>
+                    )}
+                    
+                    {/* Profile Settings Link */}
+                    <button
+                      onClick={handleProfileNavigation}
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 gap-2"
+                      style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
+                    >
+                      <User className="h-4 w-4 flex-shrink-0" />
+                      <span className="whitespace-nowrap">{t('auth.profileSettings')}</span>
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 gap-2"
+                      style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
+                    >
+                      <LogOut className="h-4 w-4 flex-shrink-0" />
+                      <span className="whitespace-nowrap">{t('auth.signOut')}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors duration-300"
+          >
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
 
@@ -312,7 +442,10 @@ const Header = () => {
               {/* Profile Dropdown */}
               <div className="relative" ref={profileDropdownRef}>
                 <button
-                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setProfileDropdownOpen(!profileDropdownOpen);
+                  }}
                   className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'} hover:text-white transition-colors duration-300 font-medium whitespace-nowrap`}
                 >
                   <div className="h-8 w-8 rounded-full bg-gymmawy-accent flex items-center justify-center">
@@ -321,6 +454,10 @@ const Header = () => {
                     </span>
                   </div>
                   <span>{user?.firstName}</span>
+                  <ChevronDown 
+                    size={16} 
+                    className={`transition-transform duration-200 ${profileDropdownOpen ? 'rotate-180' : ''} ${i18n.language === 'ar' ? 'mr-1' : 'ml-1'}`} 
+                  />
                 </button>
                 
                 {/* Profile Dropdown Menu */}
@@ -416,13 +553,6 @@ const Header = () => {
           </div>
         </nav>
 
-        {/* Mobile Menu Button */}
-        <button
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="xlg:hidden p-2 hover:bg-white/10 rounded-lg transition-colors duration-300"
-        >
-          {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
       </div>
 
       {/* Mobile Navigation */}
@@ -492,66 +622,8 @@ const Header = () => {
                 )
               ))}
             
-            {/* Mobile Authentication Section */}
-            {user ? (
-              <div className="border-t border-white/20 pt-4 space-y-3">
-                {/* User Name Display */}
-                <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'} text-sm font-medium`}>
-                  <div className="h-6 w-6 rounded-full bg-gymmawy-accent flex items-center justify-center">
-                    <span className="text-xs font-medium text-white">
-                      {user?.firstName?.charAt(0) || 'U'}
-                    </span>
-                  </div>
-                  <span>{user?.firstName}</span>
-                </div>
-                
-                {/* Gymmawy Points - Only for regular users, not admins */}
-                {user?.role !== 'ADMIN' && user?.role !== 'admin' && (
-                  <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'} text-sm`}>
-                    <Gift className="h-4 w-4 text-gymmawy-accent" />
-                    <span className="text-gymmawy-accent font-medium">
-                      {user.loyaltyPoints || 0} {t('auth.loyaltyPoints')}
-                    </span>
-                  </div>
-                )}
-                
-                {/* Dashboard Link */}
-                <button
-                  onClick={() => {
-                    setHomeDropdownOpen(false);
-                    handleDashboardNavigation();
-                    setIsMenuOpen(false);
-                  }}
-                  className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'} hover:text-white transition-colors duration-300 font-medium ${i18n.language === 'ar' ? 'text-right' : 'text-left'}`}
-                >
-                  <ShoppingBag size={20} />
-                  <span>{t('auth.dashboard')}</span>
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setHomeDropdownOpen(false);
-                    handleDashboardNavigation();
-                    setIsMenuOpen(false);
-                  }}
-                  className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'} hover:text-white transition-colors duration-300 font-medium ${i18n.language === 'ar' ? 'text-right' : 'text-left'}`}
-                >
-                  <User size={20} />
-                  <span>{t('auth.profileSettings')}</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setHomeDropdownOpen(false);
-                    handleLogout();
-                    setIsMenuOpen(false);
-                  }}
-                  className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'} hover:text-white transition-colors duration-300 font-medium ${i18n.language === 'ar' ? 'text-right' : 'text-left'}`}
-                >
-                  <LogOut size={20} />
-                  <span>{t('auth.signOut')}</span>
-                </button>
-              </div>
-            ) : (
+            {/* Mobile Authentication Section - Only show login for non-authenticated users */}
+            {!user && (
               <div className="border-t border-white/20 pt-4 space-y-3">
                 <button
                   onClick={() => {
