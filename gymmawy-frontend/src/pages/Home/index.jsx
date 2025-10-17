@@ -658,7 +658,7 @@ return '';
               </div>
             </div>
           ) : subscriptionPlans.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="flex flex-wrap justify-center gap-6">
               {subscriptionPlans.map((plan, index) => {
                 // Debug: Log the plan data to see its structure
                 const planName = getBilingualText(plan.name, 'Package');
@@ -752,7 +752,7 @@ return '';
                 return (
               <div
                 key={index}
-                className={`relative bg-[#ebebeb] rounded-3xl border-[2px] shadow-lg flex flex-col ${
+                className={`relative bg-[#ebebeb] rounded-3xl border-[2px] shadow-lg flex flex-col w-[350px] ${
                   plan.crown && (plan.crown.en || plan.crown.ar) ? 'mt-8 md:mt-0' : ''
                 }`}
                 style={{
