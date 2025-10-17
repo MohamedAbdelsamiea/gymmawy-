@@ -3,8 +3,8 @@ import React from 'react';
 const SARSymbol = ({ className = '', fallback = 'SAR' }) => {
   return (
     <span className={`sar-symbol ${className}`}>
-      {/* Primary: Unicode Rial Sign */}
-      <span style={{ fontFamily: 'Arial Unicode MS, Lucida Grande, Tahoma, sans-serif' }}>
+      {/* Primary: Unicode Rial Sign with Tajawal font */}
+      <span className="sar-unicode">
         ﷼
       </span>
       {/* Fallback: Text fallback for unsupported devices */}

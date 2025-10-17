@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
 @import "slick-carousel/slick/slick.css"; 
 @import "slick-carousel/slick/slick-theme.css";
 
@@ -313,15 +314,16 @@ html {
   background: #2a0a5a;
 }
 
-/* SAR Currency Symbol Fallback */
+/* SAR Currency Symbol with Tajawal Font */
 .sar-symbol {
-  font-family: 'Arial Unicode MS', 'Lucida Grande', 'Tahoma', 'DejaVu Sans', sans-serif;
+  font-family: 'Tajawal', 'Arial Unicode MS', 'Lucida Grande', 'Tahoma', 'DejaVu Sans', sans-serif;
   font-variant: normal;
   text-rendering: optimizeLegibility;
   -webkit-font-feature-settings: "liga" 1;
   font-feature-settings: "liga" 1;
   position: relative;
   display: inline-block;
+  font-weight: 400;
 }
 
 /* Ensure proper rendering of Rial Sign */
@@ -333,14 +335,37 @@ html {
 /* Fallback styling for better compatibility */
 @font-face {
   font-family: 'RialSymbol';
-  src: local('Arial Unicode MS'), local('Lucida Grande'), local('Tahoma');
+  src: local('Tajawal'), local('Arial Unicode MS'), local('Lucida Grande'), local('Tahoma');
   unicode-range: U+FDFC;
 }
 
-/* Force proper font rendering for SAR symbol */
+/* Force proper font rendering for SAR symbol with Tajawal priority */
 .sar-symbol,
 .sar-symbol * {
-  font-family: 'RialSymbol', 'Arial Unicode MS', 'Lucida Grande', 'Tahoma', sans-serif !important;
+  font-family: 'Tajawal', 'RialSymbol', 'Arial Unicode MS', 'Lucida Grande', 'Tahoma', sans-serif !important;
+}
+
+/* Specific styling for SAR symbol character */
+.sar-symbol .sar-unicode {
+  font-family: 'Tajawal', 'Arial Unicode MS', 'Lucida Grande', 'Tahoma', sans-serif !important;
+  font-weight: 400;
+  font-size: inherit;
+  line-height: 1;
+}
+
+/* Fallback mechanism - show text if symbol doesn't render */
+@supports not (font-family: 'Tajawal') {
+  .sar-symbol .sar-unicode {
+    display: none;
+  }
+  .sar-symbol .sar-fallback {
+    display: inline !important;
+  }
+}
+
+/* Additional fallback for devices that don't support the SAR symbol */
+.sar-symbol:has(.sar-unicode:empty) .sar-fallback {
+  display: inline !important;
 }
 
 /* Improved typography */
