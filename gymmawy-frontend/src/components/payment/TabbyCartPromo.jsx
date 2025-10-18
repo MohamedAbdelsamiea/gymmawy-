@@ -82,13 +82,14 @@ const TabbyCartPromo = ({
       supportedCurrencies: supportedCurrencies
     });
     
-    if (isActuallySupported && supportedCurrencies.includes(fromCurrency)) {
+    // If currency is supported (SAR or AED), use it directly regardless of country
+    if (isCurrencySupported()) {
       return { currency: fromCurrency, price };
+    } else {
+      // This should not happen since we check isCurrencySupported() before rendering
+      console.warn('TabbyCartPromo: Currency not supported but component is rendering');
+      return { currency: 'AED', price: price };
     }
-    
-    // Default to AED for other currencies
-    const convertedPrice = convertPriceForTabby(price, fromCurrency, 'AED');
-    return { currency: 'AED', price: convertedPrice };
   };
 
   // Initialize Tabby promo

@@ -105,13 +105,13 @@ const TabbyPromo = ({
       country: country
     });
     
-    if (isActuallySupported) {
-      // Use the current currency directly
+    // If currency is supported (SAR or AED), use it directly regardless of country
+    if (isCurrencySupported()) {
       return { currency: currentCurrency, price: price };
     } else {
-      // Fallback to AED for unsupported countries
-      const convertedPrice = convertCurrencyForTabby(price, currentCurrency, 'AED');
-      return { currency: 'AED', price: convertedPrice };
+      // This should not happen since we check isCurrencySupported() before rendering
+      console.warn('TabbyPromo: Currency not supported but component is rendering');
+      return { currency: 'AED', price: price };
     }
   };
 
