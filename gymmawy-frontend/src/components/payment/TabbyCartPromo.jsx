@@ -56,9 +56,8 @@ const TabbyCartPromo = ({
 
   // Check if Tabby is supported for the given country
   const isCountrySupported = () => {
-    const supportedCountries = ['AE', 'SA'];
-    const targetCountry = country || currentCountry;
-    return supportedCountries.includes(targetCountry);
+    // Always show Tabby promo, but with different behavior based on support
+    return true; // Show for all countries, but handle unsupported countries gracefully
   };
 
   // Check if price is within Tabby's supported range
@@ -72,8 +71,11 @@ const TabbyCartPromo = ({
   // Get the display currency and price for Tabby
   const getTabbyCurrencyAndPrice = (price, fromCurrency) => {
     const supportedCurrencies = ['AED', 'SAR'];
+    const targetCountry = country || currentCountry;
+    const isActuallySupported = supportedCurrencies.includes(fromCurrency) || 
+      (targetCountry && ['AE', 'SA'].includes(targetCountry));
     
-    if (supportedCurrencies.includes(fromCurrency)) {
+    if (isActuallySupported && supportedCurrencies.includes(fromCurrency)) {
       return { currency: fromCurrency, price };
     }
     
@@ -91,12 +93,11 @@ const TabbyCartPromo = ({
       return;
     }
 
-    // Validate requirements
-    if (!isSupported || !isCountrySupported()) {
-      const errorMsg = `Tabby not supported for country: ${country || currentCountry}`;
-      setError(errorMsg);
-      onError?.(errorMsg);
-      return;
+    // Validate requirements - always show, but handle gracefully
+    const targetCountry = country || currentCountry;
+    const isActuallySupported = isSupported && ['AE', 'SA'].includes(targetCountry);
+    if (!isActuallySupported) {
+      console.log(`Tabby not natively supported for country: ${targetCountry}, using fallback`);
     }
 
     if (!isPriceSupported(price)) {
@@ -127,7 +128,7 @@ const TabbyCartPromo = ({
         lang: currentLang,
         source: 'cart',
         publicKey: tabbyConfig.publicKey,
-        merchantCode: getMerchantCode(),
+        merchantCode: isActuallySupported ? getMerchantCode() : 'AE', // Use AE as fallback
         shouldInheritBg: false
       });
 
@@ -175,7 +176,7 @@ const TabbyCartPromo = ({
     };
 
     // Only load if we have valid data
-    if (total && total > 0 && isSupported && isCountrySupported()) {
+    if (total && total > 0) {
       loadTabbyScript();
     }
 
@@ -197,8 +198,8 @@ const TabbyCartPromo = ({
   // Component will re-render completely when language changes due to key prop
   // No need for complex language change detection
 
-  // Don't render if not supported
-  if (!isSupported || !isCountrySupported() || !isPriceSupported(total)) {
+  // Don't render if price is not supported
+  if (!isPriceSupported(total)) {
     return null;
   }
 

@@ -21,20 +21,32 @@
 @media (max-width: 768px) {
   .tabby-promo-container {
     margin: 0 auto;
+    padding: 0 4px; /* Add small padding for mobile */
   }
   
   .tabby-promo-container #TabbyProductPromo,
   .tabby-promo-container #TabbyCartPromo {
     font-size: 14px;
     line-height: 1.4;
+    width: 100% !important;
+    max-width: 100% !important;
   }
   
   /* Ensure Tabby promo content fits mobile screen */
   .tabby-promo-container .tabby-promo,
-  .tabby-promo-container .tabby-widget {
+  .tabby-promo-container .tabby-widget,
+  .tabby-promo-container iframe {
     max-width: 100% !important;
     width: 100% !important;
     box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+  
+  /* Mobile-specific Tabby widget styling */
+  .tabby-promo-container [class*="tabby"] {
+    max-width: 100% !important;
+    width: 100% !important;
+    font-size: 12px !important;
   }
 }
 

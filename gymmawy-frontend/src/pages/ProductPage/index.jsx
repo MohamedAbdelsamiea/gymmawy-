@@ -403,7 +403,7 @@ const ProductPage = () => {
               </div>
 
               {/* Tabby Promo Snippet */}
-              {isTabbySupported && transformedProduct && (
+              {transformedProduct && (
                 <div className="mb-6">
                   <TabbyPromo
                     key={`tabby-product-${i18n.language}-${transformedProduct.id}`}

@@ -325,7 +325,7 @@ const CartPage = () => {
                 </div>
 
                 {/* Tabby Promo Snippet */}
-                {isTabbySupported && cartItems.length > 0 && (
+                {cartItems.length > 0 && (
                   <div className="mb-4">
                     <TabbyCartPromo
                       key={`tabby-cart-${i18n.language}-${total}`}
