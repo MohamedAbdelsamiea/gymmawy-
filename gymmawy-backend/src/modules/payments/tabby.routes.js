@@ -7,6 +7,7 @@ import {
   refundTabbyPayment,
   closeTabbyPayment,
   setupTabbyWebhook,
+  listTabbyWebhooks,
   checkTabbyAvailability,
   manualCapturePayment,
   performPrescoring
@@ -18,6 +19,7 @@ const router = Router();
 // Public routes (no authentication required)
 router.post('/webhook', handleTabbyWebhook);
 router.post('/webhook/setup', setupTabbyWebhook);
+router.get('/webhooks', listTabbyWebhooks);
 router.get('/availability', checkTabbyAvailability);
 router.post('/prescoring', performPrescoring);
 

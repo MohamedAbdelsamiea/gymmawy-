@@ -1010,7 +1010,7 @@ export async function closeTabbyPayment(req, res, next) {
 }
 
 /**
- * Setup Tabby webhook
+ * Setup Tabby webhook for both UAE and KSA
  */
 export async function setupTabbyWebhook(req, res, next) {
   try {
@@ -1021,16 +1021,119 @@ export async function setupTabbyWebhook(req, res, next) {
     });
 
     const webhookData = parseOrThrow(schema, req.body);
+    const results = [];
 
-    const webhook = await tabbyService.createWebhook(webhookData);
+    // Setup webhook for Saudi Arabia (SAR)
+    try {
+      console.log('Setting up webhook for Saudi Arabia (SAR)...');
+      const sarWebhook = await tabbyService.createWebhook(webhookData, 'SAR');
+      results.push({
+        country: 'Saudi Arabia',
+        currency: 'SAR',
+        merchant_code: tabbyService.getMerchantCode('SAR'),
+        webhook: sarWebhook
+      });
+      console.log('✅ SAR webhook created successfully');
+    } catch (error) {
+      console.error('❌ Failed to create SAR webhook:', error.message);
+      results.push({
+        country: 'Saudi Arabia',
+        currency: 'SAR',
+        merchant_code: tabbyService.getMerchantCode('SAR'),
+        error: error.message
+      });
+    }
+
+    // Setup webhook for UAE (AED)
+    try {
+      console.log('Setting up webhook for UAE (AED)...');
+      const aedWebhook = await tabbyService.createWebhook(webhookData, 'AED');
+      results.push({
+        country: 'UAE',
+        currency: 'AED',
+        merchant_code: tabbyService.getMerchantCode('AED'),
+        webhook: aedWebhook
+      });
+      console.log('✅ AED webhook created successfully');
+    } catch (error) {
+      console.error('❌ Failed to create AED webhook:', error.message);
+      results.push({
+        country: 'UAE',
+        currency: 'AED',
+        merchant_code: tabbyService.getMerchantCode('AED'),
+        error: error.message
+      });
+    }
 
     res.json({
       success: true,
-      webhook
+      message: 'Webhook setup completed for both countries',
+      results
     });
 
   } catch (error) {
     console.error('Tabby webhook setup error:', error);
+    next(error);
+  }
+}
+
+/**
+ * List all webhooks for both UAE and KSA
+ */
+export async function listTabbyWebhooks(req, res, next) {
+  try {
+    const results = [];
+
+    // Get webhooks for Saudi Arabia (SAR)
+    try {
+      console.log('Fetching webhooks for Saudi Arabia (SAR)...');
+      const sarWebhooks = await tabbyService.getWebhooks('SAR');
+      results.push({
+        country: 'Saudi Arabia',
+        currency: 'SAR',
+        merchant_code: tabbyService.getMerchantCode('SAR'),
+        webhooks: sarWebhooks
+      });
+      console.log('✅ SAR webhooks fetched successfully');
+    } catch (error) {
+      console.error('❌ Failed to fetch SAR webhooks:', error.message);
+      results.push({
+        country: 'Saudi Arabia',
+        currency: 'SAR',
+        merchant_code: tabbyService.getMerchantCode('SAR'),
+        error: error.message
+      });
+    }
+
+    // Get webhooks for UAE (AED)
+    try {
+      console.log('Fetching webhooks for UAE (AED)...');
+      const aedWebhooks = await tabbyService.getWebhooks('AED');
+      results.push({
+        country: 'UAE',
+        currency: 'AED',
+        merchant_code: tabbyService.getMerchantCode('AED'),
+        webhooks: aedWebhooks
+      });
+      console.log('✅ AED webhooks fetched successfully');
+    } catch (error) {
+      console.error('❌ Failed to fetch AED webhooks:', error.message);
+      results.push({
+        country: 'UAE',
+        currency: 'AED',
+        merchant_code: tabbyService.getMerchantCode('AED'),
+        error: error.message
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Webhook status retrieved for both countries',
+      results
+    });
+
+  } catch (error) {
+    console.error('Tabby webhook listing error:', error);
     next(error);
   }
 }

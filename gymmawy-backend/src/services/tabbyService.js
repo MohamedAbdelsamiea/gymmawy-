@@ -269,31 +269,33 @@ class TabbyService {
   /**
    * Create a webhook
    * @param {Object} webhookData - The webhook data
+   * @param {string} currency - The currency (SAR, AED) to determine merchant code
    * @returns {Promise<Object>} - The created webhook data
    */
-  async createWebhook(webhookData) {
+  async createWebhook(webhookData, currency = null) {
     try {
-      const apiClient = this.getApiClient();
+      const apiClient = this.getApiClient(currency);
       const response = await apiClient.post('/api/v1/webhooks', webhookData);
       return response.data;
     } catch (error) {
-      console.error('Tabby webhook creation failed:', error.response?.data || error.message);
-      throw new Error(`Failed to create Tabby webhook: ${error.response?.data?.message || error.message}`);
+      console.error(`Tabby webhook creation failed for ${currency || 'default'}:`, error.response?.data || error.message);
+      throw new Error(`Failed to create Tabby webhook for ${currency || 'default'}: ${error.response?.data?.message || error.message}`);
     }
   }
 
   /**
    * Get all webhooks
+   * @param {string} currency - The currency (SAR, AED) to determine merchant code
    * @returns {Promise<Array>} - The webhooks list
    */
-  async getWebhooks() {
+  async getWebhooks(currency = null) {
     try {
-      const apiClient = this.getApiClient();
+      const apiClient = this.getApiClient(currency);
       const response = await apiClient.get('/api/v1/webhooks');
       return response.data;
     } catch (error) {
-      console.error('Tabby webhooks retrieval failed:', error.response?.data || error.message);
-      throw new Error(`Failed to retrieve Tabby webhooks: ${error.response?.data?.message || error.message}`);
+      console.error(`Tabby webhooks retrieval failed for ${currency || 'default'}:`, error.response?.data || error.message);
+      throw new Error(`Failed to retrieve Tabby webhooks for ${currency || 'default'}: ${error.response?.data?.message || error.message}`);
     }
   }
 
