@@ -374,17 +374,22 @@ class TabbyService {
       errors.push('Buyer name is required');
     }
 
-    // Shipping address validation
-    if (!checkoutData.shipping_address?.line1) {
-      errors.push('Shipping address line1 is required');
-    }
+    // Shipping address validation - only required for physical items (cart, product)
+    const orderType = checkoutData.metadata?.orderType || checkoutData.paymentableType?.toLowerCase();
+    const isPhysicalItem = orderType === 'cart' || orderType === 'product';
+    
+    if (isPhysicalItem) {
+      if (!checkoutData.shipping_address?.line1) {
+        errors.push('Shipping address line1 is required for physical items');
+      }
 
-    if (!checkoutData.shipping_address?.city) {
-      errors.push('Shipping city is required');
-    }
+      if (!checkoutData.shipping_address?.city) {
+        errors.push('Shipping city is required for physical items');
+      }
 
-    if (!checkoutData.shipping_address?.country) {
-      errors.push('Shipping country is required');
+      if (!checkoutData.shipping_address?.country) {
+        errors.push('Shipping country is required for physical items');
+      }
     }
 
     // Items validation

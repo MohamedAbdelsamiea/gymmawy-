@@ -1341,7 +1341,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       console.log('🔍 PRESCORING - Real order data for pre-scoring:', JSON.stringify(realOrderData, null, 2));
       
       // Create checkout data for pre-scoring
-      const checkoutData = tabbyService.createCheckoutData(realOrderData, type);
+      const checkoutData = tabbyService.createCheckoutData(realOrderData, type === 'cart' ? 'order' : type);
       console.log('🔍 PRESCORING - Checkout data for pre-scoring:', JSON.stringify(checkoutData, null, 2));
       
       // Perform official Tabby pre-scoring (calls backend endpoint)
@@ -1915,14 +1915,14 @@ return;
       const orderData = {
         id: generateUUID(),
         amount: total, // Use total amount for consistency
-        currency: finalPrice?.currency || 'EGP',
+        currency: currency || 'EGP', // Use the current currency from context
         description: `Payment for ${type === 'cart' ? 'cart items' : type}`,
         lang: i18n.language === 'ar' ? 'ar' : 'en', // Add language marker
         user: {
           firstName: user?.firstName || '',
           lastName: user?.lastName || '',
           email: user?.email || '',
-          mobileNumber: getPhoneForCurrency(finalPrice?.currency || 'EGP')
+          mobileNumber: getPhoneForCurrency(currency || 'EGP')
         },
         items: getOrderItemsForTabby(),
         // Include shipping address for all orders (Tabby requires it)
@@ -1933,9 +1933,9 @@ return;
             ? (shippingDetails?.shippingStreet || 'Digital Product Address')
             : 'Digital Product Address',
           city: type === 'cart' || type === 'product' 
-            ? (shippingDetails?.shippingCity || getCityForCurrency(finalPrice?.currency || 'EGP'))
-            : getCityForCurrency(finalPrice?.currency || 'EGP'),
-          country: getCountryForCurrency(finalPrice?.currency || 'EGP'),
+            ? (shippingDetails?.shippingCity || getCityForCurrency(currency || 'EGP'))
+            : getCityForCurrency(currency || 'EGP'),
+          country: getCountryForCurrency(currency || 'EGP'),
           postalCode: type === 'cart' || type === 'product' 
             ? (shippingDetails?.shippingPostalCode || '00000')
             : '00000'
@@ -1943,7 +1943,7 @@ return;
       };
 
       // Create checkout data for Tabby
-      const checkoutData = tabbyService.createCheckoutData(orderData, type);
+      const checkoutData = tabbyService.createCheckoutData(orderData, type === 'cart' ? 'order' : type);
 
       // Debug: Log the complete order data being sent to Tabby
       console.log('🔍 COMPLETE ORDER DATA FOR TABBY:');
@@ -1982,12 +1982,24 @@ return;
       console.log('🔍 Tabby checkout result:', result);
       console.log('🔍 Tabby checkout_session:', result?.checkout_session);
       console.log('🔍 Tabby checkout_url:', result?.checkout_session?.checkout_url);
+      console.log('🔍 Full result structure:', JSON.stringify(result, null, 2));
 
-      if (result?.checkout_session?.checkout_url) {
+      // Check multiple possible locations for checkout URL
+      const checkoutUrl = result?.checkout_session?.checkout_url || 
+                         result?.checkout_url || 
+                         result?.configuration?.available_products?.installments?.[0]?.web_url ||
+                         result?.web_url;
+
+      console.log('🔍 Final checkout URL found:', checkoutUrl);
+
+      if (checkoutUrl) {
         showSuccess('Redirecting to secure payment page...');
         // Redirect to Tabby checkout
-        window.location.href = result.checkout_session.checkout_url;
+        window.location.href = checkoutUrl;
       } else {
+        console.error('❌ No checkout URL found in any expected location');
+        console.error('❌ Available keys in result:', Object.keys(result || {}));
+        console.error('❌ Available keys in checkout_session:', Object.keys(result?.checkout_session || {}));
         throw new Error('No checkout URL received from Tabby');
       }
 

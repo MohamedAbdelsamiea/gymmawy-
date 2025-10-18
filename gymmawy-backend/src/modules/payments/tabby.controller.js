@@ -74,7 +74,7 @@ export async function createTabbyCheckout(req, res, next) {
       currency: z.enum(['EGP', 'SAR', 'AED', 'USD']),
       description: z.string().optional(),
       paymentableId: z.string().uuid(),
-      paymentableType: z.enum(['PRODUCT', 'PLAN', 'PROGRAMME', 'MEDICAL', 'SUBSCRIPTION']),
+      paymentableType: z.enum(['PRODUCT', 'PLAN', 'PROGRAMME', 'MEDICAL', 'SUBSCRIPTION', 'ORDER']),
       lang: z.enum(['ar', 'en']).default('en'),
       buyer: z.object({
         phone: z.string(),
@@ -89,7 +89,7 @@ export async function createTabbyCheckout(req, res, next) {
         state: z.string().optional(),
         zip: z.string(),
         country: z.string()
-      }),
+      }).optional(),
       items: z.array(z.object({
         title: z.string(),
         description: z.string().optional(),
@@ -276,6 +276,13 @@ export async function createTabbyCheckout(req, res, next) {
         configuration: checkoutSession.configuration,
         checkout_url: checkoutSession.configuration?.available_products?.installments?.[0]?.web_url
       });
+      
+      // Debug: Log the full response structure
+      console.log('🔍 Backend - Full Tabby response structure:', JSON.stringify(checkoutSession, null, 2));
+      console.log('🔍 Backend - Available keys in checkoutSession:', Object.keys(checkoutSession || {}));
+      console.log('🔍 Backend - Available keys in configuration:', Object.keys(checkoutSession?.configuration || {}));
+      console.log('🔍 Backend - Available products:', checkoutSession?.configuration?.available_products);
+      console.log('🔍 Backend - Installments:', checkoutSession?.configuration?.available_products?.installments);
 
       // Handle background pre-scoring results
       if (checkoutSession.status === 'rejected') {
