@@ -49,10 +49,10 @@ const TabbyPromo = ({
     return countryDetectionService.getTabbyMerchantCode(country);
   };
 
-  // Check if Tabby is supported for the given country
-  const isCountrySupported = () => {
-    // Always show Tabby promo, but with different behavior based on support
-    return true; // Show for all countries, but handle unsupported countries gracefully
+  // Check if Tabby is supported for the given currency
+  const isCurrencySupported = () => {
+    const currentCurrency = currency || appCurrency;
+    return ['SAR', 'AED'].includes(currentCurrency);
   };
 
   // Check if price is within Tabby's supported range
@@ -92,16 +92,25 @@ const TabbyPromo = ({
 
   // Get the display currency and price for Tabby
   const getTabbyCurrencyAndPrice = () => {
-    // For unsupported countries, use AED as fallback
+    // Use the passed currency prop directly
+    const currentCurrency = currency || appCurrency;
     const isActuallySupported = isTabbySupported && countryDetectionService.isTabbySupported(country);
     
+    console.log('🔍 TabbyPromo - Currency Debug:', {
+      passedCurrency: currency,
+      appCurrency: appCurrency,
+      currentCurrency: currentCurrency,
+      isActuallySupported: isActuallySupported,
+      isCurrencySupported: isCurrencySupported(),
+      country: country
+    });
+    
     if (isActuallySupported) {
-      const tabbyCurrency = getTabbyCurrency();
-      const tabbyPrice = getTabbyPrice(price);
-      return { currency: tabbyCurrency, price: tabbyPrice };
+      // Use the current currency directly
+      return { currency: currentCurrency, price: price };
     } else {
       // Fallback to AED for unsupported countries
-      const convertedPrice = convertCurrencyForTabby(price, currency, 'AED');
+      const convertedPrice = convertCurrencyForTabby(price, currentCurrency, 'AED');
       return { currency: 'AED', price: convertedPrice };
     }
   };
@@ -204,8 +213,8 @@ const TabbyPromo = ({
   // Component will re-render completely when language changes due to key prop
   // No need for complex language change detection
 
-  // Don't render if price is not supported
-  if (!isPriceSupported()) {
+  // Don't render if currency is not supported or price is not supported
+  if (!isCurrencySupported() || !isPriceSupported()) {
     return null;
   }
 

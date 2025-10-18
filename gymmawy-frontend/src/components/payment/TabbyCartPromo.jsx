@@ -54,10 +54,9 @@ const TabbyCartPromo = ({
     return tabbyConfig.merchantCodes[targetCountry] || tabbyConfig.merchantCode;
   };
 
-  // Check if Tabby is supported for the given country
-  const isCountrySupported = () => {
-    // Always show Tabby promo, but with different behavior based on support
-    return true; // Show for all countries, but handle unsupported countries gracefully
+  // Check if Tabby is supported for the given currency
+  const isCurrencySupported = () => {
+    return ['SAR', 'AED'].includes(currency);
   };
 
   // Check if price is within Tabby's supported range
@@ -74,6 +73,14 @@ const TabbyCartPromo = ({
     const targetCountry = country || currentCountry;
     const isActuallySupported = supportedCurrencies.includes(fromCurrency) || 
       (targetCountry && ['AE', 'SA'].includes(targetCountry));
+    
+    console.log('🔍 TabbyCartPromo - Currency Debug:', {
+      fromCurrency: fromCurrency,
+      targetCountry: targetCountry,
+      isActuallySupported: isActuallySupported,
+      isCurrencySupported: isCurrencySupported(),
+      supportedCurrencies: supportedCurrencies
+    });
     
     if (isActuallySupported && supportedCurrencies.includes(fromCurrency)) {
       return { currency: fromCurrency, price };
@@ -198,8 +205,8 @@ const TabbyCartPromo = ({
   // Component will re-render completely when language changes due to key prop
   // No need for complex language change detection
 
-  // Don't render if price is not supported
-  if (!isPriceSupported(total)) {
+  // Don't render if currency is not supported or price is not supported
+  if (!isCurrencySupported() || !isPriceSupported(total)) {
     return null;
   }
 
