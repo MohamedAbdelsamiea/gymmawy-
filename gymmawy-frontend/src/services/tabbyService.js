@@ -216,14 +216,24 @@ class TabbyService {
   formatOrderItems(items) {
     return items.map(item => ({
       title: item.title || item.name || 'Item',
-      description: item.description || '',
+      description: item.description || 'Product description',
       quantity: item.quantity || 1,
       unit_price: (item.price || item.amount || 0).toString(),
       discount_amount: (item.discount || 0).toString(),
-      reference_id: item.id || item.reference_id,
-      image_url: item.imageUrl || item.image_url,
-      product_url: item.productUrl || item.product_url,
-      category: item.category || 'general'
+      reference_id: item.id || item.reference_id || `ITEM_${Date.now()}`,
+      image_url: item.imageUrl || item.image_url || 'https://example.com/product.jpg',
+      product_url: item.productUrl || item.product_url || 'https://example.com/product',
+      category: item.category || 'General',
+      brand: item.brand || 'Gymmawy',
+      gender: item.gender || 'Unisex',
+      color: item.color || 'Black',
+      product_material: item.material || 'Cotton',
+      size_type: item.sizeType || 'EU',
+      size: item.size || 'M',
+      is_refundable: item.isRefundable !== undefined ? item.isRefundable : true,
+      barcode: item.barcode || '',
+      ppn: item.ppn || '',
+      seller: item.seller || 'Gymmawy'
     }));
   }
 

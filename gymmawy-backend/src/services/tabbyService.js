@@ -410,8 +410,7 @@ class TabbyService {
       order: orderData.order,
       order_history: orderData.order_history || [],
       items: orderData.items,
-      meta: orderData.meta || {},
-      attachment: orderData.attachment || {}
+      meta: orderData.meta || {}
     };
 
     // Only include shipping_address if provided (for physical items)

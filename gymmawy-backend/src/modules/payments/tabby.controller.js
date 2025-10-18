@@ -231,8 +231,7 @@ export async function createTabbyCheckout(req, res, next) {
           id: user.id,
           email: user.email
         }
-      },
-      attachment: {}
+      }
     };
 
     // Debug: Log order data
