@@ -52,7 +52,17 @@ const TabbyPromo = ({
   // Check if Tabby is supported for the given currency
   const isCurrencySupported = () => {
     const currentCurrency = currency || appCurrency;
-    return ['SAR', 'AED'].includes(currentCurrency);
+    const isSupported = ['SAR', 'AED'].includes(currentCurrency);
+    
+    console.log('🔍 TabbyPromo - isCurrencySupported Debug:', {
+      currency: currency,
+      appCurrency: appCurrency,
+      currentCurrency: currentCurrency,
+      isSupported: isSupported,
+      supportedCurrencies: ['SAR', 'AED']
+    });
+    
+    return isSupported;
   };
 
   // Check if price is within Tabby's supported range
@@ -214,7 +224,18 @@ const TabbyPromo = ({
   // No need for complex language change detection
 
   // Don't render if currency is not supported or price is not supported
-  if (!isCurrencySupported() || !isPriceSupported()) {
+  const currencySupported = isCurrencySupported();
+  const priceSupported = isPriceSupported();
+  
+  console.log('🔍 TabbyPromo - Rendering Decision:', {
+    currencySupported: currencySupported,
+    priceSupported: priceSupported,
+    willRender: currencySupported && priceSupported,
+    currency: currency,
+    price: price
+  });
+  
+  if (!currencySupported || !priceSupported) {
     return null;
   }
 

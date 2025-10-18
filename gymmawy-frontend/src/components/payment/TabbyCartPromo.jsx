@@ -56,7 +56,15 @@ const TabbyCartPromo = ({
 
   // Check if Tabby is supported for the given currency
   const isCurrencySupported = () => {
-    return ['SAR', 'AED'].includes(currency);
+    const isSupported = ['SAR', 'AED'].includes(currency);
+    
+    console.log('🔍 TabbyCartPromo - isCurrencySupported Debug:', {
+      currency: currency,
+      isSupported: isSupported,
+      supportedCurrencies: ['SAR', 'AED']
+    });
+    
+    return isSupported;
   };
 
   // Check if price is within Tabby's supported range
@@ -207,7 +215,18 @@ const TabbyCartPromo = ({
   // No need for complex language change detection
 
   // Don't render if currency is not supported or price is not supported
-  if (!isCurrencySupported() || !isPriceSupported(total)) {
+  const currencySupported = isCurrencySupported();
+  const priceSupported = isPriceSupported(total);
+  
+  console.log('🔍 TabbyCartPromo - Rendering Decision:', {
+    currencySupported: currencySupported,
+    priceSupported: priceSupported,
+    willRender: currencySupported && priceSupported,
+    currency: currency,
+    total: total
+  });
+  
+  if (!currencySupported || !priceSupported) {
     return null;
   }
 
