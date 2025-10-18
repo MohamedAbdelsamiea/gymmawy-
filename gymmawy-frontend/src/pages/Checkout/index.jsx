@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useCurrencyContext } from '../../contexts/CurrencyContext';
+import { useCart } from '../../contexts/CartContext';
 import { useLanguage } from '../../hooks/useLanguage';
 import { config } from '../../config';
 import checkoutService from '../../services/checkoutService';
@@ -51,6 +52,7 @@ const Checkout = () => {
   const { user, isAuthenticated } = useAuth();
   const { showError, showSuccess, showInfo } = useToast();
   const { currency: detectedCurrency, isLoading: currencyLoading, formatPrice, isTabbySupported } = useCurrencyContext();
+  const { cart, loadCart, loading: cartLoading } = useCart();
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -69,11 +71,46 @@ return fallback;
   };
   
   // Get data from location state (plan, product, or cart items)
-  const { plan, product, cartItems, type, currency: passedCurrency, buyNow, subtotal: cartSubtotal, shipping: cartShipping, total: cartTotal, fromPaymentFailure, paymentFailureReason, fromPaymentCancel } = location.state || {};
+  const { plan, product, cartItems, type, currency: passedCurrency, buyNow, subtotal: cartSubtotal, shipping: cartShipping, total: cartTotal, fromPaymentFailure, paymentFailureReason, fromPaymentCancel, preserveCart } = location.state || {};
   
-  // Check for loyalty redemption data from sessionStorage
+  // All state management - moved to top to avoid hooks order issues
   const [loyaltyData, setLoyaltyData] = useState(null);
   const [isLoyaltyRedemption, setIsLoyaltyRedemption] = useState(false);
+  const [isLoadingCart, setIsLoadingCart] = useState(false);
+  const [loadedCartItems, setLoadedCartItems] = useState(null);
+  const [cartLoadError, setCartLoadError] = useState(null);
+  const [selectedDuration, setSelectedDuration] = useState('normal');
+  const prescoringCalledRef = useRef(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponValid, setCouponValid] = useState(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponDiscountType, setCouponDiscountType] = useState('percentage');
+  const [couponData, setCouponData] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('full');
+  const [paymentOption, setPaymentOption] = useState('');
+  const [paymentProof, setPaymentProof] = useState(null);
+  const [paymentProofPreview, setPaymentProofPreview] = useState(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(null);
+  const [tabbyAvailable, setTabbyAvailable] = useState(false);
+  const [tabbyRejectionMessage, setTabbyRejectionMessage] = useState(null);
+  const [forceTabbyAvailable, setForceTabbyAvailable] = useState(false);
+  const [tabbyPrescoringLoading, setTabbyPrescoringLoading] = useState(false);
+  const [copiedField, setCopiedField] = useState(null);
+  const [tabbyConfiguration, setTabbyConfiguration] = useState(null);
+  const [shippingDetails, setShippingDetails] = useState({
+    shippingBuilding: '',
+    shippingStreet: '',
+    shippingCity: '',
+    shippingCountry: '',
+    shippingPostalCode: ''
+  });
+  const [cartLoadAttempted, setCartLoadAttempted] = useState(false);
+  const cartLoadTimeoutRef = useRef(null);
   
   // Check for loyalty redemption data on component mount
   useEffect(() => {
@@ -92,6 +129,143 @@ return fallback;
       }
     }
   }, []);
+
+  // Store original purchase data for payment retry
+  useEffect(() => {
+    if (plan || product || cartItems) {
+      const originalPurchaseData = {
+        plan,
+        product,
+        cartItems,
+        type,
+        currency: passedCurrency,
+        buyNow,
+        subtotal: cartSubtotal,
+        shipping: cartShipping,
+        total: cartTotal
+      };
+      sessionStorage.setItem('originalPurchaseData', JSON.stringify(originalPurchaseData));
+      console.log('💾 Stored original purchase data for payment retry:', originalPurchaseData);
+    }
+  }, [plan, product, cartItems, type, passedCurrency, buyNow, cartSubtotal, cartShipping, cartTotal]);
+
+  // Load cart data when returning from payment failure/cancellation (only for cart purchases)
+  useEffect(() => {
+    const loadCartData = async () => {
+      // Only load cart if we're returning from payment failure/cancellation for a CART purchase
+      // and we don't have the original cart data
+      if ((fromPaymentFailure || fromPaymentCancel || preserveCart) && 
+          type === 'cart' && 
+          !cartItems && 
+          isAuthenticated && 
+          !cartLoadAttempted) {
+        console.log('🛒 Loading cart data for payment retry...');
+        setCartLoadAttempted(true);
+        setIsLoadingCart(true);
+        setCartLoadError(null);
+        
+        // Clear any existing timeout
+        if (cartLoadTimeoutRef.current) {
+          clearTimeout(cartLoadTimeoutRef.current);
+        }
+        
+        // Add a small delay to prevent rapid API calls
+        cartLoadTimeoutRef.current = setTimeout(async () => {
+          try {
+            await loadCart(true); // Force load cart for payment retry
+            console.log('✅ Cart loaded successfully');
+          } catch (error) {
+            console.error('❌ Failed to load cart:', error);
+            setCartLoadError(error.message);
+            showError('Failed to load your cart. Please try again.');
+          } finally {
+            setIsLoadingCart(false);
+          }
+        }, 100);
+      }
+    };
+
+    loadCartData();
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (cartLoadTimeoutRef.current) {
+        clearTimeout(cartLoadTimeoutRef.current);
+      }
+    };
+  }, [fromPaymentFailure, fromPaymentCancel, preserveCart, cartItems, type, isAuthenticated, loadCart, showError, cartLoadAttempted]);
+
+  // Transform cart data when it's loaded
+  useEffect(() => {
+    if (cart && cart.items && cart.items.length > 0 && !cartItems) {
+      console.log('🛒 Transforming cart data for checkout...');
+      
+      const transformCartItem = (item) => {
+        const product = item.product;
+        if (!product) return null;
+        
+        // Get EGP price
+        const egpPrice = product.prices?.find(p => p.currency === 'EGP');
+        const price = egpPrice?.amount ? parseFloat(egpPrice.amount) : 0;
+        
+        // Apply discount if available
+        const discountPercentage = product.discountPercentage || 0;
+        const discountedPrice = discountPercentage > 0 ? price * (1 - discountPercentage / 100) : price;
+        
+        // Get primary image
+        const primaryImage = product.images?.find(img => img.isPrimary) || product.images?.[0];
+        const getImageSrc = (imagePath) => {
+          if (!imagePath) return '/assets/common/store/product1-1.png';
+          
+          if (imagePath.startsWith('/uploads/')) {
+            const baseUrl = config.API_BASE_URL.replace('/api', '');
+            return `${baseUrl}${imagePath}`;
+          }
+          return imagePath;
+        };
+        
+        const productImage = primaryImage?.url ? getImageSrc(primaryImage.url) : '/assets/common/store/product1-1.png';
+        
+        return {
+          id: item.id,
+          productId: product.id,
+          name: product.name?.en || product.name || 'Unnamed Product',
+          price: price,
+          discountedPrice: discountedPrice,
+          hasDiscount: discountPercentage > 0,
+          image: productImage,
+          size: item.size || 'M',
+          quantity: item.quantity
+        };
+      };
+
+      const transformedItems = cart.items.map(transformCartItem).filter(Boolean);
+      setLoadedCartItems(transformedItems);
+      
+      // Calculate totals
+      const subtotal = transformedItems.reduce((total, item) => {
+        const itemPrice = item.hasDiscount ? item.discountedPrice : item.price;
+        return total + (itemPrice * item.quantity);
+      }, 0);
+      
+      // Calculate shipping based on currency
+      const currentCurrency = currency || 'EGP';
+      const baseShippingAmount = calculateShippingCost(currentCurrency);
+      const freeShippingThreshold = calculateFreeShippingThreshold(currentCurrency);
+      const shipping = subtotal > freeShippingThreshold ? 0 : baseShippingAmount;
+      const total = subtotal + shipping;
+      
+      console.log('✅ Cart data transformed:', { items: transformedItems.length, subtotal, total });
+      
+      // Show success message when cart is loaded for payment retry
+      if (fromPaymentFailure || fromPaymentCancel) {
+        const message = i18n.language === 'ar' 
+          ? 'تم تحميل سلة التسوق بنجاح. يمكنك الآن إعادة المحاولة.'
+          : 'Your cart has been loaded successfully. You can now retry your payment.';
+        showSuccess(message);
+      }
+    }
+  }, [cart, cartItems, fromPaymentFailure, fromPaymentCancel, i18n.language, showSuccess]);
 
   // Debug: Log currency detection
   console.log('🔍 Checkout - Currency detection:', {
@@ -120,48 +294,34 @@ return fallback;
     }
   }, [isAuthenticated, navigate, location.pathname, plan, type]);
 
-  // Redirect if no data (plan, product, or cart items)
+  // Redirect if no data (plan, product, or cart items) - but wait for cart loading
   useEffect(() => {
+    // Don't redirect if we're still loading cart data
+    if (isLoadingCart) {
+      return;
+    }
+    
+    // Don't redirect if we have cart data from context
+    if (cart && cart.items && cart.items.length > 0) {
+      return;
+    }
+    
+    // Don't redirect if we have loaded cart items
+    if (loadedCartItems && loadedCartItems.length > 0) {
+      return;
+    }
+    
     if (!plan && !product && !cartItems) {
       console.log('No checkout data found, redirecting to home');
       navigate('/');
     }
-  }, [plan, product, cartItems, navigate]);
-
-  // Removed duplicate useEffect - pre-scoring is handled by the main useEffect below
-
-  // State management
-  const [selectedDuration, setSelectedDuration] = useState('normal');
-  const prescoringCalledRef = useRef(false);
+  }, [plan, product, cartItems, cart, loadedCartItems, isLoadingCart, navigate]);
 
   // Function to reset prescoring flag (for manual testing)
   const resetPrescoringFlag = () => {
     prescoringCalledRef.current = false;
     console.log('🔄 PRESCORING - Flag reset, allowing new call');
   };
-  const [couponCode, setCouponCode] = useState('');
-  const [couponValid, setCouponValid] = useState(null);
-  const [couponLoading, setCouponLoading] = useState(false);
-  const [couponError, setCouponError] = useState(null);
-  const [couponDiscount, setCouponDiscount] = useState(0);
-  const [couponDiscountType, setCouponDiscountType] = useState('percentage');
-  const [couponData, setCouponData] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('full');
-  const [paymentOption, setPaymentOption] = useState('');
-  const [paymentProof, setPaymentProof] = useState(null); // Stores the File object
-  const [paymentProofPreview, setPaymentProofPreview] = useState(null); // Stores preview URL
-  const [uploadingProof, setUploadingProof] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState(null);
-  
-  // Tabby Testing Panel State
-  const [tabbyAvailable, setTabbyAvailable] = useState(false);
-  const [tabbyRejectionMessage, setTabbyRejectionMessage] = useState(null);
-  const [forceTabbyAvailable, setForceTabbyAvailable] = useState(false);
-  const [tabbyPrescoringLoading, setTabbyPrescoringLoading] = useState(false);
-  const [copiedField, setCopiedField] = useState(null); // Track which field was copied
-  const [tabbyConfiguration, setTabbyConfiguration] = useState(null);
   
   // Clear any existing rejection message for testing
   useEffect(() => {
@@ -241,15 +401,6 @@ return fallback;
   };
 
 
-  
-  // Shipping details state (matching database schema)
-  const [shippingDetails, setShippingDetails] = useState({
-    shippingBuilding: '',
-    shippingStreet: '',
-    shippingCity: '',
-    shippingCountry: '',
-    shippingPostcode: ''
-  });
 
   // Cleanup preview URL on unmount
   useEffect(() => {
@@ -812,11 +963,32 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
   // Get pricing for cart items or single product
   const getCartOrProductPrice = () => {
     if (type === 'cart') {
-      return {
-        amount: cartTotal || 0,
-        currency: 'EGP',
-        currencySymbol: 'L.E'
-      };
+      // Use loaded cart items if available, otherwise use cartTotal from state
+      if (loadedCartItems && loadedCartItems.length > 0) {
+        const subtotal = loadedCartItems.reduce((total, item) => {
+          const itemPrice = item.hasDiscount ? item.discountedPrice : item.price;
+          return total + (itemPrice * item.quantity);
+        }, 0);
+        
+        // Calculate shipping based on currency
+        const currentCurrency = currency || 'EGP';
+        const baseShippingAmount = calculateShippingCost(currentCurrency);
+        const freeShippingThreshold = calculateFreeShippingThreshold(currentCurrency);
+        const shipping = subtotal > freeShippingThreshold ? 0 : baseShippingAmount;
+        const total = subtotal + shipping;
+        
+        return {
+          amount: total,
+          currency: currentCurrency,
+          currencySymbol: getCurrencySymbol(currentCurrency, i18n.language)
+        };
+      } else {
+        return {
+          amount: cartTotal || 0,
+          currency: 'EGP',
+          currencySymbol: 'L.E'
+        };
+      }
     } else if (type === 'product') {
       const price = product.hasDiscount ? product.discountedPrice : product.price;
       return {
@@ -841,11 +1013,98 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
     }
   }, [finalPrice?.currency, paymentOption]);
   
-  // Calculate shipping cost (hardcoded to 200 L.E for now)
+  // Helper function to calculate shipping cost based on currency
+  const calculateShippingCost = (currency = 'EGP') => {
+    // Convert 200 L.E to the specified currency
+    const baseShippingEGP = 200;
+    
+    // Simple conversion rates (in production, these should come from a currency service)
+    const conversionRates = {
+      'EGP': 1,      // Base currency
+      'SAR': 0.15,   // 1 EGP = 0.15 SAR
+      'AED': 0.16,   // 1 EGP = 0.16 AED
+      'USD': 0.04,   // 1 EGP = 0.04 USD
+      'KWD': 0.01    // 1 EGP = 0.01 KWD
+    };
+    
+    const rate = conversionRates[currency] || 1;
+    const shippingAmount = Math.round(baseShippingEGP * rate);
+    
+    console.log('🚚 Shipping cost calculation:', {
+      baseShippingEGP,
+      currency,
+      rate,
+      shippingAmount
+    });
+    
+    return shippingAmount;
+  };
+
+  // Helper function to calculate free shipping threshold based on currency
+  const calculateFreeShippingThreshold = (currency = 'EGP') => {
+    // Convert 2000 L.E to the specified currency
+    const baseThresholdEGP = 2000;
+    
+    // Simple conversion rates (in production, these should come from a currency service)
+    const conversionRates = {
+      'EGP': 1,      // Base currency
+      'SAR': 0.15,   // 1 EGP = 0.15 SAR
+      'AED': 0.16,   // 1 EGP = 0.16 AED
+      'USD': 0.04,   // 1 EGP = 0.04 USD
+      'KWD': 0.01    // 1 EGP = 0.01 KWD
+    };
+    
+    const rate = conversionRates[currency] || 1;
+    const threshold = Math.round(baseThresholdEGP * rate);
+    
+    console.log('🚚 Free shipping threshold calculation:', {
+      baseThresholdEGP,
+      currency,
+      rate,
+      threshold
+    });
+    
+    return threshold;
+  };
+
+  // Calculate shipping cost based on currency
   const getShippingCost = () => {
     // Only add shipping for cart and product orders (physical items)
     if (type === 'cart' || type === 'product') {
-      return 200; // 200 L.E hardcoded
+      const currentCurrency = currency || 'EGP';
+      const baseShippingAmount = calculateShippingCost(currentCurrency);
+      const freeShippingThreshold = calculateFreeShippingThreshold(currentCurrency);
+      
+      // Calculate current subtotal for free shipping check
+      let currentSubtotal = 0;
+      
+      if (type === 'cart') {
+        // Use loaded cart items if available, otherwise use cartSubtotal from state
+        if (loadedCartItems && loadedCartItems.length > 0) {
+          currentSubtotal = loadedCartItems.reduce((total, item) => {
+            const itemPrice = item.hasDiscount ? item.discountedPrice : item.price;
+            return total + (itemPrice * item.quantity);
+          }, 0);
+        } else {
+          currentSubtotal = cartSubtotal || 0;
+        }
+      } else if (type === 'product') {
+        // Use discounted price if product has discount, otherwise use regular price
+        const productPrice = product.hasDiscount ? product.discountedPrice : product.price;
+        currentSubtotal = productPrice * (product.quantity || 1);
+      }
+      
+      const shippingAmount = currentSubtotal > freeShippingThreshold ? 0 : baseShippingAmount;
+      
+      console.log('🚚 Main shipping calculation:', {
+        currentCurrency,
+        currentSubtotal,
+        freeShippingThreshold,
+        baseShippingAmount,
+        finalShippingAmount: shippingAmount
+      });
+      
+      return shippingAmount;
     }
     return 0; // No shipping for subscriptions/programmes (digital)
   };
@@ -910,7 +1169,15 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
   let originalPrice = 0;
   
   if (type === 'cart') {
-    originalPrice = cartSubtotal || 0;
+    // Use loaded cart items if available, otherwise use cartSubtotal from state
+    if (loadedCartItems && loadedCartItems.length > 0) {
+      originalPrice = loadedCartItems.reduce((total, item) => {
+        const itemPrice = item.hasDiscount ? item.discountedPrice : item.price;
+        return total + (itemPrice * item.quantity);
+      }, 0);
+    } else {
+      originalPrice = cartSubtotal || 0;
+    }
   } else if (type === 'product') {
     // Use discounted price if product has discount, otherwise use regular price
     const productPrice = product.hasDiscount ? product.discountedPrice : product.price;
@@ -1312,21 +1579,21 @@ return;
       {type === 'cart' ? (
         // Cart items summary
         <div>
-          <h4 className="font-medium text-gray-900 mb-3">Order Items</h4>
+          <h4 className="font-medium text-gray-900 mb-3">{t('checkout.orderItems')}</h4>
           <div className="space-y-3">
             {cartItems?.map((item, index) => (
-              <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+              <div key={index} className="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg">
                 <img 
                   src={item.image} 
                   alt={item.name}
-                  className="w-12 h-12 object-cover rounded"
+                  className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
                   onError={(e) => {
                     e.target.src = '/assets/common/store/product1-1.png';
                   }}
                 />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">{item.name}</p>
-                  <p className="text-xs text-gray-600">Size: {item.size} • Qty: {item.quantity}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 mb-1">{item.name}</p>
+                  <p className="text-xs text-gray-600 mb-2">{t('checkout.size')}: {item.size} • {t('checkout.quantity')}: {item.quantity}</p>
                   <div className="flex items-center space-x-2">
                     {item.hasDiscount ? (
                       <>
@@ -1354,19 +1621,19 @@ return;
       ) : type === 'product' ? (
         // Single product summary
         <div>
-          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg">
             <img 
               src={product.image} 
               alt={product.name}
-              className="w-16 h-16 object-cover rounded"
+              className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
               onError={(e) => {
                 e.target.src = '/assets/common/store/product1-1.png';
               }}
             />
-            <div className="flex-1">
-              <h4 className="font-medium text-gray-900">{product.name}</h4>
-              <p className="text-sm text-gray-600">Size: {product.size} • Qty: {product.quantity}</p>
-              <div className="flex items-center space-x-2 mt-1">
+            <div className="flex-1 min-w-0">
+              <h4 className="font-medium text-gray-900 mb-1">{product.name}</h4>
+              <p className="text-sm text-gray-600 mb-2">{t('checkout.size')}: {product.size} • {t('checkout.quantity')}: {product.quantity}</p>
+              <div className="flex items-center space-x-2">
                 {product.hasDiscount ? (
                   <>
                     <span className="text-xs text-gray-500 line-through">
@@ -1759,10 +2026,12 @@ return;
     };
 
     if (type === 'cart') {
-      return cartItems?.map(item => ({
+      // Use loaded cart items if available, otherwise use cartItems from state
+      const itemsToUse = loadedCartItems || cartItems;
+      return itemsToUse?.map(item => ({
         title: getNameString(item.name) || 'Product',
         quantity: item.quantity || 1,
-        price: item.price || 0,
+        price: item.hasDiscount ? item.discountedPrice : item.price || 0,
         category: 'product'
       })) || [];
     } else if (type === 'product') {
@@ -2093,6 +2362,10 @@ return;
 
         setSuccess(true);
         setSubmitting(false);
+        
+        // Clean up stored purchase data on successful payment
+        sessionStorage.removeItem('originalPurchaseData');
+        console.log('🧹 Cleaned up stored purchase data after successful payment');
     } catch (error) {
       console.error('Submission error:', error);
       
@@ -2129,7 +2402,7 @@ return;
   }
 
   // Show error state if no checkout data is available
-  if (!plan && !product && !cartItems) {
+  if (!plan && !product && !cartItems && !loadedCartItems && (!cart || !cart.items || cart.items.length === 0)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 sm:p-8 text-center">
@@ -2449,75 +2722,75 @@ return;
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                     <Truck className={`h-5 w-5 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'} text-gymmawy-primary`} />
-                    Shipping Details
+                    {t('checkout.shippingDetails')}
                   </h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Building/Street *
+                        {t('checkout.buildingStreet')} *
                       </label>
                       <input
                         type="text"
                         value={shippingDetails.shippingBuilding}
                         onChange={(e) => setShippingDetails(prev => ({ ...prev, shippingBuilding: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-                        placeholder="Enter building name/number"
+                        placeholder={t('checkout.enterBuildingName')}
                         required
                       />
                     </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Street Address *
+                        {t('checkout.streetAddress')} *
                       </label>
                       <input
                         type="text"
                         value={shippingDetails.shippingStreet}
                         onChange={(e) => setShippingDetails(prev => ({ ...prev, shippingStreet: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-                        placeholder="Enter street address"
+                        placeholder={t('checkout.enterStreetAddress')}
                         required
                       />
                     </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        City *
+                        {t('checkout.city')} *
                       </label>
                       <input
                         type="text"
                         value={shippingDetails.shippingCity}
                         onChange={(e) => setShippingDetails(prev => ({ ...prev, shippingCity: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-                        placeholder="Enter your city"
+                        placeholder={t('checkout.enterCity')}
                         required
                       />
                     </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Country
+                        {t('checkout.country')}
                       </label>
                       <input
                         type="text"
                         value={shippingDetails.shippingCountry}
                         onChange={(e) => setShippingDetails(prev => ({ ...prev, shippingCountry: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-                        placeholder="Enter your country"
+                        placeholder={t('checkout.enterCountry')}
                       />
                     </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Postal Code
+                        {t('checkout.postalCode')}
                       </label>
                       <input
                         type="text"
                         value={shippingDetails.shippingPostcode}
                         onChange={(e) => setShippingDetails(prev => ({ ...prev, shippingPostcode: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-                        placeholder="Enter postal code (optional)"
+                        placeholder={t('checkout.enterPostalCode')}
                       />
                     </div>
                   </div>

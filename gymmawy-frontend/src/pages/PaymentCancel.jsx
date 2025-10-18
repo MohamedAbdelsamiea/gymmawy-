@@ -8,7 +8,7 @@ import apiClient from '../services/apiClient';
 const PaymentCancel = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation(['checkout', 'common']);
   const { showInfo } = useToast();
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -117,17 +117,30 @@ const PaymentCancel = () => {
   };
 
   const handleRetryPayment = () => {
+    // Get the original purchase data from sessionStorage
+    const originalPurchaseData = sessionStorage.getItem('originalPurchaseData');
+    let purchaseData = {};
+    
+    if (originalPurchaseData) {
+      try {
+        purchaseData = JSON.parse(originalPurchaseData);
+      } catch (error) {
+        console.error('Error parsing original purchase data:', error);
+      }
+    }
+    
     // Navigate back to checkout page with preserved state
     navigate('/checkout', { 
       state: { 
         fromPaymentCancel: true,
-        preserveCart: true
+        preserveCart: true,
+        ...purchaseData // Include original purchase data
       } 
     });
   };
 
   const handleContinueShopping = () => {
-    navigate('/');
+    navigate('/store');
   };
 
   const handleViewCart = () => {

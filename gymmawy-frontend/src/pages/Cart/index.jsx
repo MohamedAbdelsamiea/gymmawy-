@@ -62,13 +62,70 @@ const CartPage = () => {
 
   const cartItems = cart?.items?.map(transformCartItem) || [];
 
+  // Helper function to calculate shipping cost based on currency
+  const calculateShippingCost = (currency = 'EGP') => {
+    // Convert 200 L.E to the specified currency
+    const baseShippingEGP = 200;
+    
+    // Simple conversion rates (in production, these should come from a currency service)
+    const conversionRates = {
+      'EGP': 1,      // Base currency
+      'SAR': 0.15,   // 1 EGP = 0.15 SAR
+      'AED': 0.16,   // 1 EGP = 0.16 AED
+      'USD': 0.04,   // 1 EGP = 0.04 USD
+      'KWD': 0.01    // 1 EGP = 0.01 KWD
+    };
+    
+    const rate = conversionRates[currency] || 1;
+    const shippingAmount = Math.round(baseShippingEGP * rate);
+    
+    console.log('🚚 Cart shipping cost calculation:', {
+      baseShippingEGP,
+      currency,
+      rate,
+      shippingAmount
+    });
+    
+    return shippingAmount;
+  };
+
+  // Helper function to calculate free shipping threshold based on currency
+  const calculateFreeShippingThreshold = (currency = 'EGP') => {
+    // Convert 2000 L.E to the specified currency
+    const baseThresholdEGP = 2000;
+    
+    // Simple conversion rates (in production, these should come from a currency service)
+    const conversionRates = {
+      'EGP': 1,      // Base currency
+      'SAR': 0.15,   // 1 EGP = 0.15 SAR
+      'AED': 0.16,   // 1 EGP = 0.16 AED
+      'USD': 0.04,   // 1 EGP = 0.04 USD
+      'KWD': 0.01    // 1 EGP = 0.01 KWD
+    };
+    
+    const rate = conversionRates[currency] || 1;
+    const threshold = Math.round(baseThresholdEGP * rate);
+    
+    console.log('🚚 Cart free shipping threshold calculation:', {
+      baseThresholdEGP,
+      currency,
+      rate,
+      threshold
+    });
+    
+    return threshold;
+  };
+
   // Calculate totals
   const subtotal = cartItems.reduce((total, item) => {
     const price = item.hasDiscount ? item.discountedPrice : item.price;
     return total + (price * item.quantity);
   }, 0);
 
-  const shipping = subtotal > 2000 ? 0 : 200; // Free shipping over 2000 LE
+  // Calculate shipping based on currency
+  const baseShippingAmount = calculateShippingCost(currency);
+  const freeShippingThreshold = calculateFreeShippingThreshold(currency);
+  const shipping = subtotal > freeShippingThreshold ? 0 : baseShippingAmount;
   const total = subtotal + shipping;
 
   // Handle quantity change
@@ -287,7 +344,7 @@ const CartPage = () => {
                         {/* Item Total */}
                         <div className="text-right">
                           <div className="text-lg sm:text-xl font-medium text-[#190143]">
-                            {(currentPrice * item.quantity).toLocaleString()} LE
+                            {formatPrice(currentPrice * item.quantity)}
                           </div>
                         </div>
                       </div>
@@ -311,7 +368,7 @@ const CartPage = () => {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Shipping</span>
                     <span className="font-medium">
-                      {shipping === 0 ? 'Free' : `${shipping} LE`}
+                      {shipping === 0 ? 'Free' : formatPrice(shipping)}
                     </span>
                   </div>
                   

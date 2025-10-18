@@ -16,6 +16,7 @@ export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [lastLoadTime, setLastLoadTime] = useState(0);
   
   // Get auth context safely
   const authContext = useContext(AuthContext);
@@ -30,19 +31,27 @@ export const CartProvider = ({ children }) => {
     }
   }, [isAuthenticated]);
 
-  const loadCart = useCallback(async () => {
+  const loadCart = useCallback(async (force = false) => {
+    // Cache for 5 seconds to prevent rapid API calls
+    const now = Date.now();
+    if (!force && now - lastLoadTime < 5000) {
+      console.log('Cart load skipped - too recent');
+      return;
+    }
+    
     try {
       setLoading(true);
       setError(null);
       const response = await storeService.getCart();
       setCart(response.cart);
+      setLastLoadTime(now);
     } catch (err) {
       console.error('Error loading cart:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [lastLoadTime]);
 
   const addToCart = async (productId, quantity = 1, size = "M") => {
     if (!isAuthenticated) {
