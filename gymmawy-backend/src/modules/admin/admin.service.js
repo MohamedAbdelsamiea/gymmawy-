@@ -839,9 +839,8 @@ export async function deleteProduct(id) {
   const product = await prisma.product.findUnique({ 
     where: { id }, 
     select: { 
-      imageUrl: true,
       images: {
-        select: { url: true }
+        select: { url: true, isPrimary: true }
       }
     } 
   });
@@ -851,10 +850,11 @@ export async function deleteProduct(id) {
   }
   
   // Delete the main product image if it exists
-  if (product.imageUrl) {
+  const mainImage = product.images?.find(img => img.isPrimary);
+  if (mainImage?.url) {
     try {
       const { deleteProductImage } = await import('../uploads/upload.service.js');
-      await deleteProductImage(product.imageUrl);
+      await deleteProductImage(mainImage.url);
     } catch (error) {
       console.error('Error deleting product main image:', error);
       // Don't throw error here - we still want to delete the product even if image deletion fails

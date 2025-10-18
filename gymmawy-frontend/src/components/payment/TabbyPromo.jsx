@@ -69,11 +69,24 @@ const TabbyPromo = ({
   const isPriceSupported = () => {
     if (!price || price <= 0) return false;
     
-    // Tabby typically supports prices from 50 to 50000 in local currency
+    const currentCurrency = currency || appCurrency;
+    
+    // Tabby minimum prices vary by currency
+    // SAR: 50 SAR minimum, AED: 50 AED minimum
     const minPrice = 50;
     const maxPrice = 50000;
     
-    return price >= minPrice && price <= maxPrice;
+    const isSupported = price >= minPrice && price <= maxPrice;
+    
+    console.log('🔍 TabbyPromo - Price Support Debug:', {
+      price: price,
+      currency: currentCurrency,
+      minPrice: minPrice,
+      maxPrice: maxPrice,
+      isSupported: isSupported
+    });
+    
+    return isSupported;
   };
 
   // Format price for Tabby (2 decimals for EGP/SAR/AED, 3 for KWD)

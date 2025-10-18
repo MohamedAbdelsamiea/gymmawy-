@@ -70,9 +70,23 @@ const TabbyCartPromo = ({
   // Check if price is within Tabby's supported range
   const isPriceSupported = (price) => {
     if (!price || price <= 0) return false;
+    
+    // Tabby minimum prices vary by currency
+    // SAR: 50 SAR minimum, AED: 50 AED minimum
     const minPrice = 50;
     const maxPrice = 50000;
-    return price >= minPrice && price <= maxPrice;
+    
+    const isSupported = price >= minPrice && price <= maxPrice;
+    
+    console.log('🔍 TabbyCartPromo - Price Support Debug:', {
+      price: price,
+      currency: currency,
+      minPrice: minPrice,
+      maxPrice: maxPrice,
+      isSupported: isSupported
+    });
+    
+    return isSupported;
   };
 
   // Get the display currency and price for Tabby
