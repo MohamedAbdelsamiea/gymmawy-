@@ -22,6 +22,7 @@ const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess.jsx'));
 const PaymentFailure = lazy(() => import('./pages/PaymentFailure.jsx'));
 const PaymentCancel = lazy(() => import('./pages/PaymentCancel.jsx'));
 const PaymobPaymentResult = lazy(() => import('./components/payment/PaymobPaymentResult.jsx'));
+const ButtonTest = lazy(() => import('./pages/ButtonTest'));
 
 // Public routes with MainLayout
 export const publicRoutes = [
@@ -41,6 +42,7 @@ export const publicRoutes = [
   { path: '/payment/failure', element: <MainLayout><PaymentFailure /></MainLayout> },
   { path: '/payment/cancel', element: <MainLayout><PaymentCancel /></MainLayout> },
   { path: '/payment/result', element: <MainLayout><PaymobPaymentResult /></MainLayout> },
+  { path: '/button-test', element: <MainLayout><ButtonTest /></MainLayout> },
 
 ];
 
