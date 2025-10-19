@@ -52,11 +52,12 @@ class ApiClient {
     }
 
     try {
-      const response = await fetch(`${this.baseURL}/auth/refresh`, {
+      const response = await fetch(`${this.baseURL}/api/auth/refresh`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${refreshToken}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ refreshToken }),
       });
 
       if (!response.ok) {

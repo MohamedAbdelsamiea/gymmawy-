@@ -13,6 +13,7 @@ const AdminLeads = lazy(() => import('./admin').then(module => ({ default: modul
 const AdminCoupons = lazy(() => import('./admin').then(module => ({ default: module.AdminCoupons })));
 const AdminCMS = lazy(() => import('./admin').then(module => ({ default: module.AdminCMS })));
 const AdminShipping = lazy(() => import('./admin').then(module => ({ default: module.AdminShipping })));
+const AdminHomepagePopup = lazy(() => import('./admin/HomepagePopup'));
 const Profile = lazy(() => import('./user').then(module => ({ default: module.Profile })));
 
 const AdminDashboard = () => {
@@ -37,6 +38,7 @@ const AdminDashboard = () => {
         <Route path="/coupons" element={<AdminCoupons />} />
         <Route path="/cms" element={<AdminCMS />} />
         <Route path="/shipping" element={<AdminShipping />} />
+        <Route path="/homepage-popup" element={<AdminHomepagePopup />} />
         <Route path="/profile" element={<Profile />} />
       </Routes>
     </Suspense>

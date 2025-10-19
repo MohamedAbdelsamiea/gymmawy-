@@ -15,7 +15,9 @@ import videoService from "../../services/videoService";
 import transformationService from "../../services/transformationService";
 import subscriptionService from "../../services/subscriptionService";
 import AuthRequiredModal from "../../components/modals/AuthRequiredModal";
+import HomepagePopup from "../../components/modals/HomepagePopup";
 import useAuthRequired from "../../hooks/useAuthRequired";
+import { useHomepagePopup } from "../../hooks/useHomepagePopup";
 import { config } from "../../config";
 
 const HomePage = () => {
@@ -25,6 +27,7 @@ const HomePage = () => {
   const { isAuthenticated } = useAuth();
   const { currency: userCurrency } = useCurrencyContext();
   const { requireAuth, showAuthModal, closeAuthModal } = useAuthRequired();
+  const { popup, showPopup, closePopup } = useHomepagePopup();
   const [isVisible, setIsVisible] = useState(false);
   const [featuredVideo, setFeaturedVideo] = useState(null);
   const [videoLoading, setVideoLoading] = useState(true);
@@ -1153,6 +1156,15 @@ return '';
         isOpen={showAuthModal}
         onClose={closeAuthModal}
       />
+
+      {/* Homepage Popup */}
+      {showPopup && (
+        <HomepagePopup
+          popup={popup}
+          onClose={closePopup}
+        />
+      )}
+
     </div>
   );
 };

@@ -18,7 +18,8 @@ import {
   Percent,
   UserCheck,
   Play,
-  Home
+  Home,
+  MessageSquare
 } from 'lucide-react';
 
 const DashboardLayout = ({ children }) => {
@@ -49,6 +50,7 @@ const DashboardLayout = ({ children }) => {
         { path: '/dashboard/coupons', icon: Percent, label: 'Coupons' },
         { path: '/dashboard/cms', icon: Video, label: 'CMS' },
         { path: '/dashboard/shipping', icon: Truck, label: 'Shipping' },
+        { path: '/dashboard/homepage-popup', icon: MessageSquare, label: 'Homepage Popup' },
       ];
     } else {
       return [

@@ -12,7 +12,9 @@ import {
   createVideo,
   getVideoById,
   updateVideo,
-  deleteVideo
+  deleteVideo,
+  getHomepagePopup,
+  updateHomepagePopup
 } from './cms.controller.js';
 
 const router = express.Router();
@@ -34,5 +36,9 @@ router.post('/videos', requireAuth, requireAdmin, createVideo);
 router.get('/videos/:id', getVideoById);
 router.put('/videos/:id', requireAuth, requireAdmin, updateVideo);
 router.delete('/videos/:id', requireAuth, requireAdmin, deleteVideo);
+
+// Homepage Popup
+router.get('/homepage-popup', getHomepagePopup);
+router.patch('/homepage-popup', requireAuth, requireAdmin, updateHomepagePopup);
 
 export default router;

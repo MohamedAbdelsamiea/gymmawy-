@@ -712,6 +712,7 @@ enum PurchasableType {
   MEDICAL_SUBSCRIPTION
   SUBSCRIPTION
   ORDER
+  CART
 }
 
 enum OrderStatus {
@@ -802,4 +803,18 @@ enum LoyaltyTransactionSource {
 enum SubscriptionPriceType {
   NORMAL
   MEDICAL
+}
+
+model HomepagePopup {
+  id          String    @id @default(uuid())
+  isActive    Boolean   @default(false)
+  header      Json      // Multilingual header text
+  subheader   Json      // Multilingual subheader text
+  imageUrl    String?   // Popup image URL
+  buttonText  Json      // Multilingual button text
+  buttonLink  String    // Link to redirect to when button is clicked
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isActive])
 }

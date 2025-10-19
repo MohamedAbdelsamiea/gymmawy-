@@ -170,20 +170,17 @@ export const getHomepagePopupService = async () => {
 
 export const updateHomepagePopupService = async (data) => {
   const prisma = getPrismaClient();
+  console.log('=== updateHomepagePopupService called ===');
+  console.log('prisma object:', typeof prisma);
+  console.log('prisma.homepagePopup:', typeof prisma.homepagePopup);
+  console.log('data received:', data);
   
-  // If we're activating a popup, deactivate all others first
-  if (data.isActive) {
-    await prisma.homepagePopup.updateMany({
-      where: { isActive: true },
-      data: { isActive: false }
-    });
-  }
-  
-  // Check if popup already exists
   let popup = await prisma.homepagePopup.findFirst();
+  console.log('Found popup:', popup);
   
   if (popup) {
     // Update existing popup
+    console.log('Updating existing popup with id:', popup.id);
     return prisma.homepagePopup.update({
       where: { id: popup.id },
       data: {
@@ -197,6 +194,7 @@ export const updateHomepagePopupService = async (data) => {
     });
   } else {
     // Create new popup
+    console.log('Creating new popup');
     return prisma.homepagePopup.create({
       data: {
         isActive: data.isActive || false,

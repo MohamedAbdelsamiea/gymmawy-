@@ -41,7 +41,7 @@ const ToggleSwitch = ({
         className={`relative inline-flex items-center rounded-full transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:ring-offset-2 ${
           sizeClasses[size]
         } ${
-          checked ? 'bg-blue-500' : 'bg-gray-300'
+          checked ? 'bg-purple-500' : 'bg-gray-300'
         } ${
           disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
         }`}

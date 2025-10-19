@@ -10,7 +10,9 @@ import {
   createVideoService,
   getVideoByIdService,
   updateVideoService,
-  deleteVideoService
+  deleteVideoService,
+  getHomepagePopupService,
+  updateHomepagePopupService
 } from './cms.service.js';
 
 export const getContent = async (req, res) => {
@@ -305,6 +307,83 @@ export const deleteVideo = async (req, res) => {
     }
     
     res.status(204).send();
+  } catch (error) {
+    res.status(400).json({ error: { message: error.message } });
+  }
+};
+
+// Homepage Popup
+export const getHomepagePopup = async (req, res) => {
+  try {
+    const popup = await getHomepagePopupService();
+    res.json({ popup });
+  } catch (error) {
+    res.status(500).json({ error: { message: error.message } });
+  }
+};
+
+export const updateHomepagePopup = async (req, res) => {
+  try {
+    // Import directly to avoid any caching issues
+    const { getPrismaClient } = await import('../../config/db.js');
+    const prisma = getPrismaClient();
+    
+    // If activating, deactivate all others first
+    if (req.body.isActive) {
+      await prisma.homepagePopup.updateMany({
+        where: { isActive: true },
+        data: { isActive: false }
+      });
+    }
+    
+    // Check if popup exists
+    let popup = await prisma.homepagePopup.findFirst();
+    
+    // Store old image URL for deletion if provided
+    const oldImageUrl = req.body.oldImageUrl;
+    
+    if (popup) {
+      // Update existing
+      popup = await prisma.homepagePopup.update({
+        where: { id: popup.id },
+        data: {
+          isActive: req.body.isActive,
+          header: req.body.header,
+          subheader: req.body.subheader,
+          imageUrl: req.body.imageUrl,
+          buttonText: req.body.buttonText,
+          buttonLink: req.body.buttonLink
+        }
+      });
+    } else {
+      // Create new
+      popup = await prisma.homepagePopup.create({
+        data: {
+          isActive: req.body.isActive || false,
+          header: req.body.header || { en: "Welcome", ar: "مرحباً" },
+          subheader: req.body.subheader || { en: "Start your journey", ar: "ابدأ رحلتك" },
+          imageUrl: req.body.imageUrl || null,
+          buttonText: req.body.buttonText || { en: "Get Started", ar: "ابدأ" },
+          buttonLink: req.body.buttonLink || "/join-us"
+        }
+      });
+    }
+    
+    // Delete old image if provided and different from new image
+    if (oldImageUrl && oldImageUrl !== req.body.imageUrl) {
+      try {
+        const { deleteUpload } = await import('../uploads/upload.service.js');
+        const fileName = oldImageUrl.split('/').pop();
+        const fileId = fileName.split('.')[0]; // Remove extension
+        await deleteUpload(fileId, 'popup');
+        console.log(`Deleted old popup image: ${fileId}`);
+      } catch (deleteError) {
+        console.error('Error deleting old popup image:', deleteError);
+        // Don't fail the operation if image deletion fails
+      }
+    }
+    
+    res.json({ popup });
   } catch (error) {
     res.status(400).json({ error: { message: error.message } });
   }
