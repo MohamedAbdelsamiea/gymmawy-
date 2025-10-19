@@ -2,11 +2,56 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAsset } from '../../hooks/useAsset';
 
-// CSS for shine animation
+// CSS for shine animation and circulating glow effect
 const shineAnimation = `
   @keyframes shine {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
+  }
+  
+  @keyframes circulate-glow {
+    0% { 
+      border: 2px solid transparent;
+      box-shadow: 
+        0 4px 15px rgba(41, 18, 89, 0.3), 
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 0px rgba(250, 252, 246, 0);
+    }
+    25% { 
+      border: 2px solid rgba(250, 252, 246, 0.8);
+      box-shadow: 
+        0 4px 15px rgba(41, 18, 89, 0.3), 
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 20px rgba(250, 252, 246, 0.8),
+        inset 0 0 20px rgba(250, 252, 246, 0.3);
+    }
+    50% { 
+      border: 2px solid rgba(250, 252, 246, 1);
+      box-shadow: 
+        0 4px 15px rgba(41, 18, 89, 0.3), 
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 30px rgba(250, 252, 246, 1),
+        inset 0 0 30px rgba(250, 252, 246, 0.5);
+    }
+    75% { 
+      border: 2px solid rgba(250, 252, 246, 0.8);
+      box-shadow: 
+        0 4px 15px rgba(41, 18, 89, 0.3), 
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 20px rgba(250, 252, 246, 0.8),
+        inset 0 0 20px rgba(250, 252, 246, 0.3);
+    }
+    100% { 
+      border: 2px solid transparent;
+      box-shadow: 
+        0 4px 15px rgba(41, 18, 89, 0.3), 
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 0px rgba(250, 252, 246, 0);
+    }
+  }
+  
+  .circulate-glow {
+    animation: circulate-glow 0.6s ease-in-out;
   }
 `;
 
@@ -35,11 +80,20 @@ const JoinUsButtonNew = ({
   const { t, i18n } = useTranslation('home');
   const buttonImg = useAsset('button-img.webp');
   const [isPressed, setIsPressed] = useState(false);
+  const [glowActive, setGlowActive] = useState(false);
 
   const handleJoinUsClick = async () => {
     if (disabled || loading) return;
 
     setIsPressed(true);
+    
+    // Create pulsing glow effect
+    setGlowActive(true);
+    setTimeout(() => setGlowActive(false), 200);
+    setTimeout(() => setGlowActive(true), 300);
+    setTimeout(() => setGlowActive(false), 500);
+    setTimeout(() => setGlowActive(true), 600);
+    setTimeout(() => setGlowActive(false), 800);
     
     // Reset pressed state after animation
     setTimeout(() => setIsPressed(false), 150);
@@ -49,15 +103,18 @@ const JoinUsButtonNew = ({
       return;
     }
     
-    // Scroll to target section
-    const targetSection = document.getElementById(targetElementId);
-    if (targetSection) {
-      const elementPosition = targetSection.offsetTop - scrollOffset;
-      window.scrollTo({ 
-        top: elementPosition,
-        behavior: 'smooth',
-      });
-    }
+    // Wait for glow effect to complete before scrolling
+    setTimeout(() => {
+      // Scroll to target section
+      const targetSection = document.getElementById(targetElementId);
+      if (targetSection) {
+        const elementPosition = targetSection.offsetTop - scrollOffset;
+        window.scrollTo({ 
+          top: elementPosition,
+          behavior: 'smooth',
+        });
+      }
+    }, 850); // Wait 850ms to ensure glow effect is complete
   };
 
   // Size classes
@@ -173,10 +230,15 @@ const JoinUsButtonNew = ({
             className="relative px-20 py-3 overflow-hidden"
             style={{
               background: 'linear-gradient(to right, #291259 0%, #4e0a78 100%)',
-              boxShadow: '0 4px 15px rgba(41, 18, 89, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: glowActive 
+                ? '0 4px 15px rgba(41, 18, 89, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 30px rgba(250, 252, 246, 1), inset 0 0 30px rgba(250, 252, 246, 0.5)'
+                : '0 4px 15px rgba(41, 18, 89, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+              border: glowActive 
+                ? '2px solid rgba(250, 252, 246, 1)'
+                : '1px solid rgba(255, 255, 255, 0.1)',
               borderRadius: '0px',
-              clipPath: 'polygon(0 0, calc(100% - 90px) 0, 100% 100%, 0 100%)'
+              clipPath: 'polygon(0 0, calc(100% - 90px) 0, 100% 100%, 0 100%)',
+              transition: 'all 0.3s ease'
             }}
           >
             {/* Shine effect overlay */}
@@ -193,7 +255,7 @@ const JoinUsButtonNew = ({
             <div className="relative flex items-center justify-center space-x-3">
               {/* JOIN US text */}
               <span 
-                className="font-medium text-2xl uppercase"
+                className="font-medium text-2xl uppercase transition-all duration-300 group-hover:text-white group-hover:[text-shadow:0_0_15px_rgba(250,252,246,0.9),0_0_25px_rgba(250,252,246,0.7),0_0_35px_rgba(250,252,246,0.5)]"
                 style={{
                   color: '#fafcf6',
                   fontFamily: 'Inter, system-ui, sans-serif',
@@ -206,7 +268,7 @@ const JoinUsButtonNew = ({
               {/* Three triangular arrow heads overlapping like Christmas tree pattern */}
               <div className="flex items-center">
                 <svg 
-                  className="w-6 h-6 transform group-hover:translate-x-1 transition-transform duration-200 relative z-10" 
+                  className="w-6 h-6 transform group-hover:translate-x-1 transition-all duration-200 relative z-10 group-hover:[filter:drop-shadow(0_0_15px_rgba(250,252,246,0.9))_drop-shadow(0_0_25px_rgba(250,252,246,0.7))_drop-shadow(0_0_35px_rgba(250,252,246,0.5))]" 
                   fill="currentColor" 
                   viewBox="0 0 24 24"
                   style={{ color: '#fafcf6' }}
@@ -214,7 +276,7 @@ const JoinUsButtonNew = ({
                   <path d="M4 5l11 7-11 7V5z" />
                 </svg>
                 <svg 
-                  className="w-6 h-6 transform group-hover:translate-x-1 transition-transform duration-200 delay-75 relative -ml-3 z-20" 
+                  className="w-6 h-6 transform group-hover:translate-x-1 transition-all duration-200 delay-75 relative -ml-3 z-20 group-hover:[filter:drop-shadow(0_0_15px_rgba(250,252,246,0.9))_drop-shadow(0_0_25px_rgba(250,252,246,0.7))_drop-shadow(0_0_35px_rgba(250,252,246,0.5))]" 
                   fill="currentColor" 
                   viewBox="0 0 24 24"
                   style={{ color: '#fafcf6' }}
@@ -222,7 +284,7 @@ const JoinUsButtonNew = ({
                   <path d="M4 5l11 7-11 7V5z" />
                 </svg>
                 <svg 
-                  className="w-6 h-6 transform group-hover:translate-x-1 transition-transform duration-200 delay-150 relative -ml-3 z-30" 
+                  className="w-6 h-6 transform group-hover:translate-x-1 transition-all duration-200 delay-150 relative -ml-3 z-30 group-hover:[filter:drop-shadow(0_0_15px_rgba(250,252,246,0.9))_drop-shadow(0_0_25px_rgba(250,252,246,0.7))_drop-shadow(0_0_35px_rgba(250,252,246,0.5))]" 
                   fill="currentColor" 
                   viewBox="0 0 24 24"
                   style={{ color: '#fafcf6' }}
