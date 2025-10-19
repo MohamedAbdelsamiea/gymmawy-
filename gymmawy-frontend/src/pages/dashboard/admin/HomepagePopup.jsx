@@ -418,7 +418,10 @@ const AdminHomepagePopup = () => {
                   </div>
                 </div>
                 <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
-                  <div className="w-[32rem] max-w-[calc(100vw-2rem)] max-h-[90vh] mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
+                  <div className={`w-[32rem] max-w-[calc(100vw-2rem)] max-h-[90vh] mx-auto bg-white rounded-lg shadow-sm border border-gray-200 ${
+                    previewLanguage === 'ar' ? 'text-right' : 'text-left'
+                  }`}
+                  dir={previewLanguage === 'ar' ? 'rtl' : 'ltr'}>
                     <div className="p-4 pb-12 lg:pb-4">
                       {/* Mobile Close Button Preview */}
                       <div className="flex justify-end mb-2 lg:hidden">
@@ -429,7 +432,7 @@ const AdminHomepagePopup = () => {
 
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-4 items-center">
                         {/* Image Column */}
-                        <div className={`${previewLanguage === 'ar' ? 'lg:order-2' : 'lg:order-1'}`}>
+                        <div className="lg:order-1">
                           {imagePreview?.url && (
                             <div className="w-full flex justify-center">
                               <img
@@ -442,20 +445,20 @@ const AdminHomepagePopup = () => {
                         </div>
 
                         {/* Text Column */}
-                        <div className={`${previewLanguage === 'ar' ? 'lg:order-1' : 'lg:order-2'} flex flex-col justify-center ${
-                          previewLanguage === 'ar' ? 'lg:items-end lg:text-right' : 'lg:items-start lg:text-left'
-                        } items-center text-center lg:text-left`}>
-                          <h3 className={`text-xl lg:text-2xl font-bold text-gray-900 mb-2 lg:mb-4 ${
-                            previewLanguage === 'ar' ? 'lg:text-right' : 'lg:text-left'
-                          }`}>
+                        <div className={`lg:order-2 flex flex-col justify-center lg:items-start ${
+                          previewLanguage === 'ar' ? 'lg:text-right' : 'lg:text-left'
+                        } items-center text-center`}>
+                          <h3 className="text-xl lg:text-2xl font-bold text-gray-900 mb-2 lg:mb-4">
                             {getPreviewText(formData.header) || 'Header'}
                           </h3>
-                          <p className={`text-gray-600 mb-3 lg:mb-4 text-base ${
-                            previewLanguage === 'ar' ? 'lg:text-right' : 'lg:text-left'
+                          <div className={`mb-3 lg:mb-4 text-gray-600 text-base flex ${
+                            previewLanguage === 'ar' ? 'justify-start' : 'justify-start'
                           }`}>
-                            {getPreviewText(formData.subheader) || 'Subheader'}
-                          </p>
-                          <button className="bg-gymmawy-primary text-white py-2 px-4 rounded font-bold text-base w-fit">
+                            <span>{getPreviewText(formData.subheader) || 'Subheader'}</span>
+                          </div>
+                          <button className={`bg-gymmawy-primary text-white py-2 px-4 rounded font-bold text-base w-fit ${
+                            previewLanguage === 'ar' ? 'lg:ml-auto' : 'lg:mr-auto'
+                          }`}>
                             {getPreviewText(formData.buttonText) || 'Button'}
                           </button>
                         </div>

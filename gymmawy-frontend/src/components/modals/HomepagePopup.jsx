@@ -58,7 +58,8 @@ const HomepagePopup = ({ popup, onClose }) => {
       <div 
         className={`bg-white rounded-2xl shadow-2xl w-[32rem] max-w-[calc(100vw-2rem)] max-h-[90vh] mx-4 transform transition-all duration-300 ${
           isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
-        }`}
+        } ${isRTL ? 'text-right' : 'text-left'}`}
+        dir={isRTL ? 'rtl' : 'ltr'}
       >
         {/* Content */}
         <div className="p-4 pb-12 lg:pb-4">
@@ -85,7 +86,7 @@ const HomepagePopup = ({ popup, onClose }) => {
           {/* Content Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-4 items-center">
             {/* Image Column */}
-            <div className={`${isRTL ? 'lg:order-2' : 'lg:order-1'}`}>
+            <div className="lg:order-1">
               {popup.imageUrl && (
                 <div className="w-full flex justify-center">
                   <img
@@ -99,27 +100,27 @@ const HomepagePopup = ({ popup, onClose }) => {
             </div>
 
             {/* Text Column */}
-            <div className={`${isRTL ? 'lg:order-1' : 'lg:order-2'} flex flex-col justify-center ${
-              isRTL ? 'lg:items-end lg:text-right' : 'lg:items-start lg:text-left'
-            } items-center text-center lg:text-left`}>
+            <div className={`lg:order-2 flex flex-col justify-center lg:items-start ${
+              isRTL ? 'lg:text-right' : 'lg:text-left'
+            } items-center text-center`}>
               {/* Header */}
-              <h2 className={`text-3xl lg:text-4xl font-bold text-gray-900 mb-2 lg:mb-5 ${
-                isRTL ? 'lg:text-right' : 'lg:text-left'
-              }`}>
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2 lg:mb-5">
                 {getLocalizedText(popup.header)}
               </h2>
 
               {/* Subheader */}
-              <p className={`text-gray-600 mb-3 lg:mb-6 leading-relaxed text-lg ${
-                isRTL ? 'lg:text-right' : 'lg:text-left'
+              <div className={`mb-3 lg:mb-6 text-gray-600 leading-relaxed text-lg flex ${
+                isRTL ? 'justify-start' : 'justify-start'
               }`}>
-                {getLocalizedText(popup.subheader)}
-              </p>
+                <span>{getLocalizedText(popup.subheader)}</span>
+              </div>
 
               {/* Button */}
               <button
                 onClick={handleButtonClick}
-                className="bg-gymmawy-primary text-white py-2 px-4 rounded-lg font-bold hover:bg-gymmawy-primary/90 transition-colors flex items-center justify-center gap-2 w-fit text-lg"
+                className={`bg-gymmawy-primary text-white py-2 px-4 rounded-lg font-bold hover:bg-gymmawy-primary/90 transition-colors flex items-center justify-center gap-2 w-fit text-lg ${
+                  isRTL ? 'lg:ml-auto' : 'lg:mr-auto'
+                }`}
               >
                 {getLocalizedText(popup.buttonText)}
                 {popup.buttonLink && popup.buttonLink.startsWith('http') && (
