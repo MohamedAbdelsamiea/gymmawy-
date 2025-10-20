@@ -22,6 +22,7 @@ export const useHomepagePopup = () => {
         if (!popupData) {
           console.warn('No popup data received from service');
           setPopup(null);
+          setShowPopup(false);
           return;
         }
         
@@ -35,10 +36,13 @@ export const useHomepagePopup = () => {
           setShowPopup(true);
         } else {
           console.log('Popup not active or no popup data');
+          setShowPopup(false);
         }
       } catch (err) {
         console.error('Error fetching popup:', err);
         setError(err.message);
+        setPopup(null);
+        setShowPopup(false);
       } finally {
         setLoading(false);
       }

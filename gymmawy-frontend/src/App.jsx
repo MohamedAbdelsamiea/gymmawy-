@@ -19,16 +19,23 @@ const RTLHandler = () => {
   const { i18n } = useTranslation();
   
   useEffect(() => {
-    // Check if current route is admin dashboard
-    const isAdminDashboard = location.pathname.startsWith('/dashboard/admin');
+    // Use requestAnimationFrame to prevent layout thrashing
+    const updateDirection = () => {
+      requestAnimationFrame(() => {
+        // Check if current route is admin dashboard
+        const isAdminDashboard = location.pathname.startsWith('/dashboard/admin');
+        
+        // Only apply RTL to non-admin dashboard routes
+        if (!isAdminDashboard) {
+          document.documentElement.dir = i18n.dir();
+        } else {
+          // Force LTR for admin dashboard
+          document.documentElement.dir = 'ltr';
+        }
+      });
+    };
     
-    // Only apply RTL to non-admin dashboard routes
-    if (!isAdminDashboard) {
-      document.documentElement.dir = i18n.dir();
-    } else {
-      // Force LTR for admin dashboard
-      document.documentElement.dir = 'ltr';
-    }
+    updateDirection();
   }, [i18n.language, location.pathname]);
   
   // Load currency namespace

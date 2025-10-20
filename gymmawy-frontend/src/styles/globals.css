@@ -29,6 +29,31 @@
   html[dir="rtl"] * {
     font-family: 'Alexandria', 'Noto Sans Arabic', 'Cairo', 'Amiri', sans-serif !important;
   }
+  
+  /* Prevent layout shifts during loading */
+  html {
+    /* Prevent horizontal scrollbar during loading */
+    overflow-x: hidden;
+  }
+  
+  body {
+    /* Prevent layout shifts */
+    min-height: 100vh;
+    /* Smooth transitions for direction changes */
+    transition: none;
+  }
+  
+  /* Prevent FOUC (Flash of Unstyled Content) */
+  body:not(.loaded) {
+    opacity: 0;
+    visibility: hidden;
+  }
+  
+  body.loaded {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.2s ease-in-out;
+  }
 }
 
 /* RTL Support */
