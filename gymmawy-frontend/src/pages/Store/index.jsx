@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAsset } from '../../hooks/useAsset';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -11,6 +11,7 @@ const StorePage = () => {
   const { t, i18n } = useTranslation('store');
   const { isAuthenticated } = useAuth();
   const { showSuccess, showError } = useToast();
+  const location = useLocation();
   
   // State for new arrivals
   const [newArrivals, setNewArrivals] = useState([]);
@@ -64,6 +65,20 @@ const StorePage = () => {
     loadNewArrivals();
   }, []);
 
+  // Handle anchor scrolling after page load
+  useEffect(() => {
+    const hash = location.hash;
+    if (hash) {
+      // Wait for the page to fully load, then scroll to the anchor
+      setTimeout(() => {
+        const element = document.querySelector(hash);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }, [location.hash]);
+
   // Handle add to cart
   const handleAddToCart = async (productId, quantity = 1) => {
     if (!isAuthenticated) {
@@ -89,6 +104,7 @@ const StorePage = () => {
     <div className="min-h-screen" dir="ltr">
       {/* Hero Section */}
       <section
+        id="store"
         className="relative pb-8 lg:pb-16 pt-0 overflow-hidden"
         style={{
           backgroundImage: `url(${heroBg})`,

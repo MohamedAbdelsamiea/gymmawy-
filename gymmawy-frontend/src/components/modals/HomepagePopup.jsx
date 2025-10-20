@@ -23,14 +23,34 @@ const HomepagePopup = ({ popup, onClose }) => {
   }
 
   const handleButtonClick = () => {
+    console.log('Popup button clicked, buttonLink:', popup.buttonLink);
     if (popup.buttonLink) {
       if (popup.buttonLink.startsWith('http')) {
         // External link
+        console.log('Opening external link:', popup.buttonLink);
         window.open(popup.buttonLink, '_blank');
+      } else if (popup.buttonLink.startsWith('#')) {
+        // Anchor link - scroll to section
+        console.log('Scrolling to anchor:', popup.buttonLink);
+        const element = document.querySelector(popup.buttonLink);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          console.log('Anchor element not found:', popup.buttonLink);
+        }
+      } else if (popup.buttonLink.includes('#')) {
+        // Page + anchor link (e.g., /programmes#programmes)
+        const [path, anchor] = popup.buttonLink.split('#');
+        console.log('Navigating to page with anchor:', path, anchor);
+        navigate(popup.buttonLink);
+        // The anchor scrolling will be handled by the browser after navigation
       } else {
-        // Internal link
+        // Internal page link
+        console.log('Navigating to internal page:', popup.buttonLink);
         navigate(popup.buttonLink);
       }
+    } else {
+      console.log('No buttonLink found');
     }
     onClose();
   };

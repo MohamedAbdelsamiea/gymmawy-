@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
 import Programme from "../../components/common/Programme";
 import { useAsset } from "../../hooks/useAsset";
 import { useCurrencyContext } from "../../contexts/CurrencyContext";
@@ -8,6 +9,7 @@ import programmeService from "../../services/programmeService";
 const TrainingProgramsPage = () => {
   const { t, i18n } = useTranslation("programmes"); // use the namespace
   const { currency, isLoading: currencyLoading, formatPrice, getCurrencyInfo } = useCurrencyContext();
+  const location = useLocation();
   const [programmes, setProgrammes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,6 +37,20 @@ const TrainingProgramsPage = () => {
   useEffect(() => {
     loadProgrammes();
   }, [i18n.language]);
+
+  // Handle anchor scrolling after page load
+  useEffect(() => {
+    const hash = location.hash;
+    if (hash) {
+      // Wait for the page to fully load, then scroll to the anchor
+      setTimeout(() => {
+        const element = document.querySelector(hash);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }, [location.hash]);
 
   // Debug logging
   useEffect(() => {
@@ -195,6 +211,7 @@ const TrainingProgramsPage = () => {
 
       {/* Programmes Section */}
       <section
+        id="programmes"
         className="md:py-20 py-12 bg-[#190143] text-center text-[#ebebeb]"
         style={{
           backgroundImage: `url(${programmesBg})`,

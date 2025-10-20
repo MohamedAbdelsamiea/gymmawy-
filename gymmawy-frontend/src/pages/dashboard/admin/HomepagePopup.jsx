@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Upload, Eye, EyeOff, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useToast } from '../../../contexts/ToastContext';
 import ToggleSwitch from '../../../components/common/ToggleSwitch';
 import AdminImageUpload from '../../../components/common/AdminImageUpload';
 import popupService from '../../../services/popupService';
@@ -11,15 +12,14 @@ import { config } from '../../../config';
 
 const AdminHomepagePopup = () => {
   const { t, i18n } = useTranslation();
+  const { showSuccess, showError } = useToast();
   const [popup, setPopup] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [removedImageUrl, setRemovedImageUrl] = useState(null);
-  const [previewLanguage, setPreviewLanguage] = useState('en');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -28,7 +28,9 @@ const AdminHomepagePopup = () => {
     subheader: { en: '', ar: '' },
     imageUrl: '',
     buttonText: { en: '', ar: '' },
-    buttonLink: ''
+    buttonLink: '',
+    linkType: 'packages',
+    customLink: ''
   });
 
   useEffect(() => {
@@ -43,13 +45,32 @@ const AdminHomepagePopup = () => {
       const popupData = response.popup;
       
       setPopup(popupData);
+      // Determine link type and custom link from buttonLink
+      let linkType = 'packages';
+      let customLink = '';
+      
+      if (popupData.buttonLink) {
+        if (popupData.buttonLink.includes('#packages')) {
+          linkType = 'packages';
+        } else if (popupData.buttonLink.includes('/programmes')) {
+          linkType = 'programmes';
+        } else if (popupData.buttonLink.includes('/store')) {
+          linkType = 'store';
+        } else {
+          linkType = 'custom';
+          customLink = popupData.buttonLink;
+        }
+      }
+
       setFormData({
         isActive: popupData.isActive || false,
         header: popupData.header || { en: '', ar: '' },
         subheader: popupData.subheader || { en: '', ar: '' },
         imageUrl: popupData.imageUrl || '',
         buttonText: popupData.buttonText || { en: '', ar: '' },
-        buttonLink: popupData.buttonLink || ''
+        buttonLink: popupData.buttonLink || '',
+        linkType: linkType,
+        customLink: customLink
       });
 
       if (popupData.imageUrl) {
@@ -72,6 +93,41 @@ const AdminHomepagePopup = () => {
     setFormData(prev => ({
       ...prev,
       [field]: value
+    }));
+  };
+
+  const handleLinkTypeChange = (linkType) => {
+    let buttonLink = '';
+    
+    switch (linkType) {
+      case 'packages':
+        buttonLink = '#packages';
+        break;
+      case 'programmes':
+        buttonLink = '/programmes#programmes';
+        break;
+      case 'store':
+        buttonLink = '/store#store';
+        break;
+      case 'custom':
+        buttonLink = formData.customLink || '';
+        break;
+      default:
+        buttonLink = '';
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      linkType: linkType,
+      buttonLink: buttonLink
+    }));
+  };
+
+  const handleCustomLinkChange = (customLink) => {
+    setFormData(prev => ({
+      ...prev,
+      customLink: customLink,
+      buttonLink: prev.linkType === 'custom' ? customLink : prev.buttonLink
     }));
   };
 
@@ -134,7 +190,6 @@ const AdminHomepagePopup = () => {
     try {
       setSaving(true);
       setError(null);
-      setSuccess(false);
 
       let finalFormData = { ...formData };
 
@@ -171,13 +226,31 @@ const AdminHomepagePopup = () => {
         setRemovedImageUrl(null);
       }
 
+      // Update buttonLink based on linkType before saving
+      let finalButtonLink = finalFormData.buttonLink;
+      if (finalFormData.linkType !== 'custom') {
+        switch (finalFormData.linkType) {
+          case 'packages':
+            finalButtonLink = '#packages';
+            break;
+          case 'programmes':
+            finalButtonLink = '/programmes#programmes';
+            break;
+          case 'store':
+            finalButtonLink = '/store#store';
+            break;
+        }
+      }
+
       // Save the popup data with old image URL for deletion
       const saveData = {
         ...finalFormData,
+        buttonLink: finalButtonLink,
         oldImageUrl: removedImageUrl
       };
       await popupService.updateHomepagePopup(saveData);
-      setSuccess(true);
+      console.log('Popup saved with data:', saveData);
+      showSuccess('Popup settings saved successfully!');
       
       // Update form data with final image URL if uploaded
       if (finalFormData.imageUrl !== formData.imageUrl) {
@@ -195,8 +268,6 @@ const AdminHomepagePopup = () => {
         }
       }
       
-      // Hide success message after 3 seconds
-      setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error('Error saving popup:', err);
       setError('Failed to save popup settings');
@@ -210,10 +281,6 @@ const AdminHomepagePopup = () => {
     return textObj[i18n.language] || textObj.en || textObj.ar || '';
   };
 
-  const getPreviewText = (textObj) => {
-    if (!textObj) return '';
-    return textObj[previewLanguage] || textObj.en || textObj.ar || '';
-  };
 
   if (loading) {
     return (
@@ -236,12 +303,7 @@ const AdminHomepagePopup = () => {
         </div>
       </div>
 
-      {/* Success/Error Messages */}
-      {success && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <p className="text-green-800">Popup settings saved successfully!</p>
-        </div>
-      )}
+      {/* Error Messages */}
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -368,112 +430,42 @@ const AdminHomepagePopup = () => {
                 />
               </div>
 
-              {/* Button Link - Full Width */}
+              {/* Button Link Type - Full Width */}
               <div className="lg:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Button Link
+                  Button Link Destination
                 </label>
-                <input
-                  type="text"
-                  value={formData.buttonLink}
-                  onChange={(e) => handleInputChange('buttonLink', e.target.value)}
+                <select
+                  value={formData.linkType}
+                  onChange={(e) => handleLinkTypeChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-                  placeholder="Enter link (e.g., /join-us or https://example.com)"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Use internal links (e.g., /join-us) or external URLs (e.g., https://example.com)
-                </p>
+                >
+                  <option value="packages">Packages Section</option>
+                  <option value="programmes">Programmes Section</option>
+                  <option value="store">Store Section</option>
+                  <option value="custom">Custom Link</option>
+                </select>
               </div>
 
-              {/* Preview - Full Width */}
-              <div className="lg:col-span-2">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Preview
+              {/* Custom Link Input - Show only when custom is selected */}
+              {formData.linkType === 'custom' && (
+                <div className="lg:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Custom Link
                   </label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">Language:</span>
-                    <div className="flex bg-gray-100 rounded-lg p-1">
-                      <button
-                        onClick={() => setPreviewLanguage('en')}
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                          previewLanguage === 'en'
-                            ? 'bg-white text-gray-900 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        English
-                      </button>
-                      <button
-                        onClick={() => setPreviewLanguage('ar')}
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                          previewLanguage === 'ar'
-                            ? 'bg-white text-gray-900 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        العربية
-                      </button>
-                    </div>
-                  </div>
+                  <input
+                    type="text"
+                    value={formData.customLink}
+                    onChange={(e) => handleCustomLinkChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                    placeholder="Enter custom link (e.g., /join-us or https://example.com)"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Use internal links (e.g., /join-us) or external URLs (e.g., https://example.com)
+                  </p>
                 </div>
-                <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
-                  <div className={`relative w-auto lg:w-[32rem] max-w-[calc(100vw-2rem)] max-h-[90vh] mx-auto bg-white rounded-2xl shadow-2xl border border-gray-200 ${
-                    previewLanguage === 'ar' ? 'text-right' : 'text-left'
-                  }`}
-                  dir={previewLanguage === 'ar' ? 'rtl' : 'ltr'}>
-                    <div className="p-3 pb-4 lg:p-4 lg:pb-4">
-                      {/* Desktop Close Button Preview */}
-                      <div className={`hidden lg:block absolute top-4 z-10 p-2 rounded-full hover:bg-gray-100 transition-colors ${
-                        previewLanguage === 'ar' ? 'left-4' : 'right-4'
-                      }`}>
-                        <div className="w-5 h-5 bg-gray-500 rounded"></div>
-                      </div>
+              )}
 
-                      <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-4 items-center">
-                        {/* Image Column */}
-                        <div className="lg:order-1">
-                          {imagePreview?.url && (
-                            <div className="w-full flex justify-center mb-3 lg:mb-0 relative">
-                              <img
-                                src={imagePreview.url}
-                                alt="Popup preview"
-                                className="w-full h-auto max-h-[40vh] object-contain rounded-lg"
-                              />
-                              {/* Mobile Close Button Preview - Over Image */}
-                              <div className="lg:hidden absolute top-2 right-2 p-2 rounded-full bg-black bg-opacity-50 hover:bg-opacity-70 transition-colors z-10">
-                                <div className="w-4 h-4 bg-white rounded"></div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Text Column */}
-                        <div className={`lg:order-2 flex flex-col justify-center lg:items-start ${
-                          previewLanguage === 'ar' ? 'lg:text-right' : 'lg:text-left'
-                        } items-center text-center`}>
-                          <h2 className="text-2xl font-bold text-gray-900 mb-2 lg:mb-5">
-                            {getPreviewText(formData.header) || 'Header'}
-                          </h2>
-                          <div className={`mb-4 lg:mb-6 text-gray-600 leading-relaxed flex ${
-                            previewLanguage === 'ar' ? 'justify-start' : 'justify-start'
-                          }`}>
-                            <span>{getPreviewText(formData.subheader) || 'Subheader'}</span>
-                          </div>
-                          <button className={`bg-gymmawy-primary text-white py-3 px-6 rounded-lg font-bold hover:bg-gymmawy-primary/90 transition-colors flex items-center justify-center gap-2 w-fit text-sm ${
-                            previewLanguage === 'ar' ? 'lg:ml-auto' : 'lg:mr-auto'
-                          }`}>
-                            {getPreviewText(formData.buttonText) || 'Button'}
-                            {formData.buttonLink && formData.buttonLink.startsWith('http') && (
-                              <div className="w-4 h-4 bg-white rounded"></div>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 

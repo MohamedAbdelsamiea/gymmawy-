@@ -31,6 +31,7 @@ export const useHomepagePopup = () => {
         // Check if popup should be shown
         if (popupData && popupData.isActive) {
           console.log('Popup data:', popupData);
+          console.log('Popup buttonLink:', popupData.buttonLink);
           console.log('Popup is active:', popupData.isActive);
           console.log('Setting showPopup to true');
           setShowPopup(true);
