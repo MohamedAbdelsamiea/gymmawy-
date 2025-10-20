@@ -1,0 +1,25 @@
+{
+  "amount": "Amount",
+  "secure": "Secure",
+  "encrypted": "Encrypted",
+  "processing": "Processing payment...",
+  "processingDescription": "Please wait while we verify your payment.",
+  "error": "Payment Error",
+  "tryAgain": "Try Again",
+  "success": "Payment Successful!",
+  "failed": "Payment Failed",
+  "successDescription": "Your payment has been processed successfully. You will receive a confirmation email shortly.",
+  "failedDescription": "We were unable to process your payment. Please try again or contact support if the problem persists.",
+  "intentionId": "Payment ID",
+  "transactionId": "Transaction ID",
+  "status": "Status",
+  "continue": "Continue",
+  "contactSupport": "Contact Support",
+  "paymob": {
+    "title": "Pay with Paymob",
+    "subtitle": "Secure payment powered by Paymob",
+    "payWithCard": "Pay with Card",
+    "payWithApple": "Pay with Apple Pay",
+    "disclaimer": "Your payment information is secure and encrypted. We do not store your card details."
+  }
+}
