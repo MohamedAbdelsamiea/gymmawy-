@@ -418,27 +418,34 @@ const AdminHomepagePopup = () => {
                   </div>
                 </div>
                 <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
-                  <div className={`w-[32rem] max-w-[calc(100vw-2rem)] max-h-[90vh] mx-auto bg-white rounded-lg shadow-sm border border-gray-200 ${
+                  <div className={`relative w-[32rem] max-w-[calc(100vw-2rem)] max-h-[90vh] mx-auto bg-white rounded-2xl shadow-2xl border border-gray-200 ${
                     previewLanguage === 'ar' ? 'text-right' : 'text-left'
                   }`}
                   dir={previewLanguage === 'ar' ? 'rtl' : 'ltr'}>
                     <div className="p-4 pb-12 lg:pb-4">
                       {/* Mobile Close Button Preview */}
                       <div className="flex justify-end mb-2 lg:hidden">
-                        <div className="p-2 rounded-full bg-gray-100">
-                          <div className="w-5 h-5 bg-gray-400 rounded"></div>
+                        <div className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                          <div className="w-5 h-5 bg-gray-500 rounded"></div>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-4 items-center">
+                      {/* Desktop Close Button Preview */}
+                      <div className={`hidden lg:block absolute top-4 z-10 p-2 rounded-full hover:bg-gray-100 transition-colors ${
+                        previewLanguage === 'ar' ? 'left-4' : 'right-4'
+                      }`}>
+                        <div className="w-5 h-5 bg-gray-500 rounded"></div>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-4 items-center">
                         {/* Image Column */}
                         <div className="lg:order-1">
                           {imagePreview?.url && (
-                            <div className="w-full flex justify-center">
+                            <div className="w-full flex justify-center mb-4 lg:mb-0">
                               <img
                                 src={imagePreview.url}
                                 alt="Popup preview"
-                                className="w-full h-auto max-h-[40vh] object-contain rounded"
+                                className="w-full h-auto max-h-[40vh] object-contain rounded-lg"
                               />
                             </div>
                           )}
@@ -448,18 +455,21 @@ const AdminHomepagePopup = () => {
                         <div className={`lg:order-2 flex flex-col justify-center lg:items-start ${
                           previewLanguage === 'ar' ? 'lg:text-right' : 'lg:text-left'
                         } items-center text-center`}>
-                          <h3 className="text-xl lg:text-2xl font-bold text-gray-900 mb-2 lg:mb-4">
+                          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 lg:mb-5">
                             {getPreviewText(formData.header) || 'Header'}
-                          </h3>
-                          <div className={`mb-3 lg:mb-4 text-gray-600 text-base flex ${
+                          </h2>
+                          <div className={`mb-6 lg:mb-6 text-gray-600 leading-relaxed text-lg flex ${
                             previewLanguage === 'ar' ? 'justify-start' : 'justify-start'
                           }`}>
                             <span>{getPreviewText(formData.subheader) || 'Subheader'}</span>
                           </div>
-                          <button className={`bg-gymmawy-primary text-white py-2 px-4 rounded font-bold text-base w-fit ${
+                          <button className={`bg-gymmawy-primary text-white py-3 px-6 rounded-lg font-bold hover:bg-gymmawy-primary/90 transition-colors flex items-center justify-center gap-2 w-fit text-lg ${
                             previewLanguage === 'ar' ? 'lg:ml-auto' : 'lg:mr-auto'
                           }`}>
                             {getPreviewText(formData.buttonText) || 'Button'}
+                            {formData.buttonLink && formData.buttonLink.startsWith('http') && (
+                              <div className="w-4 h-4 bg-white rounded"></div>
+                            )}
                           </button>
                         </div>
                       </div>

@@ -84,11 +84,11 @@ const HomepagePopup = ({ popup, onClose }) => {
           </button>
 
           {/* Content Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-4 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-4 items-center">
             {/* Image Column */}
             <div className="lg:order-1">
               {popup.imageUrl && (
-                <div className="w-full flex justify-center">
+                <div className="w-full flex justify-center mb-4 lg:mb-0">
                   <img
                     src={getFullImageUrl(popup.imageUrl)}
                     alt="Popup"
@@ -104,12 +104,12 @@ const HomepagePopup = ({ popup, onClose }) => {
               isRTL ? 'lg:text-right' : 'lg:text-left'
             } items-center text-center`}>
               {/* Header */}
-              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2 lg:mb-5">
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 lg:mb-5">
                 {getLocalizedText(popup.header)}
               </h2>
 
               {/* Subheader */}
-              <div className={`mb-3 lg:mb-6 text-gray-600 leading-relaxed text-lg flex ${
+              <div className={`mb-6 lg:mb-6 text-gray-600 leading-relaxed text-lg flex ${
                 isRTL ? 'justify-start' : 'justify-start'
               }`}>
                 <span>{getLocalizedText(popup.subheader)}</span>
@@ -118,7 +118,7 @@ const HomepagePopup = ({ popup, onClose }) => {
               {/* Button */}
               <button
                 onClick={handleButtonClick}
-                className={`bg-gymmawy-primary text-white py-2 px-4 rounded-lg font-bold hover:bg-gymmawy-primary/90 transition-colors flex items-center justify-center gap-2 w-fit text-lg ${
+                className={`bg-gymmawy-primary text-white py-3 px-6 rounded-lg font-bold hover:bg-gymmawy-primary/90 transition-colors flex items-center justify-center gap-2 w-fit text-lg ${
                   isRTL ? 'lg:ml-auto' : 'lg:mr-auto'
                 }`}
               >
