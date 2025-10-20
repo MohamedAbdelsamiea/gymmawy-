@@ -56,23 +56,13 @@ const HomepagePopup = ({ popup, onClose }) => {
       onClick={handleOverlayClick}
     >
       <div 
-        className={`bg-white rounded-2xl shadow-2xl w-[32rem] max-w-[calc(100vw-2rem)] max-h-[90vh] mx-4 transform transition-all duration-300 ${
+        className={`bg-white rounded-2xl shadow-2xl w-auto lg:w-[32rem] max-w-[calc(100vw-2rem)] max-h-[90vh] mx-4 transform transition-all duration-300 ${
           isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         } ${isRTL ? 'text-right' : 'text-left'}`}
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         {/* Content */}
-        <div className="p-4 pb-12 lg:pb-4">
-          {/* Close Button - Mobile: Full row, Desktop: Absolute positioned */}
-          <div className="flex justify-end mb-2 lg:hidden">
-            <button
-              onClick={onClose}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
-
+        <div className="p-3 pb-4 lg:p-4 lg:pb-4">
           {/* Desktop Close Button */}
           <button
             onClick={onClose}
@@ -84,17 +74,24 @@ const HomepagePopup = ({ popup, onClose }) => {
           </button>
 
           {/* Content Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-4 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-4 items-center">
             {/* Image Column */}
             <div className="lg:order-1">
               {popup.imageUrl && (
-                <div className="w-full flex justify-center mb-4 lg:mb-0">
+                <div className="w-full flex justify-center mb-3 lg:mb-0 relative">
                   <img
                     src={getFullImageUrl(popup.imageUrl)}
                     alt="Popup"
                     className="w-full h-auto max-h-[40vh] object-contain rounded-lg"
                     loading="lazy"
                   />
+                  {/* Mobile Close Button - Over Image */}
+                  <button
+                    onClick={onClose}
+                    className="lg:hidden absolute top-2 right-2 p-2 rounded-full bg-black bg-opacity-50 hover:bg-opacity-70 transition-colors z-10"
+                  >
+                    <X className="w-4 h-4 text-white" />
+                  </button>
                 </div>
               )}
             </div>
@@ -104,12 +101,12 @@ const HomepagePopup = ({ popup, onClose }) => {
               isRTL ? 'lg:text-right' : 'lg:text-left'
             } items-center text-center`}>
               {/* Header */}
-              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 lg:mb-5">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 lg:mb-5">
                 {getLocalizedText(popup.header)}
               </h2>
 
               {/* Subheader */}
-              <div className={`mb-6 lg:mb-6 text-gray-600 leading-relaxed text-lg flex ${
+              <div className={`mb-4 lg:mb-6 text-gray-600 leading-relaxed flex ${
                 isRTL ? 'justify-start' : 'justify-start'
               }`}>
                 <span>{getLocalizedText(popup.subheader)}</span>
@@ -118,7 +115,7 @@ const HomepagePopup = ({ popup, onClose }) => {
               {/* Button */}
               <button
                 onClick={handleButtonClick}
-                className={`bg-gymmawy-primary text-white py-3 px-6 rounded-lg font-bold hover:bg-gymmawy-primary/90 transition-colors flex items-center justify-center gap-2 w-fit text-lg ${
+                className={`bg-gymmawy-primary text-white py-3 px-6 rounded-lg font-bold hover:bg-gymmawy-primary/90 transition-colors flex items-center justify-center gap-2 w-fit text-sm ${
                   isRTL ? 'lg:ml-auto' : 'lg:mr-auto'
                 }`}
               >
