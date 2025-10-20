@@ -2495,7 +2495,7 @@ return;
             {isLoyaltyRedemption 
               ? (i18n.language === 'ar' 
                   ? 'أكمل بياناتك لاستبدال المكافأة بنقاط جيماوي الخاصة بك'
-                  : 'Complete your details to redeem your reward with Gymmawy Points'
+                  : 'Complete your details to redeem your reward with Gymmawy Coins'
                 )
               : t('checkout.subtitle')
             }

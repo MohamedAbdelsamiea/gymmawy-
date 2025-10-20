@@ -1,15 +1,15 @@
 {
   "title": "مركز المكافآت",
-  "subtitle": "استبدل نقاط جيماوي الخاصة بك للحصول على مكافآت رائعة",
-  "yourPoints": "نقاطك",
-  "points": "نقطة",
+  "subtitle": "استبدل عملات جيماوي الخاصة بك للحصول على مكافآت رائعة",
+  "yourPoints": "عملات جيماوي الخاصة بك",
+  "points": "عملة جيماوي",
   "redeem": "استبدال الآن",
   "redeeming": "جاري الاستبدال...",
   "redemptionSuccess": "تم استبدال المكافأة بنجاح!",
   "locked": {
-    "title": "نقاط غير كافية",
-    "message": "تحتاج إلى {{pointsNeeded}} نقاط إضافية لاستبدال \"{{rewardName}}\".",
-    "morePoints": "نقطة إضافية مطلوبة",
+    "title": "عملات جيماوي غير كافية",
+    "message": "تحتاج إلى {{pointsNeeded}} عملات جيماوي إضافية لاستبدال \"{{rewardName}}\".",
+    "morePoints": "عملة جيماوي إضافية مطلوبة",
     "button": "موافق"
   },
   "loginRequired": {
@@ -40,9 +40,9 @@
     "programmes": "البرامج"
   },
   "pointsInfo": {
-    "currentPoints": "النقاط الحالية",
-    "requiredPoints": "النقاط المطلوبة",
-    "pointsNeeded": "النقاط المطلوبة"
+    "currentPoints": "عملات جيماوي الحالية",
+    "requiredPoints": "عملات جيماوي المطلوبة",
+    "pointsNeeded": "عملات جيماوي المطلوبة"
   },
   "locked": "مقفل"
 }

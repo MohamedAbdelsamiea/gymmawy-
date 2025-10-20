@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Play, ChevronDown, Plus, Gift, Award, Info } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Slider from "react-slick";
 import * as Accordion from "@radix-ui/react-accordion";
@@ -19,6 +19,81 @@ import HomepagePopup from "../../components/modals/HomepagePopup";
 import useAuthRequired from "../../hooks/useAuthRequired";
 import { useHomepagePopup } from "../../hooks/useHomepagePopup";
 import { config } from "../../config";
+import { getGymmawyCoinIcon } from "../../utils/currencyUtils";
+
+// CSS for card animations
+const cardAnimationStyles = `
+  @keyframes fadeInUp {
+    0% {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes shinyEffect {
+    0% {
+      transform: translateX(-100%) skewX(-15deg);
+    }
+    100% {
+      transform: translateX(200%) skewX(-15deg);
+    }
+  }
+  
+  .card-fade-in {
+    animation: fadeInUp 0.8s ease-out forwards;
+  }
+  
+  .card-shiny::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      transparent 100%
+    );
+    transform: translateX(-100%) skewX(-15deg);
+    animation: shinyEffect 1.5s ease-out;
+    pointer-events: none;
+    z-index: 1;
+  }
+  
+  @keyframes cardFlip {
+    0% {
+      transform: rotateY(-90deg);
+      opacity: 0;
+    }
+    50% {
+      transform: rotateY(-45deg);
+      opacity: 0.5;
+    }
+    100% {
+      transform: rotateY(0deg);
+      opacity: 1;
+    }
+  }
+  
+  .card-flip {
+    animation: cardFlip 1s ease-out forwards;
+    transform-style: preserve-3d;
+  }
+`;
+
+// Inject CSS if not already injected
+if (typeof document !== 'undefined' && !document.getElementById('card-animation-styles')) {
+  const style = document.createElement('style');
+  style.id = 'card-animation-styles';
+  style.textContent = cardAnimationStyles;
+  document.head.appendChild(style);
+}
 
 const HomePage = () => {
   const { t, i18n } = useTranslation("home");
@@ -37,6 +112,11 @@ const HomePage = () => {
   const [plansLoading, setPlansLoading] = useState(true);
   const [selectedPlanOptions, setSelectedPlanOptions] = useState({});
   const [openDropdowns, setOpenDropdowns] = useState({});
+  const [visibleCards, setVisibleCards] = useState(new Set());
+  const [shinyCards, setShinyCards] = useState(new Set());
+  const [visibleMembershipCards, setVisibleMembershipCards] = useState(new Set());
+  const cardsRef = useRef([]);
+  const membershipCardsRef = useRef([]);
 
   // Fetch featured video
   useEffect(() => {
@@ -93,6 +173,75 @@ const HomePage = () => {
 
     fetchSubscriptionPlans();
   }, [i18n.language]);
+
+  // Intersection Observer for card animations
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const cardIndex = entry.target.dataset.cardIndex;
+            const delay = parseInt(cardIndex) * 400; // 400ms delay between each card
+            
+            // Show card with staggered delay
+            setTimeout(() => {
+              setVisibleCards(prev => new Set([...prev, cardIndex]));
+              
+              // Trigger shiny effect after fade-in
+              setTimeout(() => {
+                setShinyCards(prev => new Set([...prev, cardIndex]));
+              }, 800); // After fade-in animation completes
+            }, delay);
+          }
+        });
+      },
+      {
+        threshold: 0.2, // Increased threshold - card needs to be 20% visible
+        rootMargin: '20px' // Reduced margin - cards trigger closer to viewport
+      }
+    );
+
+    // Observe all card elements
+    cardsRef.current.forEach((cardRef) => {
+      if (cardRef) observer.observe(cardRef);
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [cardsRef.current.length]);
+
+  // Intersection Observer for membership cards flip animation
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const cardIndex = entry.target.dataset.membershipCardIndex;
+            const delay = parseInt(cardIndex) * 300; // 300ms delay between each card
+            
+            // Show card with staggered delay
+            setTimeout(() => {
+              setVisibleMembershipCards(prev => new Set([...prev, cardIndex]));
+            }, delay);
+          }
+        });
+      },
+      {
+        threshold: 0.3, // Card needs to be 30% visible
+        rootMargin: '50px'
+      }
+    );
+
+    // Observe all membership card elements
+    membershipCardsRef.current.forEach((cardRef) => {
+      if (cardRef) observer.observe(cardRef);
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [membershipCardsRef.current.length]);
 
   // Helper function to get bilingual text
   const getBilingualText = (text, fallback = '') => {
@@ -438,12 +587,16 @@ return '';
               ].map((card, index) => (
                 <div
                   key={index}
-                  className={`relative rounded-2xl overflow-hidden bg-cover bg-center min-h-[160px] transition-all duration-700 ease-out ${
-                    isVisible ? "animate-slide-up" : "opacity-0 translate-y-20"
+                  ref={(el) => (cardsRef.current[index] = el)}
+                  data-card-index={index}
+                  className={`relative rounded-2xl overflow-hidden bg-cover bg-center min-h-[160px] ${
+                    visibleCards.has(index.toString()) ? 'card-fade-in' : 'opacity-0 translate-y-8'
+                  } ${
+                    shinyCards.has(index.toString()) ? 'card-shiny' : ''
                   }`}
                   style={{
                     backgroundImage: `url(${card.background})`,
-                    animationDelay: `${index * 200}ms`,
+                    transition: 'opacity 0.8s ease-out, transform 0.8s ease-out',
                   }}
                 >
                   <div className="relative p-5 pt-8 h-full flex flex-col">
@@ -514,9 +667,15 @@ return '';
             ].map((feature, index) => (
               <div
                 key={index}
-                className="relative rounded-lg md:rounded-2xl bg-contain bg-no-repeat bg-center overflow-hidden p-6 md:p-10 text-[#ebebeb] transition-all duration-700 ease-out flex flex-col justify-end items-start w-[90%] max-w-[300px] sm:w-[380px] sm:max-w-none h-[420px] sm:h-[520px]"
+                ref={(el) => (membershipCardsRef.current[index] = el)}
+                data-membership-card-index={index}
+                className={`relative rounded-lg md:rounded-2xl bg-contain bg-no-repeat bg-center overflow-hidden p-6 md:p-10 text-[#ebebeb] flex flex-col justify-end items-start w-[90%] max-w-[300px] sm:w-[380px] sm:max-w-none h-[420px] sm:h-[520px] ${
+                  visibleMembershipCards.has(index.toString()) ? 'card-flip' : 'opacity-0'
+                }`}
                 style={{
                   backgroundImage: `url(${feature.background})`,
+                  transform: visibleMembershipCards.has(index.toString()) ? 'rotateY(0deg)' : 'rotateY(-90deg)',
+                  transition: 'opacity 1s ease-out, transform 1s ease-out',
                 }}
               >
                 {/* Bottom Third Text */}
@@ -797,15 +956,14 @@ return '';
                     </div>
                   )}
 
-                  {/* Gymmawy Points - Right under discount */}
+                  {/* Gymmawy Coins - Right under discount */}
                   {((selectedOption === 'regular' && (plan.loyaltyPointsAwarded > 0 || plan.loyaltyPointsRequired > 0)) ||
                     (selectedOption === 'medical' && (plan.medicalLoyaltyPointsAwarded > 0 || plan.medicalLoyaltyPointsRequired > 0))) && (
                     <div className={`absolute ${hasDiscount ? 'top-14' : 'top-6'} ${i18n.language === 'ar' ? 'left-6' : 'right-6'} z-10 group`}>
                       {/* Info Icon Trigger */}
                       <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200">
-                        <Award className="h-4 w-4 text-purple-600" />
                         <span className="text-sm font-bold text-purple-700">
-                          {i18n.language === 'ar' ? 'نقاط' : 'Points'}
+                          {i18n.language === 'ar' ? 'عملات جيماوي' : 'Gymmawy Coins'}
                         </span>
                         <Info className="h-4 w-4 text-purple-500" />
                       </div>
@@ -820,8 +978,8 @@ return '';
                           <div className="text-center mb-2">
                             <p className="text-xs text-gray-600 leading-relaxed">
                               {i18n.language === 'ar' 
-                                ? 'نقاط جيماوي المتضمنة في هذه الباقة'
-                                : 'Gymmawy Points included with this plan'}
+                                ? 'عملات جيماوي المتضمنة في هذه الباقة'
+                                : 'Gymmawy Coins included with this plan'}
                             </p>
                           </div>
                           
@@ -830,9 +988,7 @@ return '';
                               <>
                                 {plan.loyaltyPointsAwarded > 0 && (
                                   <div className="flex items-center gap-1.5 flex-1 justify-center">
-                                    <div className="p-1.5 bg-green-100 rounded-full">
-                                      <Gift className="h-4 w-4 text-green-600" />
-                                    </div>
+                                    {getGymmawyCoinIcon({ size: 32 })}
                                     <div className="flex flex-col">
                                       <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
                                       <span className="text-sm font-bold text-green-700">
@@ -843,9 +999,7 @@ return '';
                                 )}
                                 {plan.loyaltyPointsRequired > 0 && (
                                   <div className="flex items-center gap-1.5 flex-1 justify-center">
-                                    <div className="p-1.5 bg-orange-100 rounded-full">
-                                      <Award className="h-4 w-4 text-orange-600" />
-                                    </div>
+                                    {getGymmawyCoinIcon({ size: 32 })}
                                     <div className="flex flex-col">
                                       <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'التكلفة' : 'Cost'}</span>
                                       <span className="text-sm font-bold text-orange-700">
@@ -859,9 +1013,7 @@ return '';
                               <>
                                 {plan.medicalLoyaltyPointsAwarded > 0 && (
                                   <div className="flex items-center gap-1.5 flex-1 justify-center">
-                                    <div className="p-1.5 bg-green-100 rounded-full">
-                                      <Gift className="h-4 w-4 text-green-600" />
-                                    </div>
+                                    {getGymmawyCoinIcon({ size: 32 })}
                                     <div className="flex flex-col">
                                       <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
                                       <span className="text-sm font-bold text-green-700">
@@ -872,9 +1024,7 @@ return '';
                                 )}
                                 {plan.medicalLoyaltyPointsRequired > 0 && (
                                   <div className="flex items-center gap-1.5 flex-1 justify-center">
-                                    <div className="p-1.5 bg-orange-100 rounded-full">
-                                      <Award className="h-4 w-4 text-orange-600" />
-                                    </div>
+                                    {getGymmawyCoinIcon({ size: 32 })}
                                     <div className="flex flex-col">
                                       <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'التكلفة' : 'Cost'}</span>
                                       <span className="text-sm font-bold text-orange-700">

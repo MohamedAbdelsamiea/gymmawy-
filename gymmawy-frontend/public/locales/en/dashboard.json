@@ -195,7 +195,7 @@
       "pointsRequired": "pts",
       "validUntil": "Valid until",
       "redeemNow": "Redeem Now",
-      "notEnoughPoints": "Not Enough Points",
+      "notEnoughPoints": "Not Enough Coins",
       "transactionId": "Transaction ID",
       "type": "Type",
       "points": "Points",

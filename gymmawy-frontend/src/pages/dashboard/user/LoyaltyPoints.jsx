@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Gift, Award, TrendingUp, Clock, Star } from 'lucide-react';
 import { StatCard, StatusBadge } from '../../../components/dashboard';
+import { getGymmawyCoinIcon } from '../../../utils/currencyUtils';
 
 const UserLoyaltyPoints = () => {
   const [activeTab, setActiveTab] = useState('rewards');
@@ -142,8 +143,8 @@ const UserLoyaltyPoints = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gymmawy Points</h1>
-          <p className="text-gray-600 mt-1">Manage your points and rewards</p>
+          <h1 className="text-2xl font-bold text-gray-900">Gymmawy Coins</h1>
+          <p className="text-gray-600 mt-1">Manage your coins and rewards</p>
         </div>
       </div>
 
@@ -152,15 +153,15 @@ const UserLoyaltyPoints = () => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-3xl font-bold">{userPoints.current.toLocaleString()}</h2>
-            <p className="text-gymmawy-light opacity-90">Current Points</p>
+            <p className="text-gymmawy-light opacity-90">Current Gymmawy Coins</p>
           </div>
           <div className="text-right">
             <div className="flex items-center">
-              <Award className="h-6 w-6 mr-2" />
+              {getGymmawyCoinIcon({ size: 24, className: "mr-2" })}
               <span className="text-lg font-semibold">{userPoints.level} Member</span>
             </div>
             <p className="text-sm text-gymmawy-light opacity-90">
-              {userPoints.pointsToNext} points to {userPoints.nextLevel}
+              {userPoints.pointsToNext} gymmawy coins to {userPoints.nextLevel}
             </p>
           </div>
         </div>
@@ -185,7 +186,7 @@ const UserLoyaltyPoints = () => {
         <StatCard
           title="Total Redeemed"
           value={userPoints.totalRedeemed.toLocaleString()}
-          icon={Gift}
+          icon={() => getGymmawyCoinIcon({ size: 20 })}
           color="purple"
         />
         <StatCard
@@ -209,7 +210,7 @@ const UserLoyaltyPoints = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            <Gift className="h-4 w-4 inline mr-2" />
+            {getGymmawyCoinIcon({ size: 16, className: "inline mr-2" })}
             Available Rewards
           </button>
           <button
@@ -256,7 +257,7 @@ const UserLoyaltyPoints = () => {
                     : 'bg-gray-200 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                {userPoints.current >= reward.pointsRequired ? 'Redeem Now' : 'Not Enough Points'}
+                {userPoints.current >= reward.pointsRequired ? 'Redeem Now' : 'Not Enough Coins'}
               </button>
             </div>
           ))}

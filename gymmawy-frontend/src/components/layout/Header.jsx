@@ -6,6 +6,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import languageEventService from "../../services/languageEventService";
 import { useCart } from "../../contexts/CartContext";
 import logo from "/assets/common/logo.webp"; // import your logo directly
+import { getGymmawyCoinIcon } from "../../utils/currencyUtils";
 
 const Header = () => {
   const { t, i18n } = useTranslation("header"); // using "header" namespace
@@ -356,16 +357,16 @@ const Header = () => {
                 {/* Mobile Profile Dropdown Menu */}
                 {mobileProfileDropdownOpen && (
                   <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50`}>
-                    {/* Gymmawy Points - Only for regular users, not admins */}
+                    {/* Gymmawy Coins - Only for regular users, not admins */}
                     {user?.role !== 'ADMIN' && user?.role !== 'admin' && (
-                      <div className="px-4 py-2.5 text-sm text-gray-600" style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}>
-                        <div className="flex items-center gap-2">
-                          <Gift className="h-4 w-4 flex-shrink-0 text-gymmawy-accent" />
-                          <span className="text-gymmawy-accent font-medium whitespace-nowrap">
-                            {user.loyaltyPoints || 0} {t('auth.loyaltyPoints')}
-                          </span>
-                        </div>
-                      </div>
+                       <div className="px-2 py-2 text-sm text-gray-600" style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}>
+                         <div className="flex items-center gap-2">
+                           {getGymmawyCoinIcon({ size: 32, className: "flex-shrink-0" })}
+                           <span className="text-gymmawy-accent font-medium whitespace-nowrap">
+                             {user.loyaltyPoints || 0} {t('auth.loyaltyPoints')}
+                           </span>
+                         </div>
+                       </div>
                     )}
                     
                     {/* Conditional Navigation Link */}
@@ -463,16 +464,16 @@ const Header = () => {
                 {/* Profile Dropdown Menu */}
                 {profileDropdownOpen && (
                   <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50`}>
-                    {/* Gymmawy Points - Only for regular users, not admins */}
+                    {/* Gymmawy Coins - Only for regular users, not admins */}
                     {user?.role !== 'ADMIN' && user?.role !== 'admin' && (
-                      <div className="px-4 py-2.5 text-sm text-gray-600" style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}>
-                        <div className="flex items-center gap-2">
-                          <Gift className="h-4 w-4 flex-shrink-0 text-gymmawy-accent" />
-                          <span className="text-gymmawy-accent font-medium whitespace-nowrap">
-                            {user.loyaltyPoints || 0} {t('auth.loyaltyPoints')}
-                          </span>
-                        </div>
-                      </div>
+                       <div className="px-2 py-2 text-sm text-gray-600" style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}>
+                         <div className="flex items-center gap-2">
+                           {getGymmawyCoinIcon({ size: 32, className: "flex-shrink-0" })}
+                           <span className="text-gymmawy-accent font-medium whitespace-nowrap">
+                             {user.loyaltyPoints || 0} {t('auth.loyaltyPoints')}
+                           </span>
+                         </div>
+                       </div>
                     )}
                     
                     {/* Conditional Navigation Link */}

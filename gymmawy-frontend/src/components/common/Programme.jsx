@@ -8,6 +8,7 @@ import { Award, Gift, Info } from 'lucide-react';
 import AuthRequiredModal from '../modals/AuthRequiredModal';
 import useAuthRequired from '../../hooks/useAuthRequired';
 import { config } from '../../config';
+import { getGymmawyCoinIcon } from '../../utils/currencyUtils';
 
 export default function Programme({ image, name, price, programme }) {
     const { t, i18n } = useTranslation('programmes');
@@ -19,7 +20,7 @@ export default function Programme({ image, name, price, programme }) {
     const [showLoyaltyCard, setShowLoyaltyCard] = useState(false);
     const loyaltyCardRef = useRef(null);
     
-    // Debug: Log programme data to check Gymmawy Points
+    // Debug: Log programme data to check Gymmawy Coins
     console.log('Programme data:', {
       name,
       loyaltyPointsAwarded: programme?.loyaltyPointsAwarded,
@@ -127,7 +128,7 @@ return imagePath;
           loading="lazy"
         />
          <div className="p-3 sm:p-4 flex flex-col flex-grow text-start" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
-          {/* Gymmawy Points Badge - above name on mobile, hidden on desktop */}
+          {/* Gymmawy Coins Badge - above name on mobile, hidden on desktop */}
           {((programme?.loyaltyPointsAwarded > 0 || programme?.loyaltyPointsRequired > 0)) && (
             <div className="block sm:hidden mb-2">
               <div className="group relative" ref={loyaltyCardRef}>
@@ -139,9 +140,8 @@ return imagePath;
                     setShowLoyaltyCard(!showLoyaltyCard);
                   }}
                 >
-                  <Award className="h-3 w-3 text-purple-600" />
                   <span className="text-xs font-bold text-purple-700">
-                    {i18n.language === 'ar' ? 'نقاط' : 'Points'}
+                    {i18n.language === 'ar' ? 'عملات جيماوي' : 'Gymmawy Coins'}
                   </span>
                 </div>
                 
@@ -156,16 +156,14 @@ return imagePath;
                       <p className="text-xs text-gray-600 leading-relaxed">
                         {i18n.language === 'ar' 
                           ? 'نقاط جيماوي المتضمنة'
-                          : 'Gymmawy Points included'}
+                          : 'Gymmawy Coins included'}
                       </p>
                     </div>
                     
                     <div className="flex items-center justify-around gap-2 pt-2 border-t border-gray-200">
                       {programme.loyaltyPointsAwarded > 0 && (
                         <div className="flex items-center gap-1 flex-1 justify-center">
-                          <div className="p-1 bg-green-100 rounded-full">
-                            <Gift className="h-3 w-3 text-green-600" />
-                          </div>
+                          {getGymmawyCoinIcon({ size: 32 })}
                           <div className="flex flex-col">
                             <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
                             <span className="text-xs font-bold text-green-700">
@@ -177,7 +175,7 @@ return imagePath;
                       {programme.loyaltyPointsRequired > 0 && (
                         <div className="flex items-center gap-1 flex-1 justify-center">
                           <div className="p-1 bg-orange-100 rounded-full">
-                            <Award className="h-3 w-3 text-orange-600" />
+                            {getGymmawyCoinIcon({ size: 12, className: "text-orange-600" })}
                           </div>
                           <div className="flex flex-col">
                             <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكلف' : 'Cost'}</span>
@@ -228,15 +226,14 @@ return imagePath;
                     </span>
                   </div>
                   
-                  {/* Gymmawy Points Badge - on the opposite side (desktop only) */}
+                  {/* Gymmawy Coins Badge - on the opposite side (desktop only) */}
                   {((programme.loyaltyPointsAwarded > 0 || programme.loyaltyPointsRequired > 0)) && (
                     <div className="hidden sm:block self-start sm:ml-auto">
                     <div className="group relative">
                       {/* Info Icon Trigger */}
                       <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200">
-                        <Award className="h-3 w-3 text-purple-600" />
                         <span className="text-xs font-bold text-purple-700">
-                          {i18n.language === 'ar' ? 'نقاط' : 'Points'}
+                          {i18n.language === 'ar' ? 'عملات جيماوي' : 'Gymmawy Coins'}
                         </span>
                       </div>
                       
@@ -251,7 +248,7 @@ return imagePath;
                             <p className="text-xs text-gray-600 leading-relaxed">
                               {i18n.language === 'ar' 
                                 ? 'نقاط جيماوي المتضمنة'
-                                : 'Gymmawy Points included'}
+                                : 'Gymmawy Coins included'}
                             </p>
                           </div>
                           
@@ -259,7 +256,7 @@ return imagePath;
                             {programme.loyaltyPointsAwarded > 0 && (
                               <div className="flex items-center gap-1 flex-1 justify-center">
                                 <div className="p-1 bg-green-100 rounded-full">
-                                  <Gift className="h-3 w-3 text-green-600" />
+                                  {getGymmawyCoinIcon({ size: 12 })}
                                 </div>
                                 <div className="flex flex-col">
                                   <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
@@ -271,9 +268,7 @@ return imagePath;
                             )}
                             {programme.loyaltyPointsRequired > 0 && (
                               <div className="flex items-center gap-1 flex-1 justify-center">
-                                <div className="p-1 bg-orange-100 rounded-full">
-                                  <Award className="h-3 w-3 text-orange-600" />
-                                </div>
+                          {getGymmawyCoinIcon({ size: 32 })}
                                 <div className="flex flex-col">
                                   <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكلف' : 'Cost'}</span>
                                   <span className="text-xs font-bold text-orange-700">
@@ -300,15 +295,14 @@ return imagePath;
                     {price}
                   </p>
                   
-                  {/* Gymmawy Points Badge - for non-discounted programmes (desktop only) */}
+                  {/* Gymmawy Coins Badge - for non-discounted programmes (desktop only) */}
                   {((programme?.loyaltyPointsAwarded > 0 || programme?.loyaltyPointsRequired > 0)) && (
                     <div className="hidden sm:block self-start sm:ml-auto">
                     <div className="group relative">
                       {/* Info Icon Trigger */}
                       <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200">
-                        <Award className="h-3 w-3 text-purple-600" />
                         <span className="text-xs font-bold text-purple-700">
-                          {i18n.language === 'ar' ? 'نقاط' : 'Points'}
+                          {i18n.language === 'ar' ? 'عملات جيماوي' : 'Gymmawy Coins'}
                         </span>
                       </div>
                       
@@ -323,7 +317,7 @@ return imagePath;
                             <p className="text-xs text-gray-600 leading-relaxed">
                               {i18n.language === 'ar' 
                                 ? 'نقاط جيماوي المتضمنة'
-                                : 'Gymmawy Points included'}
+                                : 'Gymmawy Coins included'}
                             </p>
                           </div>
                           
@@ -331,7 +325,7 @@ return imagePath;
                             {programme.loyaltyPointsAwarded > 0 && (
                               <div className="flex items-center gap-1 flex-1 justify-center">
                                 <div className="p-1 bg-green-100 rounded-full">
-                                  <Gift className="h-3 w-3 text-green-600" />
+                                  {getGymmawyCoinIcon({ size: 12 })}
                                 </div>
                                 <div className="flex flex-col">
                                   <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
@@ -343,9 +337,7 @@ return imagePath;
                             )}
                             {programme.loyaltyPointsRequired > 0 && (
                               <div className="flex items-center gap-1 flex-1 justify-center">
-                                <div className="p-1 bg-orange-100 rounded-full">
-                                  <Award className="h-3 w-3 text-orange-600" />
-                                </div>
+                          {getGymmawyCoinIcon({ size: 32 })}
                                 <div className="flex flex-col">
                                   <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكلف' : 'Cost'}</span>
                                   <span className="text-xs font-bold text-orange-700">

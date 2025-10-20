@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useCurrencyContext } from '../../contexts/CurrencyContext';
 import AuthRequiredModal from '../../components/modals/AuthRequiredModal';
 import useAuthRequired from '../../hooks/useAuthRequired';
+import { getGymmawyCoinIcon } from '../../utils/currencyUtils';
 
 const ProductPage = () => {
   const { id } = useParams();
@@ -418,7 +419,7 @@ const ProductPage = () => {
                 </div>
               )}
 
-              {/* Size Selection + Gymmawy Points */}
+              {/* Size Selection + Gymmawy Coins */}
               <div className="mb-6">
                 <h3 className="text-base font-medium text-[#190143] mb-3">Size</h3>
                 
@@ -440,23 +441,22 @@ const ProductPage = () => {
                     ))}
                   </div>
                   
-                  {/* Gymmawy Points Badge */}
+                  {/* Gymmawy Coins Badge */}
                   {(transformedProduct.loyaltyPointsAwarded > 0 || transformedProduct.loyaltyPointsRequired > 0) && (
                     <div className="group relative">
                       <div className="flex items-center gap-2 px-4 py-2 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200">
-                        <Award className="h-5 w-5 text-purple-600" />
-                        <span className="text-sm font-bold text-purple-700">{i18n.language === 'ar' ? 'نقاط' : 'Points'}</span>
+                        <span className="text-sm font-bold text-purple-700">{i18n.language === 'ar' ? 'عملات جيماوي' : 'Gymmawy Coins'}</span>
                       </div>
                       <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} top-full mt-2 w-52 p-2 bg-white rounded-lg shadow-xl border-2 border-purple-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50`}>
                         <div className={`absolute -top-2 ${i18n.language === 'ar' ? 'left-4' : 'right-4'} w-4 h-4 bg-white border-l-2 border-t-2 border-purple-200 rotate-45`}></div>
                         <div className="relative">
                           <div className="text-center mb-1">
-                            <p className="text-xs text-gray-600 leading-relaxed">{i18n.language === 'ar' ? 'نقاط جيماوي المتضمنة' : 'Gymmawy Points included'}</p>
+                            <p className="text-xs text-gray-600 leading-relaxed">{i18n.language === 'ar' ? 'عملات جيماوي المتضمنة' : 'Gymmawy Coins included'}</p>
                           </div>
                           <div className="flex items-center justify-around gap-2 pt-2 border-t border-gray-200">
                             {transformedProduct.loyaltyPointsAwarded > 0 && (
                               <div className="flex items-center gap-1 flex-1 justify-center">
-                                <div className="p-1 bg-green-100 rounded-full"><Gift className="h-3 w-3 text-green-600" /></div>
+                                {getGymmawyCoinIcon({ size: 32 })}
                                 <div className="flex flex-col">
                                   <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
                                   <span className="text-xs font-bold text-green-700">{transformedProduct.loyaltyPointsAwarded}</span>
@@ -465,7 +465,7 @@ const ProductPage = () => {
                             )}
                             {transformedProduct.loyaltyPointsRequired > 0 && (
                               <div className="flex items-center gap-1 flex-1 justify-center">
-                                <div className="p-1 bg-orange-100 rounded-full"><Award className="h-3 w-3 text-orange-600" /></div>
+                                {getGymmawyCoinIcon({ size: 32 })}
                                 <div className="flex flex-col">
                                   <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكلف' : 'Cost'}</span>
                                   <span className="text-xs font-bold text-orange-700">{transformedProduct.loyaltyPointsRequired}</span>

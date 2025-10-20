@@ -173,10 +173,10 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
     // Validate loyalty points only if enabled
     if (enableLoyaltyPoints) {
       if (formData.loyaltyPointsAwarded < 0) {
-        newErrors.loyaltyPointsAwarded = 'Gymmawy Points awarded cannot be negative';
+        newErrors.loyaltyPointsAwarded = 'Gymmawy Coins awarded cannot be negative';
       }
       if (formData.loyaltyPointsRequired < 1) {
-        newErrors.loyaltyPointsRequired = 'Gymmawy Points required must be at least 1';
+        newErrors.loyaltyPointsRequired = 'Gymmawy Coins required must be at least 1';
       }
     }
 
@@ -599,7 +599,7 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
           {/* Loyalty Points */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Gymmawy Points & Rewards</h3>
+              <h3 className="text-lg font-medium text-gray-900">Gymmawy Coins & Rewards</h3>
               <label className="flex items-center">
                 <input
                   type="checkbox"
@@ -616,7 +616,7 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
                   }}
                   className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300 rounded"
                 />
-                <span className="ml-2 text-sm text-gray-700">Enable Gymmawy Points</span>
+                <span className="ml-2 text-sm text-gray-700">Enable Gymmawy Coins</span>
               </label>
             </div>
 

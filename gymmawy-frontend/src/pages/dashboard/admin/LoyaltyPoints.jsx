@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Eye, Gift, Award, TrendingUp } from 'lucide-react';
 import { DataTable, StatusBadge } from '../../../components/dashboard';
+import { getGymmawyCoinIcon } from '../../../utils/currencyUtils';
 
 const LoyaltyPoints = () => {
   const [activeTab, setActiveTab] = useState('transactions');
@@ -195,7 +196,7 @@ const LoyaltyPoints = () => {
     },
     {
       key: 'pointsRequired',
-      label: 'Points Required',
+      label: 'Gymmawy Coins Required',
       sortable: true,
       render: (value) => (
         <span className="font-medium text-orange-600">{value}</span>
@@ -249,9 +250,9 @@ const LoyaltyPoints = () => {
       sortable: true,
       render: (value) => (
         <div className="flex items-center">
-          {value === 1 && <Award className="h-4 w-4 text-yellow-500 mr-1" />}
-          {value === 2 && <Award className="h-4 w-4 text-gray-400 mr-1" />}
-          {value === 3 && <Award className="h-4 w-4 text-orange-500 mr-1" />}
+          {value === 1 && getGymmawyCoinIcon({ size: 16, className: "text-yellow-500 mr-1" })}
+          {value === 2 && getGymmawyCoinIcon({ size: 16, className: "text-gray-400 mr-1" })}
+          {value === 3 && getGymmawyCoinIcon({ size: 16, className: "text-orange-500 mr-1" })}
           <span className="font-medium">#{value}</span>
         </div>
       )
@@ -293,8 +294,8 @@ const LoyaltyPoints = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gymmawy Points Management</h1>
-          <p className="text-gray-600 mt-1">Track and manage Gymmawy Points and rewards</p>
+          <h1 className="text-2xl font-bold text-gray-900">Gymmawy Coins Management</h1>
+          <p className="text-gray-600 mt-1">Track and manage Gymmawy Coins and rewards</p>
         </div>
         <button className="flex items-center px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary transition-colors">
           <Plus className="h-4 w-4 mr-2" />
@@ -324,7 +325,7 @@ const LoyaltyPoints = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            <Gift className="h-4 w-4 inline mr-2" />
+            {getGymmawyCoinIcon({ size: 16, className: "inline mr-2" })}
             Rewards
           </button>
           <button
@@ -335,7 +336,7 @@ const LoyaltyPoints = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            <Award className="h-4 w-4 inline mr-2" />
+            {getGymmawyCoinIcon({ size: 16, className: "inline mr-2" })}
             Top Users
           </button>
         </nav>

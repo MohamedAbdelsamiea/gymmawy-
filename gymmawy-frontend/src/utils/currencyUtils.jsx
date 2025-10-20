@@ -1,4 +1,5 @@
 import { DollarSign, Banknote, Coins } from 'lucide-react';
+import GymmawyCoinIcon from '../components/common/GymmawyCoinIcon';
 
 /**
  * Currency configuration with proper symbols and icons
@@ -71,6 +72,15 @@ export const getCurrencyIcon = (currency) => {
 };
 
 /**
+ * Get gymmawy coin icon for loyalty points
+ * @param {Object} props - Props for the icon
+ * @returns {JSX.Element} Gymmawy coin icon
+ */
+export const getGymmawyCoinIcon = (props = {}) => {
+  return <GymmawyCoinIcon {...props} />;
+};
+
+/**
  * Format price with currency symbol
  * @param {number} amount - Price amount
  * @param {string} currency - Currency code
@@ -110,6 +120,7 @@ export default {
   CURRENCY_CONFIG,
   getCurrencySymbol,
   getCurrencyIcon,
+  getGymmawyCoinIcon,
   formatPrice,
   CurrencyIcon,
 };

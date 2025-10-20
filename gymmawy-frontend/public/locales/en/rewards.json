@@ -1,15 +1,15 @@
 {
   "title": "Rewards Center",
-  "subtitle": "Redeem your Gymmawy Points for amazing rewards",
-  "yourPoints": "Your Points",
-  "points": "points",
+  "subtitle": "Redeem your Gymmawy Coins for amazing rewards",
+  "yourPoints": "Your Gymmawy Coins",
+  "points": "gymmawy coins",
   "redeem": "Redeem Now",
   "redeeming": "Redeeming...",
   "redemptionSuccess": "Reward redeemed successfully!",
   "locked": {
-    "title": "Not Enough Points",
-    "message": "You need {{pointsNeeded}} more points to redeem \"{{rewardName}}\".",
-    "morePoints": "more points needed",
+    "title": "Not Enough Gymmawy Coins",
+    "message": "You need {{pointsNeeded}} more gymmawy coins to redeem \"{{rewardName}}\".",
+    "morePoints": "more gymmawy coins needed",
     "button": "OK"
   },
   "loginRequired": {
@@ -40,9 +40,9 @@
     "programmes": "Programmes"
   },
   "pointsInfo": {
-    "currentPoints": "Current Points",
-    "requiredPoints": "Required Points", 
-    "pointsNeeded": "Points Needed"
+    "currentPoints": "Current Gymmawy Coins",
+    "requiredPoints": "Required Gymmawy Coins", 
+    "pointsNeeded": "Gymmawy Coins Needed"
   },
   "locked": "Locked"
 }

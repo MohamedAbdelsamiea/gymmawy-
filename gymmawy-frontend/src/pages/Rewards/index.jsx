@@ -6,6 +6,7 @@ import { Lock, Gift, Package, ShoppingBag, BookOpen, Star, X, FileText } from 'l
 import { useLanguage } from '../../hooks/useLanguage';
 import rewardsService from '../../services/rewardsService';
 import { getFullImageUrl } from '../../utils/imageUtils';
+import { getGymmawyCoinIcon } from '../../utils/currencyUtils';
 
 const RewardsPage = () => {
   const { t, i18n } = useTranslation('rewards');
@@ -41,7 +42,7 @@ const RewardsPage = () => {
         // Note: Subscriptions might require authentication, so we handle it gracefully
         const [packagesResponse, productsResponse, programmesResponse] = await Promise.allSettled([
           rewardsService.getPackageRewards({ language: i18n.language }).catch(err => {
-            console.log('Packages endpoint requires authentication or has no Gymmawy Points items:', err.message);
+            console.log('Packages endpoint requires authentication or has no Gymmawy Coins items:', err.message);
             return null; // Return null for packages if auth required
           }),
           rewardsService.getProductRewards({ language: i18n.language }),
@@ -75,7 +76,7 @@ const RewardsPage = () => {
         // Process packages (handle case where auth is required)
         if (packagesResponse.status === 'fulfilled' && packagesResponse.value && packagesResponse.value.items) {
           fetchedRewards.packages = packagesResponse.value.items
-            .filter(item => (item.loyaltyPointsRequired || item.pointsRequired || 0) > 0) // Only show items with Gymmawy Points
+            .filter(item => (item.loyaltyPointsRequired || item.pointsRequired || 0) > 0) // Only show items with Gymmawy Coins
             .map(item => ({
               id: item.id,
               name: getBilingualText(item.name || item.title, 'Package'),
@@ -89,7 +90,7 @@ const RewardsPage = () => {
         // Process products
         if (productsResponse.status === 'fulfilled' && productsResponse.value && productsResponse.value.items) {
           fetchedRewards.products = productsResponse.value.items
-            .filter(item => (item.loyaltyPointsRequired || item.pointsRequired || 0) > 0) // Only show items with Gymmawy Points
+            .filter(item => (item.loyaltyPointsRequired || item.pointsRequired || 0) > 0) // Only show items with Gymmawy Coins
             .map(item => {
             // Handle product images - products use an images array with isPrimary flag
             const primaryImage = item.images?.find(img => img.isPrimary) || item.images?.[0];
@@ -112,7 +113,7 @@ const RewardsPage = () => {
         // Process programmes
         if (programmesResponse.status === 'fulfilled' && programmesResponse.value && programmesResponse.value.items) {
           fetchedRewards.programmes = programmesResponse.value.items
-            .filter(item => (item.loyaltyPointsRequired || item.pointsRequired || 0) > 0) // Only show items with Gymmawy Points
+            .filter(item => (item.loyaltyPointsRequired || item.pointsRequired || 0) > 0) // Only show items with Gymmawy Coins
             .map(item => ({
             id: item.id,
             name: getBilingualText(item.name || item.title, 'Programme'),
@@ -266,10 +267,10 @@ const RewardsPage = () => {
             <div className="bg-white rounded-xl p-6 shadow-lg inline-block">
               <div className="text-center">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                  {t('yourPoints')}
+                  {i18n.language === 'ar' ? 'عملات جيماوي الخاصة بك' : 'Your Gymmawy Coins'}
                 </h3>
                 <div className="flex items-center justify-center space-x-3">
-                  <Star className="h-8 w-8 text-yellow-500" />
+                  {getGymmawyCoinIcon({ size: 50 })}
                   <p className="text-3xl font-bold text-[#190143]">{userPoints}</p>
                 </div>
               </div>
@@ -358,21 +359,21 @@ const RewardsPage = () => {
                           <p className="text-sm font-semibold">
                             {!isAuthenticated 
                               ? (isArabic ? 'انضم إلى برنامج المكافآت' : 'Join Our Rewards Program')
-                              : (isArabic ? 'نقاط غير كافية' : 'Not Enough Points')
+                              : (isArabic ? 'عملات غير كافية' : 'Not Enough Coins')
                             }
                           </p>
                           {!isAuthenticated ? (
                             <p className="text-xs">
                               {isArabic 
                                 ? 'سجل الدخول إلى حسابك لبدء كسب واستبدال نقاط جيماوي للحصول على مكافآت حصرية!'
-                                : 'Sign in to your account to start earning and redeeming Gymmawy Points for exclusive rewards!'
+                                : 'Sign in to your account to start earning and redeeming Gymmawy Coins for exclusive rewards!'
                               }
                             </p>
                           ) : (
                             <p className="text-xs">
                               {isArabic 
                                 ? `${reward.pointsRequired - userPoints} نقطة إضافية مطلوبة`
-                                : `${reward.pointsRequired - userPoints} more points needed`
+                                : `${reward.pointsRequired - userPoints} more coins needed`
                               }
                             </p>
                           )}
@@ -381,8 +382,8 @@ const RewardsPage = () => {
                     )}
                     
                     {/* Points Required Badge */}
-                    <div className="absolute top-4 right-4 bg-[#190143] text-white px-3 py-1 rounded-full text-sm font-semibold">
-                      {reward.pointsRequired} {t('points')}
+                    <div className="absolute top-4 right-4 bg-[#190143] text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+                      {reward.pointsRequired} {getGymmawyCoinIcon({ size: 24 })}
                     </div>
                   </div>
                   
@@ -478,7 +479,7 @@ const RewardsPage = () => {
           <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold text-[#190143]">
-                {isArabic ? 'نقاط غير كافية' : 'Not Enough Points'}
+                {isArabic ? 'عملات غير كافية' : 'Not Enough Coins'}
               </h3>
               <button
                 onClick={closeInsufficientPointsPopup}
