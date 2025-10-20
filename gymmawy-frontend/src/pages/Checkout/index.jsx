@@ -1776,7 +1776,7 @@ return;
       // Prepare payment data
       const paymentData = {
         amount: total,
-        currency: finalPrice?.currency || 'SAR', // Use actual currency, fallback to SAR
+        currency: finalPrice?.currency || currency || 'SAR', // Use actual currency, fallback to SAR
         paymentMethod: paymobPaymentMethod,
         items: getOrderItemsForPaymob(),
         billingData: {

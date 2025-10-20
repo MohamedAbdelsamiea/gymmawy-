@@ -12,7 +12,8 @@ const createUploadDirs = () => {
     'uploads/content/programmes',
     'uploads/content/transformations',
     'uploads/content/videos',
-    'uploads/payment-proofs'
+    'uploads/payment-proofs',
+    'uploads/programmes'
   ];
   
   dirs.forEach(dir => {
@@ -57,6 +58,25 @@ const videoFileFilter = (req, file, cb) => {
   }
 };
 
+// File filter for PDFs
+const pdfFileFilter = (req, file, cb) => {
+  const allowedTypes = ['application/pdf'];
+  const allowedExtensions = ['.pdf'];
+  
+  // Check MIME type
+  const isValidMimeType = allowedTypes.includes(file.mimetype);
+  
+  // Check file extension as fallback
+  const fileExtension = path.extname(file.originalname).toLowerCase();
+  const isValidExtension = allowedExtensions.includes(fileExtension);
+  
+  if (isValidMimeType || isValidExtension) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only PDF files are allowed'), false);
+  }
+};
+
 // Multer configuration for images
 const upload = multer({
   storage,
@@ -73,6 +93,16 @@ const videoUpload = multer({
   fileFilter: videoFileFilter,
   limits: {
     fileSize: 100 * 1024 * 1024, // 100MB limit for videos
+    files: 1 // Only one file at a time
+  }
+});
+
+// Multer configuration for PDFs (no size limit as requested)
+const pdfUpload = multer({
+  storage,
+  fileFilter: pdfFileFilter,
+  limits: {
+    fileSize: 500 * 1024 * 1024, // 500MB limit for PDFs (large but reasonable)
     files: 1 // Only one file at a time
   }
 });
@@ -99,6 +129,12 @@ export const handleMulterErrors = (multerMiddleware) => {
         }
         
         if (err.message === 'Only image files (JPEG, PNG, GIF, WebP) are allowed') {
+          return res.status(400).json({ 
+            error: { message: err.message } 
+          });
+        }
+        
+        if (err.message === 'Only PDF files are allowed') {
           return res.status(400).json({ 
             error: { message: err.message } 
           });
@@ -190,6 +226,58 @@ export const processImage = async (req, res, next) => {
   }
 };
 
+// Middleware to process uploaded PDFs
+export const processPDF = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return next();
+    }
+
+    const { originalname, buffer, mimetype } = req.file;
+    const fileId = uuidv4();
+    const fileExtension = 'pdf';
+    const fileName = `${fileId}.${fileExtension}`;
+    
+    // PDFs go to uploads/programmes directory
+    const uploadDir = 'uploads/programmes';
+    
+    const filePath = path.join(uploadDir, fileName);
+    
+    // Ensure directory exists
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    
+    // Write PDF file directly (no processing needed)
+    fs.writeFileSync(filePath, buffer);
+
+    // Generate URL
+    const url = `/uploads/programmes/${fileName}`;
+
+    // Store file information in request
+    req.uploadedFile = {
+      id: fileId,
+      originalName: originalname,
+      fileName,
+      filePath,
+      url,
+      size: buffer.length,
+      mimetype: mimetype,
+      isPublic: true, // PDF uploads are public
+      category: 'programmes'
+    };
+
+    next();
+  } catch (error) {
+    console.error('Error processing PDF:', error);
+    res.status(400).json({ 
+      error: { 
+        message: 'Failed to process PDF', 
+        details: error.message 
+      } 
+    });
+  }
+};
 
 // Process video file
 export const processVideo = async (req, res, next) => {
@@ -326,6 +414,7 @@ export const serveUploadedFiles = (req, res, next) => {
   else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
   else if (ext === '.png') contentType = 'image/png';
   else if (ext === '.gif') contentType = 'image/gif';
+  else if (ext === '.pdf') contentType = 'application/pdf';
   
   // Set proper headers for image serving
   res.setHeader('Content-Type', contentType);
@@ -366,4 +455,4 @@ export const serveUploadedFiles = (req, res, next) => {
   res.sendFile(path.resolve(filePath));
 };
 
-export { upload, videoUpload };
+export { upload, videoUpload, pdfUpload };

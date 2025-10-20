@@ -1,5 +1,6 @@
 import axios from 'axios';
 import crypto from 'crypto';
+import { convertPrice as convertBackendPrice } from '../modules/currency/currency.service.js';
 
 class PaymobService {
   constructor() {
@@ -60,9 +61,28 @@ class PaymobService {
         redirectionUrl
       } = paymentData;
 
-      // Enforce SAR currency for Paymob
+      // Allow USD/AED currencies to be passed through - conversion should happen in controller
+      if (currency !== 'SAR' && currency !== 'USD' && currency !== 'AED') {
+        throw new Error('Paymob only accepts SAR, USD, or AED currencies');
+      }
+
+      // Convert non-SAR currencies to SAR for Paymob API
+      let finalAmount = amount;
+      let finalCurrency = currency;
       if (currency !== 'SAR') {
-        throw new Error('Paymob only accepts SAR currency');
+        try {
+          finalAmount = await convertBackendPrice(amount, currency, 'SAR');
+          finalCurrency = 'SAR';
+        } catch (error) {
+          console.error('Currency conversion failed, using fallback rates:', error);
+          // Fallback to simple conversion rates if API fails
+          const fallbackRates = {
+            'USD': 3.75, // 1 USD = 3.75 SAR
+            'AED': 1.02  // 1 AED = 1.02 SAR
+          };
+          finalAmount = Math.round(amount * fallbackRates[currency] * 100) / 100;
+          finalCurrency = 'SAR';
+        }
       }
 
       // Validate payment method
@@ -80,15 +100,23 @@ class PaymobService {
       }
 
       const payload = {
-        amount: Math.round(amount * 100), // Convert to cents
-        currency: 'SAR', // Always use SAR
+        amount: Math.round(finalAmount * 100), // Convert to cents
+        currency: finalCurrency, // Use converted currency (should be SAR)
         payment_methods: [parseInt(integrationId)],
-        items: items.map(item => ({
-          name: item.name,
-          amount: Math.round(item.amount * 100), // Convert to cents
-          description: item.description || '',
-          quantity: item.quantity || 1
-        })),
+        items: items.map(item => {
+          // Convert item amount if currency was converted
+          let itemAmount = item.amount;
+          if (currency !== finalCurrency) {
+            const conversionRate = finalAmount / amount;
+            itemAmount = Math.round(item.amount * conversionRate * 100) / 100;
+          }
+          return {
+            name: item.name,
+            amount: Math.round(itemAmount * 100), // Convert to cents
+            description: item.description || '',
+            quantity: item.quantity || 1
+          };
+        }),
         billing_data: {
           apartment: billingData.apartment || '',
           first_name: billingData.firstName,

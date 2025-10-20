@@ -52,6 +52,25 @@ class FileUploadService {
   }
 
   /**
+   * Upload a PDF file
+   * @param {File} file - The PDF file to upload
+   * @returns {Promise<Object>} Upload result
+   */
+  async uploadPDF(file) {
+    try {
+      const formData = new FormData();
+      formData.append('pdf', file);
+      
+      const response = await apiClient.post('/uploads/admin/pdfs', formData);
+      
+      return response;
+    } catch (error) {
+      console.error('PDF upload error:', error);
+      throw new Error(error.response?.data?.error?.message || 'PDF upload failed');
+    }
+  }
+
+  /**
    * Upload payment proof (always private)
    * @param {File} file - The payment proof file
    * @returns {Promise<Object>} Upload result
@@ -130,7 +149,8 @@ class FileUploadService {
     const {
       maxSize = 100 * 1024 * 1024, // 100MB default
       allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
-      isVideo = false
+      isVideo = false,
+      isPDF = false
     } = options;
 
     const errors = [];
@@ -141,14 +161,21 @@ class FileUploadService {
     }
 
     // Check file type
-    const allowedTypesForValidation = isVideo 
-      ? ['video/mp4', 'video/webm', 'video/ogg', 'video/avi', 'video/mov']
-      : allowedTypes;
+    let allowedTypesForValidation;
+    let typeList;
+    
+    if (isPDF) {
+      allowedTypesForValidation = ['application/pdf'];
+      typeList = 'PDF';
+    } else if (isVideo) {
+      allowedTypesForValidation = ['video/mp4', 'video/webm', 'video/ogg', 'video/avi', 'video/mov'];
+      typeList = 'MP4, WebM, OGG, AVI, MOV';
+    } else {
+      allowedTypesForValidation = allowedTypes;
+      typeList = 'JPEG, PNG, GIF, WebP';
+    }
       
     if (!allowedTypesForValidation.includes(file.type)) {
-      const typeList = isVideo 
-        ? 'MP4, WebM, OGG, AVI, MOV'
-        : 'JPEG, PNG, GIF, WebP';
       errors.push(`File type must be one of: ${typeList}`);
     }
 

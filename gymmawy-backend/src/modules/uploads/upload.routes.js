@@ -1,10 +1,11 @@
 import express from 'express';
 import multer from 'multer';
-import { upload, videoUpload, processImage, processVideo, deleteUploadedFile, serveUploadedFiles, handleMulterErrors } from '../../middlewares/uploadMiddleware.js';
+import { upload, videoUpload, pdfUpload, processImage, processVideo, processPDF, deleteUploadedFile, serveUploadedFiles, handleMulterErrors } from '../../middlewares/uploadMiddleware.js';
 import { requireAuth, requireAdmin } from '../../middlewares/authMiddleware.js';
 import {
   uploadPublicImage,
   uploadAdminImage,
+  uploadAdminPDF,
   uploadAdminVideo,
   uploadPaymentProof,
   getUpload,
@@ -38,6 +39,7 @@ router.get('/user', requireAuth, getUserUploads);
 
 // Admin routes
 router.post('/admin/images', requireAuth, requireAdmin, handleMulterErrors(upload.single('image')), processImage, uploadAdminImage);
+router.post('/admin/pdfs', requireAuth, requireAdmin, handleMulterErrors(pdfUpload.single('pdf')), processPDF, uploadAdminPDF);
 router.post('/admin/videos', requireAuth, requireAdmin, handleMulterErrors(videoUpload.single('video')), processVideo, uploadAdminVideo);
 router.get('/admin/images', requireAuth, requireAdmin, getPrivateImagesController);
 router.get('/admin/payment-proofs', requireAuth, requireAdmin, getPaymentProofsController);

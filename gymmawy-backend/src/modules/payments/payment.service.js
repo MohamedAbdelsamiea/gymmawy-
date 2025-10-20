@@ -44,7 +44,7 @@ class PaymentService {
         if (paymentData.currency === 'USD' || paymentData.currency === 'AED') {
           sarAmount = await convertBackendPrice(paymentData.amount, paymentData.currency, 'SAR');
         } else {
-          throw new Error('Paymob only accepts SAR currency');
+          throw new Error('Paymob only accepts SAR, USD, or AED currencies');
         }
       }
 

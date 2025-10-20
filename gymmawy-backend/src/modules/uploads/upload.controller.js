@@ -95,6 +95,44 @@ export const uploadAdminImage = async (req, res, next) => {
   }
 };
 
+// Upload PDF (admin)
+export const uploadAdminPDF = async (req, res, next) => {
+  try {
+    if (!req.uploadedFile) {
+      return res.status(400).json({ 
+        error: { message: 'No PDF file uploaded' } 
+      });
+    }
+
+    const uploadData = {
+      ...req.uploadedFile,
+      isPublic: true, // PDF uploads are public
+      uploadedBy: req.user?.id || null
+    };
+
+    const upload = await createUploadRecord(uploadData);
+    
+    res.status(201).json({
+      success: true,
+      upload: {
+        id: upload.id,
+        originalName: upload.originalName,
+        fileName: upload.fileName,
+        url: upload.url,
+        size: upload.size,
+        mimetype: upload.mimetype,
+        category: upload.category,
+        isPublic: upload.isPublic,
+        createdAt: upload.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Error uploading PDF:', error);
+    res.status(500).json({ 
+      error: { message: 'Failed to upload PDF' } 
+    });
+  }
+};
 
 // Upload video (admin)
 export const uploadAdminVideo = async (req, res, next) => {
