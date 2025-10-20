@@ -1,6 +1,7 @@
 import paymobService from '../../services/paymobService.js';
 import { getPrismaClient } from '../../config/db.js';
 import { generateUserFriendlyPaymentReference } from '../../utils/paymentReference.js';
+import { convertPrice as convertBackendPrice } from '../currency/currency.service.js';
 
 const prisma = getPrismaClient();
 
@@ -37,24 +38,29 @@ class PaymentService {
    */
   async createPaymobPayment(paymentData) {
     try {
-      // Enforce SAR currency for Paymob
+      // Convert USD/AED to SAR for Paymob
+      let sarAmount = paymentData.amount;
       if (paymentData.currency && paymentData.currency !== 'SAR') {
-        throw new Error('Paymob only accepts SAR currency');
+        if (paymentData.currency === 'USD' || paymentData.currency === 'AED') {
+          sarAmount = await convertBackendPrice(paymentData.amount, paymentData.currency, 'SAR');
+        } else {
+          throw new Error('Paymob only accepts SAR currency');
+        }
       }
 
       // Validate payment data
-      const validation = paymobService.validatePaymentData(paymentData);
+      const validation = paymobService.validatePaymentData({ ...paymentData, amount: sarAmount, currency: 'SAR' });
       if (!validation.isValid) {
         throw new Error(`Payment validation failed: ${validation.errors.join(', ')}`);
       }
 
       // Create Paymob intention
-      const intentionResult = await paymobService.createIntention(paymentData);
+      const intentionResult = await paymobService.createIntention({ ...paymentData, amount: sarAmount, currency: 'SAR' });
 
       // Create payment record in database
       const payment = await prisma.payment.create({
         data: {
-          amount: paymentData.amount,
+          amount: sarAmount,
           currency: 'SAR', // Always use SAR for Paymob
           method: 'PAYMOB',
           status: 'PENDING',
@@ -116,9 +122,9 @@ class PaymentService {
       {
         id: 'paymob',
         name: 'Paymob',
-        description: 'Secure payment with cards and Apple Pay - SAR only',
+        description: 'Secure payment with cards and Apple Pay — amounts processed in SAR',
         supportedMethods: ['card', 'apple_pay'],
-        currencies: ['SAR'], // Only SAR is supported
+        currencies: ['SAR', 'USD', 'AED'], // Accept USD/AED input, convert to SAR
         isAvailable: !!process.env.PAYMOB_SECRET_KEY
       },
       {

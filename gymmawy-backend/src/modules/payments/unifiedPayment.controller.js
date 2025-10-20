@@ -1,4 +1,5 @@
 import paymentService from './payment.service.js';
+import { convertPrice as convertBackendPrice } from '../currency/currency.service.js';
 import { getPrismaClient } from '../../config/db.js';
 
 const prisma = getPrismaClient();
@@ -53,13 +54,8 @@ export const createPayment = async (req, res) => {
       });
     }
 
-    // Validate currency and payment method for Paymob
+    // Validate payment method for Paymob; allow USD/AED then convert
     if (provider === 'paymob') {
-      if (currency !== 'SAR') {
-        return res.status(400).json({
-          error: { message: 'Paymob only accepts SAR currency' }
-        });
-      }
       if (paymentMethod !== 'card' && paymentMethod !== 'apple_pay') {
         return res.status(400).json({
           error: { message: 'Paymob only accepts card and apple_pay payment methods' }
@@ -74,7 +70,7 @@ export const createPayment = async (req, res) => {
     }
 
     // Prepare payment data
-    const paymentData = {
+    let paymentData = {
       amount,
       currency,
       paymentMethod,
@@ -91,6 +87,18 @@ export const createPayment = async (req, res) => {
       subscriptionPlanId,
       userId: req.user?.id || null
     };
+
+    // If provider is Paymob and currency is USD/AED, convert amount to SAR
+    if (provider === 'paymob' && currency !== 'SAR') {
+      if (currency === 'USD' || currency === 'AED') {
+        const sarAmount = await convertBackendPrice(amount, currency, 'SAR');
+        paymentData = { ...paymentData, amount: sarAmount, currency: 'SAR' };
+      } else {
+        return res.status(400).json({
+          error: { message: 'Paymob supports SAR only; allowed input currencies: USD, AED (auto-converted)' }
+        });
+      }
+    }
 
     // Create payment using the specified provider
     const result = await paymentService.createPaymentWithProvider(paymentData, provider);

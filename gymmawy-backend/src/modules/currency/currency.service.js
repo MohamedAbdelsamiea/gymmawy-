@@ -1,5 +1,6 @@
 import { Currency } from '@prisma/client';
 import { getPrismaClient } from '../../config/db.js';
+import axios from 'axios';
 
 const prisma = getPrismaClient();
 
@@ -38,21 +39,29 @@ export async function getPricesByCurrency({ currency, purchasableType, purchasab
  */
 export async function getCurrencyRates(baseCurrency = 'USD') {
   try {
-    // Mock exchange rates - in production, fetch from real API
-    const mockRates = {
-      USD: { EGP: 30.5, SAR: 3.75, AED: 3.67, USD: 1.0 },
-      EGP: { USD: 0.033, SAR: 0.123, AED: 0.120, EGP: 1.0 },
-      SAR: { USD: 0.267, EGP: 8.13, AED: 0.98, SAR: 1.0 },
-      AED: { USD: 0.272, EGP: 8.30, SAR: 1.02, AED: 1.0 }
-    };
-    
-    const rates = mockRates[baseCurrency] || mockRates.USD;
-    
+    // Use exchangerate-api.com for free FX rates (no API key required)
+    const url = `https://api.exchangerate-api.com/v4/latest/${encodeURIComponent(baseCurrency)}`;
+
+    const response = await axios.get(url, { timeout: 5000 });
+    if (!response.data || !response.data.rates) {
+      throw new Error('Failed to fetch currency rates');
+    }
+
+    const rates = response.data.rates;
+    // Filter to only the currencies we support
+    const supportedCurrencies = ['USD', 'AED', 'SAR', 'EGP'];
+    const filteredRates = {};
+    supportedCurrencies.forEach(currency => {
+      if (rates[currency]) {
+        filteredRates[currency] = rates[currency];
+      }
+    });
+
     return {
       base: baseCurrency,
-      rates,
+      rates: filteredRates,
       lastUpdated: new Date().toISOString(),
-      source: 'mock' // In production, indicate real source
+      source: 'exchangerate-api.com'
     };
   } catch (error) {
     console.error('Error fetching currency rates:', error);

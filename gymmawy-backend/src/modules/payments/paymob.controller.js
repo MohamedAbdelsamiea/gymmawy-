@@ -1,4 +1,5 @@
 import paymobService from '../../services/paymobService.js';
+import { convertPrice as convertBackendPrice } from '../currency/currency.service.js';
 import { getPrismaClient } from '../../config/db.js';
 import { v4 as uuidv4 } from 'uuid';
 import { generateUserFriendlyPaymentReference } from '../../utils/paymentReference.js';
@@ -31,11 +32,29 @@ export const createIntention = async (req, res) => {
       });
     }
 
-    // Enforce SAR currency for Paymob
+    // Allow USD/AED input then convert to SAR for Paymob
+    let finalAmount = amount;
+    let finalCurrency = currency;
     if (currency !== 'SAR') {
-      return res.status(400).json({
-        error: { message: 'Paymob only accepts SAR currency' }
-      });
+      if (currency === 'USD' || currency === 'AED') {
+        try {
+          finalAmount = await convertBackendPrice(amount, currency, 'SAR');
+          finalCurrency = 'SAR';
+        } catch (error) {
+          console.error('Currency conversion failed, using fallback rates:', error);
+          // Fallback to simple conversion rates if API fails
+          const fallbackRates = {
+            'USD': 3.75, // 1 USD = 3.75 SAR
+            'AED': 1.02  // 1 AED = 1.02 SAR
+          };
+          finalAmount = Math.round(amount * fallbackRates[currency] * 100) / 100;
+          finalCurrency = 'SAR';
+        }
+      } else {
+        return res.status(400).json({
+          error: { message: 'Paymob supports SAR only; allowed input currencies: USD, AED (auto-converted)' }
+        });
+      }
     }
 
     // Validate payment method
@@ -51,12 +70,22 @@ export const createIntention = async (req, res) => {
       });
     }
 
+    // Convert items amounts if currency was converted
+    let finalItems = items;
+    if (currency !== finalCurrency) {
+      const conversionRate = finalAmount / amount;
+      finalItems = items.map(item => ({
+        ...item,
+        amount: Math.round(item.amount * conversionRate * 100) / 100
+      }));
+    }
+
     // Validate payment data
     const validation = paymobService.validatePaymentData({
-      amount,
-      currency,
+      amount: finalAmount,
+      currency: finalCurrency,
       paymentMethod,
-      items,
+      items: finalItems,
       billingData,
       customer,
       extras
@@ -79,10 +108,10 @@ export const createIntention = async (req, res) => {
 
     // Create payment intention
     const intentionResult = await paymobService.createIntention({
-      amount,
-      currency,
+      amount: finalAmount,
+      currency: finalCurrency,
       paymentMethod,
-      items,
+      items: finalItems,
       billingData,
       customer,
       extras: {
@@ -99,7 +128,7 @@ export const createIntention = async (req, res) => {
     // Create payment record in database
     const payment = await prisma.payment.create({
       data: {
-        amount: amount,
+        amount: finalAmount,
         currency: 'SAR', // Always use SAR for Paymob
         method: 'PAYMOB',
         status: 'PENDING',
