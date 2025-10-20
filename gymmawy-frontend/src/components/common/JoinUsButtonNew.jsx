@@ -50,6 +50,17 @@ const shineAnimation = `
     }
   }
   
+  @property --border-angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+  }
+  
+  @keyframes border-angle-rotate {
+    from { --border-angle: 0deg; }
+    to { --border-angle: 360deg; }
+  }
+  
   .circulate-glow {
     animation: circulate-glow 0.6s ease-in-out;
   }
@@ -81,6 +92,10 @@ const JoinUsButtonNew = ({
   const buttonImg = useAsset('button-img.webp');
   const [isPressed, setIsPressed] = useState(false);
   const [glowActive, setGlowActive] = useState(false);
+  
+  // Check if we're in Arabic/RTL mode
+  const isArabic = i18n.language === 'ar';
+  const isRTL = document.documentElement.dir === 'rtl' || isArabic;
 
   const handleJoinUsClick = async () => {
     if (disabled || loading) return;
@@ -182,18 +197,16 @@ const JoinUsButtonNew = ({
   if (variant === 'image') {
     // Original image-based button
     return (
-      <div
-        className={`
-          ${animationClasses[animationType]} 
-          ${pressedClasses}
-          ${disabledClasses}
-          mt-4
-          ${className}
-        `}
-      >
         <button 
           onClick={handleJoinUsClick} 
-          className="relative cursor-pointer flex items-center"
+          className={`
+            relative cursor-pointer flex items-center
+            ${animationClasses[animationType]} 
+            ${pressedClasses}
+            ${disabledClasses}
+            mt-4
+            ${className}
+          `}
           disabled={disabled || loading}
           {...props}
         >
@@ -203,94 +216,118 @@ const JoinUsButtonNew = ({
             className="w-full h-auto"
           />
         </button>
-      </div>
     );
   }
 
   if (variant === 'razor') {
     // Custom razor-look button with gradient and arrows
     return (
-      <div
-        className={`
-          ${animationClasses[animationType]} 
-          ${pressedClasses}
-          ${disabledClasses}
-          mt-4
-          ${className}
-        `}
-      >
         <button 
           onClick={handleJoinUsClick} 
-          className="relative cursor-pointer group"
+          className={`
+            relative cursor-pointer group py-3 overflow-hidden
+            ${animationClasses[animationType]} 
+            ${pressedClasses}
+            ${disabledClasses}
+            mt-4
+            ${className}
+          `}
+          style={{
+            paddingLeft: isRTL ? '80px' : '32px',
+            paddingRight: isRTL ? '32px' : '80px',
+            background: isRTL 
+              ? 'linear-gradient(to left, #291259 0%, #4e0a78 100%)'
+              : 'linear-gradient(to right, #291259 0%, #4e0a78 100%)',
+            boxShadow: glowActive 
+              ? '0 4px 15px rgba(41, 18, 89, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 30px rgba(250, 252, 246, 1), inset 0 0 30px rgba(250, 252, 246, 0.5)'
+              : '0 4px 15px rgba(41, 18, 89, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+            border: glowActive 
+              ? '2px solid rgba(250, 252, 246, 1)'
+              : '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '0px',
+            clipPath: isRTL 
+              ? 'polygon(90px 0, 100% 0, 100% 100%, 0 100%)'
+              : 'polygon(0 0, calc(100% - 90px) 0, 100% 100%, 0 100%)',
+            transition: 'all 0.3s ease'
+          }}
           disabled={disabled || loading}
           {...props}
         >
-          {/* Main button with razor gradient */}
+          {/* Rotating Border Animation */}
           <div 
-            className="relative px-20 py-3 overflow-hidden"
+            className="absolute inset-0 pointer-events-none"
             style={{
-              background: 'linear-gradient(to right, #291259 0%, #4e0a78 100%)',
-              boxShadow: glowActive 
-                ? '0 4px 15px rgba(41, 18, 89, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 30px rgba(250, 252, 246, 1), inset 0 0 30px rgba(250, 252, 246, 0.5)'
-                : '0 4px 15px rgba(41, 18, 89, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-              border: glowActive 
-                ? '2px solid rgba(250, 252, 246, 1)'
-                : '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '0px',
-              clipPath: 'polygon(0 0, calc(100% - 90px) 0, 100% 100%, 0 100%)',
-              transition: 'all 0.3s ease'
+              clipPath: isRTL 
+                ? 'polygon(90px 0, 100% 0, 100% 100%, 0 100%)'
+                : 'polygon(0 0, calc(100% - 90px) 0, 100% 100%, 0 100%)',
+              '--border-angle': '0deg',
+              animation: 'border-angle-rotate 4s infinite linear',
+              border: '2px solid transparent',
+              background: `linear-gradient(${isRTL ? '#4e0a78, #291259' : '#291259, #4e0a78'}) padding-box, conic-gradient(from var(--border-angle), transparent 0deg, rgba(250, 252, 246, 0.8) 75deg, rgba(250, 252, 246, 1) 90deg, rgba(250, 252, 246, 0.8) 105deg, transparent 120deg, transparent 360deg) border-box`
             }}
-          >
+          />
             {/* Shine effect overlay */}
             <div 
               className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-10 transition-opacity duration-300"
               style={{
-                background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%)',
-                transform: 'translateX(-100%)',
+                background: isRTL 
+                  ? 'linear-gradient(-45deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%)'
+                  : 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%)',
+                transform: isRTL ? 'translateX(100%)' : 'translateX(-100%)',
                 animation: 'shine 2s infinite'
               }}
             />
             
             {/* Content container */}
-            <div className="relative flex items-center justify-center space-x-3">
+             <div className={`relative flex items-center justify-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
               {/* JOIN US text */}
-              <span 
-                className="font-medium text-2xl uppercase transition-all duration-300 group-hover:text-white group-hover:[text-shadow:0_0_15px_rgba(250,252,246,0.9),0_0_25px_rgba(250,252,246,0.7),0_0_35px_rgba(250,252,246,0.5)]"
+               <span 
+                 className="font-medium text-xl uppercase transition-all duration-300 group-hover:text-white group-hover:[text-shadow:0_0_15px_rgba(250,252,246,0.9),0_0_25px_rgba(250,252,246,0.7),0_0_35px_rgba(250,252,246,0.5)]"
                 style={{
                   color: '#fafcf6',
-                  fontFamily: 'Inter, system-ui, sans-serif',
-                  fontWeight: '500'
+                  fontFamily: isRTL ? 'Alexandria, Noto Sans Arabic, system-ui, sans-serif' : 'Inter, system-ui, sans-serif',
+                  fontWeight: '500',
+                  direction: isRTL ? 'rtl' : 'ltr'
                 }}
               >
-                JOIN US NOW
+                {isRTL ? 'انضم إلينا الآن' : 'JOIN US NOW'}
               </span>
               
               {/* Three triangular arrow heads overlapping like Christmas tree pattern */}
-              <div className="flex items-center">
+              <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <svg 
-                  className="w-6 h-6 transform group-hover:translate-x-1 transition-all duration-200 relative z-10 group-hover:[filter:drop-shadow(0_0_15px_rgba(250,252,246,0.9))_drop-shadow(0_0_25px_rgba(250,252,246,0.7))_drop-shadow(0_0_35px_rgba(250,252,246,0.5))]" 
+                  className={`w-6 h-6 transform transition-all duration-200 relative z-10 group-hover:[filter:drop-shadow(0_0_15px_rgba(250,252,246,0.9))_drop-shadow(0_0_25px_rgba(250,252,246,0.7))_drop-shadow(0_0_35px_rgba(250,252,246,0.5))] ${isRTL ? 'group-hover:-translate-x-1' : 'group-hover:translate-x-1'}`}
                   fill="currentColor" 
                   viewBox="0 0 24 24"
-                  style={{ color: '#fafcf6' }}
+                  style={{ 
+                    color: '#fafcf6',
+                    transform: isRTL ? 'scaleX(-1)' : 'scaleX(1)'
+                  }}
                 >
                   <path d="M4 5l11 7-11 7V5z" />
                 </svg>
-                <svg 
-                  className="w-6 h-6 transform group-hover:translate-x-1 transition-all duration-200 delay-75 relative -ml-3 z-20 group-hover:[filter:drop-shadow(0_0_15px_rgba(250,252,246,0.9))_drop-shadow(0_0_25px_rgba(250,252,246,0.7))_drop-shadow(0_0_35px_rgba(250,252,246,0.5))]" 
-                  fill="currentColor" 
-                  viewBox="0 0 24 24"
-                  style={{ color: '#fafcf6' }}
-                >
-                  <path d="M4 5l11 7-11 7V5z" />
-                </svg>
-                <svg 
-                  className="w-6 h-6 transform group-hover:translate-x-1 transition-all duration-200 delay-150 relative -ml-3 z-30 group-hover:[filter:drop-shadow(0_0_15px_rgba(250,252,246,0.9))_drop-shadow(0_0_25px_rgba(250,252,246,0.7))_drop-shadow(0_0_35px_rgba(250,252,246,0.5))]" 
-                  fill="currentColor" 
-                  viewBox="0 0 24 24"
-                  style={{ color: '#fafcf6' }}
-                >
-                  <path d="M4 5l11 7-11 7V5z" />
-                </svg>
+                 <svg 
+                   className={`w-6 h-6 transform transition-all duration-200 delay-75 relative z-20 group-hover:[filter:drop-shadow(0_0_15px_rgba(250,252,246,0.9))_drop-shadow(0_0_25px_rgba(250,252,246,0.7))_drop-shadow(0_0_35px_rgba(250,252,246,0.5))] ${isRTL ? 'group-hover:-translate-x-1 -ml-3' : 'group-hover:translate-x-1 -ml-3'}`}
+                   fill="currentColor" 
+                   viewBox="0 0 24 24"
+                   style={{ 
+                     color: '#fafcf6',
+                     transform: isRTL ? 'scaleX(-1)' : 'scaleX(1)'
+                   }}
+                 >
+                   <path d="M4 5l11 7-11 7V5z" />
+                 </svg>
+                 <svg 
+                   className={`w-6 h-6 transform transition-all duration-200 delay-150 relative z-30 group-hover:[filter:drop-shadow(0_0_15px_rgba(250,252,246,0.9))_drop-shadow(0_0_25px_rgba(250,252,246,0.7))_drop-shadow(0_0_35px_rgba(250,252,246,0.5))] ${isRTL ? 'group-hover:-translate-x-1 -ml-3' : 'group-hover:translate-x-1 -ml-3'}`}
+                   fill="currentColor" 
+                   viewBox="0 0 24 24"
+                   style={{ 
+                     color: '#fafcf6',
+                     transform: isRTL ? 'scaleX(-1)' : 'scaleX(1)'
+                   }}
+                 >
+                   <path d="M4 5l11 7-11 7V5z" />
+                 </svg>
               </div>
             </div>
             
@@ -300,9 +337,7 @@ const JoinUsButtonNew = ({
                 <LoadingSpinner />
               </div>
             )}
-          </div>
         </button>
-      </div>
     );
   }
 

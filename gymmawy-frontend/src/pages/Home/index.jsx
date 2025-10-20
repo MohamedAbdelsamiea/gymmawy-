@@ -9,7 +9,7 @@ import { useLanguage } from "../../hooks/useLanguage";
 import { useAuth } from "../../contexts/AuthContext";
 import { useCurrencyContext } from "../../contexts/CurrencyContext";
 import { getFullImageUrl } from "../../utils/imageUtils";
-import JoinUsButton from "../../components/common/JoinUsButton";
+import JoinUsButtonNew from "../../components/common/JoinUsButtonNew";
 import VideoPlayer from "../../components/common/VideoPlayer";
 import videoService from "../../services/videoService";
 import transformationService from "../../services/transformationService";
@@ -306,7 +306,7 @@ return '';
               <div className="w-full max-w-sm mb-4 sm:mb-8">
                 <img src={heroText} alt="Hero Text" className="w-full h-auto" loading="lazy" />
               </div>
-              <JoinUsButton />
+              <JoinUsButtonNew variant="razor" />
             </div>
 
             {/* Hero Image Column */}
@@ -350,7 +350,7 @@ return '';
                 <div className="w-full max-w-sm mb-4">
                   <img src={heroText} alt="Hero Text" className="w-full h-auto" loading="lazy" />
                 </div>
-                <JoinUsButton />
+                <JoinUsButtonNew variant="razor" />
               </div>
             </div>
           </div>
@@ -533,9 +533,7 @@ return '';
           </div>
 
           <div className="text-center">
-            <div className="transform transition-transform duration-500 hover:scale-105 inline-block md:w-[450px]">
-              <JoinUsButton />
-            </div>
+            <JoinUsButtonNew variant="razor" className="transform transition-transform duration-500 hover:scale-105 inline-block md:w-[450px]" />
           </div>
         </div>
       </section>
@@ -1070,9 +1068,7 @@ return '';
           </div>
 
           <div className="text-center">
-            <div className="transform transition-transform duration-500 hover:scale-105 inline-block mb-3 md:w-[450px]">
-              <JoinUsButton />
-            </div>
+            <JoinUsButtonNew variant="razor" className="transform transition-transform duration-500 hover:scale-105 inline-block mb-3 md:w-[450px]" />
           </div>
         </div>
       </section>
