@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthCard, FloatingInput, AuthButton, AuthLink } from '../../components/auth';
 import CountryCodeSelector from '../../components/auth/CountryCodeSelector';
+import CountrySelector from '../../components/auth/CountrySelector';
 import { 
   isValidEmail, 
   isValidPassword, 
@@ -16,11 +17,29 @@ import {
   validateBirthDate,
 } from '../../utils/validators';
 import { getValidationErrors, getFieldError, getGeneralErrorMessage } from '../../utils/errorUtils';
+import { useFormPersistence } from '../../hooks/useFormPersistence';
+import { useCountryDetection } from '../../hooks/useCountryDetection';
 
 const Register = () => {
   const { t, i18n } = useTranslation("auth");
   const { register, loading, error, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+
+  // Initialize form persistence
+  const {
+    hasStoredData,
+    isLoading: isPersistenceLoading,
+    saveData,
+    loadData,
+    clearData,
+    debouncedSave,
+    handleSubmit: handleSubmitWithPersistence
+  } = useFormPersistence('signup', {
+    excludeFields: ['password', 'confirmPassword'],
+    clearOnSubmit: true,
+    autoSave: true,
+    autoSaveDelay: 2000
+  });
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -35,9 +54,32 @@ const Register = () => {
     building: '',
     street: '',
     city: '',
-    country: '', // No default value
+    country: '', // Will be auto-detected
     postcode: '',
   });
+
+  // Country detection hook
+  const { isDetecting, detectedCountry, error: detectionError, hasDetected, detect } = useCountryDetection(true);
+
+  // Update form data when country is detected
+  useEffect(() => {
+    if (detectedCountry && !formData.country) {
+      setFormData(prev => ({
+        ...prev,
+        country: detectedCountry.country,
+        countryCode: detectedCountry.phoneCode,
+        city: detectedCountry.city || prev.city
+      }));
+      
+      // Save the detected data to persistence
+      debouncedSave({
+        ...formData,
+        country: detectedCountry.country,
+        countryCode: detectedCountry.phoneCode,
+        city: detectedCountry.city || formData.city
+      });
+    }
+  }, [detectedCountry, formData.country, formData.countryCode, formData.city, debouncedSave]);
 
   const [errors, setErrors] = useState({});
   const [validationErrors, setValidationErrors] = useState([]);
@@ -51,6 +93,27 @@ const Register = () => {
       navigate('/');
     }
   }, [isAuthenticated, user, navigate]);
+
+  // Load stored form data on mount
+  useEffect(() => {
+    if (hasStoredData && !isPersistenceLoading) {
+      const storedData = loadData();
+      if (storedData) {
+        setFormData(prev => ({
+          ...prev,
+          ...storedData
+        }));
+        console.log('Loaded stored signup data');
+      }
+    }
+  }, [hasStoredData, isPersistenceLoading, loadData]);
+
+  // Auto-save form data when it changes
+  useEffect(() => {
+    if (formData.firstName || formData.lastName || formData.email || formData.phone) {
+      debouncedSave(formData);
+    }
+  }, [formData, debouncedSave]);
 
 
   // Show loading while checking authentication
@@ -267,47 +330,57 @@ const Register = () => {
       language: i18n.language, // Include current language
     };
 
-    const result = await register(userData);
-    
-    if (result.success) {
-      // Redirect to email verification page with email parameter
-      navigate(`/auth/email-verification?email=${encodeURIComponent(formData.email)}`);
-    } else {
-      // Handle validation errors
-      const validationErrs = getValidationErrors(result.error?.response?.data || result.error);
+    // Use the persistence wrapper for submit handling
+    const submitWithPersistence = handleSubmitWithPersistence(async () => {
+      const result = await register(userData);
       
-      if (validationErrs.length > 0) {
-        setValidationErrors(validationErrs);
-        setErrors({});
+      if (result.success) {
+        // Clear stored data on successful registration
+        clearData();
+        // Redirect to email verification page with email parameter
+        navigate(`/auth/email-verification?email=${encodeURIComponent(formData.email)}`);
+        return result;
       } else {
-        // Handle general errors - check multiple possible error structures
-        let errorMessage = 'Registration failed. Please try again.';
+        // Handle validation errors
+        const validationErrs = getValidationErrors(result.error?.response?.data || result.error);
         
-        if (result.error?.response?.data?.message) {
-          errorMessage = result.error.response.data.message;
-        } else if (result.error?.response?.data?.error?.message) {
-          errorMessage = result.error.response.data.error.message;
-        } else if (result.error?.message) {
-          errorMessage = result.error.message;
-        } else if (typeof result.error === 'string') {
-          errorMessage = result.error;
+        if (validationErrs.length > 0) {
+          setValidationErrors(validationErrs);
+          setErrors({});
+        } else {
+          // Handle general errors - check multiple possible error structures
+          let errorMessage = 'Registration failed. Please try again.';
+          
+          if (result.error?.response?.data?.message) {
+            errorMessage = result.error.response.data.message;
+          } else if (result.error?.response?.data?.error?.message) {
+            errorMessage = result.error.response.data.error.message;
+          } else if (result.error?.message) {
+            errorMessage = result.error.message;
+          } else if (typeof result.error === 'string') {
+            errorMessage = result.error;
+          }
+          
+          // Handle specific error cases
+          if (errorMessage.includes('409') || errorMessage.includes('Conflict')) {
+            const translatedMessage = t('register.errors.emailAlreadyExists');
+            errorMessage = translatedMessage !== 'register.errors.emailAlreadyExists' ? translatedMessage : 'This email is already registered. Please use a different email or try logging in.';
+          } else if (errorMessage.includes('400') || errorMessage.includes('Bad Request')) {
+            const translatedMessage = t('register.errors.invalidData');
+            errorMessage = translatedMessage !== 'register.errors.invalidData' ? translatedMessage : 'Please check your information and try again.';
+          }
+          
+          setErrors({ 
+            general: errorMessage,
+          });
+          setValidationErrors([]);
         }
-        
-        // Handle specific error cases
-        if (errorMessage.includes('409') || errorMessage.includes('Conflict')) {
-          const translatedMessage = t('register.errors.emailAlreadyExists');
-          errorMessage = translatedMessage !== 'register.errors.emailAlreadyExists' ? translatedMessage : 'This email is already registered. Please use a different email or try logging in.';
-        } else if (errorMessage.includes('400') || errorMessage.includes('Bad Request')) {
-          const translatedMessage = t('register.errors.invalidData');
-          errorMessage = translatedMessage !== 'register.errors.invalidData' ? translatedMessage : 'Please check your information and try again.';
-        }
-        
-        setErrors({ 
-          general: errorMessage,
-        });
-        setValidationErrors([]);
+        return result;
       }
-    }
+    });
+
+    // Execute the wrapped submit function
+    await submitWithPersistence();
   };
 
   return (
@@ -316,6 +389,7 @@ const Register = () => {
       subtitle={t('register.subtitle')}
     >
       <form onSubmit={handleSubmit} className="space-y-6">
+
         {/* General Message */}
         {errors.general && (
           <div className={`border rounded-lg p-4 ${
@@ -382,14 +456,23 @@ const Register = () => {
 
         {/* Phone Input with Country Code */}
         <div className="w-full">
-          <label className="block text-sm font-medium text-gray-700 mb-2 uppercase">
-            {t('register.phone')} <span className="text-red-500">*</span>
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-gray-700 uppercase">
+              {t('register.phone')} <span className="text-red-500">*</span>
+            </label>
+            {isDetecting && formData.countryCode !== '+20' && (
+              <div className="flex items-center text-xs text-blue-600">
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
+                Updating...
+              </div>
+            )}
+          </div>
           <div className="flex" dir="ltr">
             <CountryCodeSelector
               value={formData.countryCode}
               onChange={handleCountryCodeChange}
               className="flex-shrink-0"
+              disabled={isDetecting}
             />
             <div className="flex-1">
               <input
@@ -484,14 +567,59 @@ const Register = () => {
               onChange={handleInputChange}
               error={errors.city || (realTimeErrors.city ? t(`register.errors.${realTimeErrors.city}`) : null)}
             />
-            <FloatingInput
-              label={t('register.country')}
-              type="text"
-              name="country"
-              value={formData.country}
-              onChange={handleInputChange}
-              error={errors.country}
-            />
+            <div className="w-full">
+              <div className="relative">
+                <CountrySelector
+                  value={formData.country}
+                  onChange={(value) => handleInputChange({ target: { name: 'country', value } })}
+                  placeholder={isDetecting ? "Detecting your country..." : " "}
+                  className="w-full"
+                  disabled={isDetecting}
+                />
+                
+                {/* Detection indicator */}
+                {isDetecting && (
+                  <div className="absolute ltr:right-0 rtl:left-0 top-1/2 transform -translate-y-1/2 flex items-center text-xs text-blue-600 mr-3">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
+                    Detecting...
+                  </div>
+                )}
+                
+                {/* Floating label */}
+                <label
+                  className={`
+                    absolute transition-all duration-200 pointer-events-none
+                    ltr:left-0 rtl:right-0
+                    ${formData.country 
+                      ? 'top-[-0.75rem] text-xs' 
+                      : 'top-2 text-lg md:text-xl'
+                    }
+                    ${errors.country 
+                      ? 'text-red-500' 
+                      : formData.country 
+                        ? 'text-gymmawy-primary' 
+                        : 'text-gray-500'
+                    }
+                    uppercase font-medium
+                  `}
+                >
+                  {t('register.country')}
+                </label>
+              </div>
+              
+              {detectionError && (
+                <p className="text-xs text-yellow-600 flex items-center mt-1">
+                  <span className="mr-1">⚠</span>
+                  Auto-detection failed, please select manually
+                </p>
+              )}
+              
+              {errors.country && (
+                <p className="text-xs text-red-500 mt-2 ltr:text-left rtl:text-right">
+                  {errors.country}
+                </p>
+              )}
+            </div>
             <FloatingInput
               label={t('register.postcode')}
               type="text"

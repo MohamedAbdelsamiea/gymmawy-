@@ -1,5 +1,7 @@
 import { getPrismaClient } from "../../config/db.js";
 import { Decimal } from "@prisma/client/runtime/library";
+import { getOrderWithCalculatedTotal } from "../../utils/orderCalculations.js";
+import { getOrderItemsWithCalculatedTotals } from "../../utils/orderItemCalculations.js";
 
 const prisma = getPrismaClient();
 
@@ -442,7 +444,7 @@ export async function getOrders(query = {}) {
             id: true,
             quantity: true,
             size: true,
-            totalPrice: true,
+            price: true,
             discountPercentage: true,
             product: {
               select: {
@@ -484,56 +486,55 @@ export async function getOrders(query = {}) {
   );
 
   // Transform the data for frontend
-    const transformedOrders = ordersWithPayments.map(order => ({
-      id: order.id,
-      orderNumber: order.orderNumber,
-      price: order.price,
-      currency: order.currency,
-      status: order.status,
-      paymentMethod: order.payment?.method || null,
-      paymentProof: order.payment?.paymentProofUrl || null,
-      couponDiscount: order.couponDiscount,
-      discountPercentage: order.discountPercentage,
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt,
+    const transformedOrders = ordersWithPayments.map(order => {
+      // Calculate total amount dynamically
+      const orderWithTotal = getOrderWithCalculatedTotal(order);
+      
+      return {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        price: order.price,
+        totalAmount: orderWithTotal.totalAmount, // Calculated dynamically
+        currency: order.currency,
+        status: order.status,
+        paymentMethod: order.payment?.method || null,
+        paymentProof: order.payment?.paymentProofUrl || null,
+        couponDiscount: order.couponDiscount,
+        discountPercentage: order.discountPercentage,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
 
-      // User information
-      user: order.user,
+        // User information
+        user: order.user,
 
-      // Order items with product details
-      items: order.items.map(item => ({
-        id: item.id,
-        quantity: item.quantity,
-        size: item.size,
-        totalPrice: item.totalPrice,
-        discountPercentage: item.discountPercentage,
-        product: item.product
-      })),
+        // Order items with product details (with calculated total prices)
+        items: getOrderItemsWithCalculatedTotals(order.items, order),
 
-      // Shipping details
-      shippingBuilding: order.shippingBuilding,
-      shippingStreet: order.shippingStreet,
-      shippingCity: order.shippingCity,
-      shippingCountry: order.shippingCountry,
-      shippingPostcode: order.shippingPostcode,
+        // Shipping details
+        shippingBuilding: order.shippingBuilding,
+        shippingStreet: order.shippingStreet,
+        shippingCity: order.shippingCity,
+        shippingCountry: order.shippingCountry,
+        shippingPostcode: order.shippingPostcode,
 
-      // Coupon information
-      coupon: order.coupon,
+        // Coupon information
+        coupon: order.coupon,
 
-      // Payment information
-      payment: order.payment,
+        // Payment information
+        payment: order.payment,
 
-      // Metadata for original price tracking
-      metadata: {
-        originalPrice: order.metadata?.originalPrice || order.price
-      }
-    }));
+        // Metadata for original price tracking
+        metadata: {
+          originalPrice: order.metadata?.originalPrice || order.price
+        }
+      };
+    });
 
   return { items: transformedOrders, total, page, pageSize };
 }
 
 export async function getOrderById(id) {
-  return prisma.order.findUnique({
+  const order = await prisma.order.findUnique({
     where: { id },
     include: {
       user: { select: { id: true, email: true, firstName: true, lastName: true } },
@@ -541,6 +542,11 @@ export async function getOrderById(id) {
       payments: true
     }
   });
+  
+  if (!order) return null;
+  
+  // Add calculated total amount
+  return getOrderWithCalculatedTotal(order);
 }
 
 export async function updateOrder(id, data) {
@@ -548,8 +554,7 @@ export async function updateOrder(id, data) {
     where: { id },
     data: {
       status: data.status,
-      notes: data.notes,
-      shippingAddress: data.shippingAddress
+      notes: data.notes
     }
   });
 }
@@ -563,13 +568,27 @@ export async function getProducts(query = {}) {
   const { page = 1, pageSize = 10, search } = query;
   const skip = (page - 1) * pageSize;
   
-  const where = {
+  let where = {
     deletedAt: null, // Exclude soft-deleted products
     isActive: true, // Only show active products in admin
-    ...(search ? {
-      name: { contains: search, mode: 'insensitive' }
-    } : {})
   };
+
+  // Handle search for JSON fields
+  if (search) {
+    where = {
+      ...where,
+      OR: [
+        // Search in English name
+        { name: { path: ['en'], string_contains: search } },
+        // Search in Arabic name
+        { name: { path: ['ar'], string_contains: search } },
+        // Search in English description
+        { description: { path: ['en'], string_contains: search } },
+        // Search in Arabic description
+        { description: { path: ['ar'], string_contains: search } }
+      ]
+    };
+  }
 
   const [products, total] = await Promise.all([
     prisma.product.findMany({
@@ -1566,7 +1585,7 @@ export async function getPayments(query = {}) {
             }
           }
         });
-      } else if (payment.paymentableType === 'PRODUCT' && payment.paymentableId) {
+      } else if (payment.paymentableType === 'ORDER' && payment.paymentableId) {
         relatedEntity = await prisma.order.findUnique({
           where: { id: payment.paymentableId },
           select: {
@@ -1575,7 +1594,7 @@ export async function getPayments(query = {}) {
             status: true
           }
         });
-      } else if (payment.paymentableType === 'PROGRAMME' && payment.paymentableId) {
+      } else if (payment.paymentableType === 'PROGRAMME_PURCHASE' && payment.paymentableId) {
         relatedEntity = await prisma.programmePurchase.findUnique({
           where: { id: payment.paymentableId },
           select: {
@@ -1595,8 +1614,8 @@ export async function getPayments(query = {}) {
         ...payment,
         // Add the related entity based on its type
         ...(payment.paymentableType === 'SUBSCRIPTION' && relatedEntity && { subscription: relatedEntity }),
-        ...(payment.paymentableType === 'PRODUCT' && relatedEntity && { order: relatedEntity }),
-        ...(payment.paymentableType === 'PROGRAMME' && relatedEntity && { programmePurchase: relatedEntity })
+        ...(payment.paymentableType === 'ORDER' && relatedEntity && { order: relatedEntity }),
+        ...(payment.paymentableType === 'PROGRAMME_PURCHASE' && relatedEntity && { programmePurchase: relatedEntity })
       };
     })
   );

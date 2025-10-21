@@ -95,7 +95,7 @@ const AdminSubscriptions = () => {
         paymentableId: payment.paymentableId || subscription.id,
         createdAt: payment.createdAt,
         user: subscription.user,
-        subscription: subscription
+        subscription: subscription // Include full subscription object for human-readable ID access
       };
       
       console.log('Payment data being passed to modal:', paymentData);
@@ -969,6 +969,24 @@ return 'Expires tomorrow';
           </div>
         );
       },
+    },
+    {
+      key: 'reason',
+      label: 'Reason',
+      sortable: false,
+      render: (value, row) => (
+        <div className="max-w-xs">
+          {value ? (
+            <div className="text-sm">
+              <div className="text-gray-900 line-clamp-2" title={value}>
+                {value}
+              </div>
+            </div>
+          ) : (
+            <div className="text-gray-400 text-sm">No reason provided</div>
+          )}
+        </div>
+      ),
     },
     {
       key: 'actions',

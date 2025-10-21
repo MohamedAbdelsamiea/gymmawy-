@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Programme is Ready - Gymmawy</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #1F1F1F;
+            background-color: #F8F9FA;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #3F0071 0%, #8B5CF6 100%);
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="50" cy="10" r="0.5" fill="rgba(255,255,255,0.05)"/><circle cx="10" cy="60" r="0.5" fill="rgba(255,255,255,0.05)"/><circle cx="90" cy="40" r="0.5" fill="rgba(255,255,255,0.05)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
+            opacity: 0.3;
+        }
+        
+        .logo {
+            position: relative;
+            z-index: 1;
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 20px;
+            background-color: rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .logo img {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+        }
+        
+        .header h1 {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .greeting {
+            font-size: 18px;
+            color: #1F1F1F;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .success-message {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .success-message h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .success-message p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .programme-details {
+            background-color: #F8F9FA;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-left: 4px solid #3F0071;
+        }
+        
+        .programme-details h3 {
+            color: #3F0071;
+            font-size: 18px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #E5E7EB;
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            font-weight: 500;
+            color: #6B7280;
+            font-size: 14px;
+        }
+        
+        .detail-value {
+            font-weight: 600;
+            color: #1F1F1F;
+            font-size: 14px;
+        }
+        
+        .download-section {
+            background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .download-section h3 {
+            color: #1F1F1F;
+            font-size: 18px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .download-section p {
+            color: #6B7280;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .download-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #3F0071 0%, #8B5CF6 100%);
+            color: white;
+            text-decoration: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: transform 0.2s ease;
+            box-shadow: 0 4px 12px rgba(63, 0, 113, 0.3);
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(63, 0, 113, 0.4);
+        }
+        
+        .instructions {
+            background-color: #FEF3C7;
+            border: 1px solid #F59E0B;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .instructions h4 {
+            color: #92400E;
+            font-size: 16px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .instructions ul {
+            color: #92400E;
+            font-size: 14px;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 5px;
+        }
+        
+        .footer {
+            background-color: #F8F9FA;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #E5E7EB;
+        }
+        
+        .footer p {
+            color: #6B7280;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .footer .support {
+            color: #3F0071;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .footer .support:hover {
+            text-decoration: underline;
+        }
+        
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #E5E7EB, transparent);
+            margin: 20px 0;
+        }
+        
+        @media (max-width: 600px) {
+            .email-container {
+                margin: 10px;
+                border-radius: 8px;
+            }
+            
+            .header, .content, .footer {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .detail-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            
+            .download-btn {
+                display: block;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <div class="logo">
+                <img src="cid:gymmawy-logo" alt="Gymmawy Logo">
+            </div>
+            <h1>Your Programme is Ready!</h1>
+            <p>Payment confirmed • Programme delivered</p>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                Hello {{firstName}},
+            </div>
+            
+            <div class="success-message">
+                <h2>🎉 Congratulations!</h2>
+                <p>Your payment has been successfully processed and your programme is now available for download.</p>
+            </div>
+            
+            <div class="programme-details">
+                <h3>📋 Programme Details</h3>
+                <div class="detail-row">
+                    <span class="detail-label">Programme Name:</span>
+                    <span class="detail-value">{{programmeName}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Purchase Date:</span>
+                    <span class="detail-value">{{purchaseDate}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Purchase Number:</span>
+                    <span class="detail-value">{{purchaseNumber}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Payment Amount:</span>
+                    <span class="detail-value">{{paymentAmount}} {{currency}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Payment Method:</span>
+                    <span class="detail-value">{{paymentMethod}}</span>
+                </div>
+            </div>
+            
+            <div class="download-section">
+                <h3>📎 Your Programme is Attached</h3>
+                <p>Your programme PDF file is attached to this email. You can save it to your device and access it anytime.</p>
+                <div style="background-color: #E5E7EB; padding: 15px; border-radius: 8px; text-align: center; margin-top: 15px;">
+                    <span style="color: #374151; font-weight: 600;">📄 Programme PDF attached to this email</span>
+                </div>
+            </div>
+            
+            <div class="instructions">
+                <h4>📖 Important Instructions</h4>
+                <ul>
+                    <li>Find the PDF attachment in this email and save it to your device</li>
+                    <li>You can access your programme anytime, even offline</li>
+                    <li>Follow the programme guidelines for best results</li>
+                    <li>Contact support if you have any questions about the programme</li>
+                </ul>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <p style="color: #6B7280; font-size: 14px; text-align: center;">
+                This programme is for your personal use only. Please do not share or distribute the content without permission.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>Thank you for choosing Gymmawy!</p>
+            <p>If you have any questions or need assistance, please don't hesitate to <a href="mailto:{{supportEmail}}" class="support">contact our support team</a>.</p>
+            <p style="margin-top: 20px; font-size: 12px; color: #9CA3AF;">
+                This email was sent to {{email}}. If you didn't make this purchase, please contact us immediately.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

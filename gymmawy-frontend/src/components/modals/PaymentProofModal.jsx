@@ -107,7 +107,20 @@ const PaymentProofModal = ({
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Paymentable ID</label>
                   <p className="text-sm text-gray-900 font-mono">
-                    {payment.paymentableId || 'N/A'}
+                    {(() => {
+                      // Display human-readable ID based on paymentable type
+                      if (payment.paymentableType === 'SUBSCRIPTION' && payment.subscription?.subscriptionNumber) {
+                        return payment.subscription.subscriptionNumber;
+                      } else if (payment.paymentableType === 'ORDER' && payment.order?.orderNumber) {
+                        return payment.order.orderNumber;
+                      } else if (payment.paymentableType === 'PROGRAMME_PURCHASE' && payment.programmePurchase?.purchaseNumber) {
+                        return payment.programmePurchase.purchaseNumber;
+                      } else if (payment.paymentableId) {
+                        return payment.paymentableId;
+                      } else {
+                        return 'N/A';
+                      }
+                    })()}
                   </p>
                 </div>
                 <div>

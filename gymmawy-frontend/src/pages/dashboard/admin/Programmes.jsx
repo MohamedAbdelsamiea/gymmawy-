@@ -122,7 +122,7 @@ const AdminProgrammes = () => {
         paymentableId: payment.paymentableId || purchase.id,
         createdAt: payment.createdAt,
         user: purchase.user,
-        programme: purchase.programme
+        programme: purchase // Include full programme purchase object for human-readable ID access
       };
       
       console.log('Payment data being passed to modal:', paymentData);

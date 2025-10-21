@@ -6,9 +6,9 @@ const prisma = getPrismaClient();
 /**
  * Validate if user has enough points for redemption
  */
-export async function validateRedemption(userId, rewardId, category, pointsRequired) {
+export async function validateRedemption(userId, itemId, category, pointsRequired) {
   try {
-    console.log('🔍 Validating redemption:', { userId, rewardId, category, pointsRequired });
+    console.log('🔍 Validating redemption:', { userId, itemId, category, pointsRequired });
 
     // Get user's current points
     const user = await prisma.user.findUnique({
@@ -30,13 +30,13 @@ export async function validateRedemption(userId, rewardId, category, pointsRequi
     let reward = null;
     let rewardData = null;
 
-    console.log('🔍 Looking up reward:', { category, rewardId });
+    console.log('🔍 Looking up reward:', { category, itemId });
 
     switch (category) {
       case 'packages':
         reward = await prisma.subscriptionPlan.findFirst({
           where: {
-            id: rewardId,
+            id: itemId,
             loyaltyPointsRequired: { gt: 0 }
           }
         });
@@ -45,7 +45,7 @@ export async function validateRedemption(userId, rewardId, category, pointsRequi
       case 'products':
         reward = await prisma.product.findFirst({
           where: {
-            id: rewardId,
+            id: itemId,
             loyaltyPointsRequired: { gt: 0 }
           }
         });
@@ -53,7 +53,7 @@ export async function validateRedemption(userId, rewardId, category, pointsRequi
       case 'programmes':
         reward = await prisma.programme.findFirst({
           where: {
-            id: rewardId,
+            id: itemId,
             loyaltyPointsRequired: { gt: 0 }
           }
         });
@@ -86,8 +86,16 @@ export async function validateRedemption(userId, rewardId, category, pointsRequi
 /**
  * Process loyalty points redemption
  */
-export async function processRedemption(userId, rewardId, category, shippingAddress, language = 'en') {
+export async function processRedemption(userId, itemId, category, shippingDetails) {
   try {
+    // Get user details for language preference
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferredLanguage: true }
+    });
+    
+    const language = user?.preferredLanguage || 'en';
+    
     // Get reward details and validate
     let reward = null;
     let rewardName = '';
@@ -96,7 +104,7 @@ export async function processRedemption(userId, rewardId, category, shippingAddr
     switch (category) {
       case 'packages':
         reward = await prisma.subscriptionPlan.findUnique({
-          where: { id: rewardId }
+          where: { id: itemId }
         });
         rewardName = reward.name?.en || reward.name || 'Subscription Package';
         // For packages, price is typically 0 since it's redeemed with points
@@ -104,7 +112,7 @@ export async function processRedemption(userId, rewardId, category, shippingAddr
         break;
       case 'products':
         reward = await prisma.product.findUnique({
-          where: { id: rewardId }
+          where: { id: itemId }
         });
         rewardName = reward.name?.en || reward.name || 'Product';
         // For products, price is typically 0 since it's redeemed with points
@@ -112,7 +120,7 @@ export async function processRedemption(userId, rewardId, category, shippingAddr
         break;
       case 'programmes':
         reward = await prisma.programme.findUnique({
-          where: { id: rewardId }
+          where: { id: itemId }
         });
         rewardName = reward.name?.en || reward.name || 'Programme';
         // For programmes, price is typically 0 since it's redeemed with points
@@ -129,7 +137,7 @@ export async function processRedemption(userId, rewardId, category, shippingAddr
     const pointsRequired = reward.loyaltyPointsRequired;
 
     // Validate redemption
-    const validation = await validateRedemption(userId, rewardId, category, pointsRequired);
+    const validation = await validateRedemption(userId, itemId, category, pointsRequired);
     if (!validation.valid) {
       throw new Error(validation.error);
     }
@@ -146,14 +154,19 @@ export async function processRedemption(userId, rewardId, category, shippingAddr
         }
       });
 
-      // Create loyalty transaction record
-      const loyaltyTransaction = await tx.loyaltyTransaction.create({
+      // Create payment record for Gymmawy coins transaction
+      const payment = await tx.payment.create({
         data: {
+          amount: pointsRequired,
+          currency: 'GYMMAWY_COINS',
+          method: 'GYMMAWY_COINS',
+          status: 'COMPLETED',
+          gatewayId: null,
+          transactionId: null,
+          paymentReference: `REWARD-${itemId}-${Date.now()}`,
           userId: userId,
-          points: pointsRequired,
-          type: 'SPENT',
-          source: 'REWARD_REDEMPTION',
-          sourceId: rewardId
+          paymentableId: null,
+          paymentableType: null
         }
       });
 
@@ -172,22 +185,25 @@ export async function processRedemption(userId, rewardId, category, shippingAddr
           orderNumber: orderNumber,
           userId: userId,
           status: 'PAID', // Directly mark as paid since it's loyalty redemption
-          totalAmount: rewardPrice,
-          price: rewardPrice, // Set the price field as well
-          currency: 'EGP', // Default currency
+          price: pointsRequired, // Use points as price for Gymmawy coins
+          currency: 'GYMMAWY_COINS', // Set currency to Gymmawy coins
           paymentMethod: 'GYMMAWY_COINS',
-          paymentReference: `LOYALTY-${loyaltyTransaction.id}`,
-          shippingAddress: shippingAddress,
-          language: language,
+          paymentReference: payment.paymentReference, // Reference payment transaction
+          discountPercentage: 0, // No discounts for reward redemptions
+          couponDiscount: 0, // No coupon discounts for reward redemptions
+          shippingBuilding: shippingDetails?.building || null,
+          shippingStreet: shippingDetails?.street || null,
+          shippingCity: shippingDetails?.city || null,
+          shippingCountry: shippingDetails?.country || null,
+          shippingPostcode: shippingDetails?.postcode || null,
           items: {
             create: [{
-              rewardId: rewardId,
+              productId: itemId,
               category: category,
               name: rewardName,
               quantity: 1,
-              price: rewardPrice,
-              totalPrice: rewardPrice,
-              loyaltyPointsUsed: pointsRequired
+              price: pointsRequired, // Price is the number of coins used
+              discountPercentage: 0 // No discounts for reward items
             }]
           }
         }
@@ -201,7 +217,7 @@ export async function processRedemption(userId, rewardId, category, shippingAddr
         const subscription = await tx.subscription.create({
           data: {
             userId: userId,
-            subscriptionPlanId: rewardId,
+            subscriptionPlanId: itemId,
             subscriptionNumber: `SUB-${orderNumber}`,
             status: 'ACTIVE',
             startDate: new Date(),
@@ -217,7 +233,7 @@ export async function processRedemption(userId, rewardId, category, shippingAddr
         const programmePurchase = await tx.programmePurchase.create({
           data: {
             userId: userId,
-            programmeId: rewardId,
+            programmeId: itemId,
             price: 0, // Free since redeemed with points
             purchaseNumber: `PROG-${orderNumber}`,
             status: 'COMPLETE', // Auto-approve loyalty redemptions

@@ -120,6 +120,38 @@ export function getEmailChangeVerificationTemplate(data, language = 'en') {
 }
 
 /**
+ * Get programme delivery template
+ * @param {Object} data - Programme and payment data
+ * @param {string} language - Language code
+ * @returns {string} Rendered HTML
+ */
+export function getProgrammeDeliveryTemplate(data, language = 'en') {
+  const {
+    firstName = 'User',
+    email = '',
+    programmeName = 'Programme',
+    programmeUrl = '#',
+    purchaseDate = '',
+    purchaseNumber = '',
+    paymentAmount = '0',
+    currency = 'EGP',
+    paymentMethod = 'Cash'
+  } = data;
+  
+  return renderEmailTemplate('programme-delivery', {
+    firstName,
+    email,
+    programmeName,
+    programmeUrl,
+    purchaseDate,
+    purchaseNumber,
+    paymentAmount,
+    currency,
+    paymentMethod
+  }, language);
+}
+
+/**
  * Get available email templates
  * @returns {Array} List of available templates
  */
@@ -145,7 +177,8 @@ export function validateTemplateVariables(templateName, variables) {
   const requiredVars = {
     'email-verification': ['firstName', 'email', 'verificationLink'],
     'password-reset': ['firstName', 'email', 'resetLink'],
-    'email-change-verification': ['firstName', 'email', 'newEmail', 'verificationLink']
+    'email-change-verification': ['firstName', 'email', 'newEmail', 'verificationLink'],
+    'programme-delivery': ['firstName', 'email', 'programmeName', 'programmeUrl', 'purchaseDate', 'purchaseNumber', 'paymentAmount', 'currency', 'paymentMethod', 'frontendUrl', 'supportEmail']
   };
   
   const required = requiredVars[templateName] || [];

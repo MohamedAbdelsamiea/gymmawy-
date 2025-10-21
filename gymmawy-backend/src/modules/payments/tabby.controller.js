@@ -9,6 +9,7 @@ import * as programmeService from '../programmes/programme.service.js';
 import { approveSubscription } from '../subscriptions/subscription.service.js';
 import { approveProgrammePurchase } from '../programmes/programme.service.js';
 import { activateOrder } from '../orders/order.service.js';
+import { sendProgrammeDeliveryEmail } from '../programmes/programmeEmail.service.js';
 import { TABBY_TEST_CREDENTIALS, TABBY_TEST_SCENARIOS } from '../../config/tabbyTesting.js';
 import { buildTabbyHistory } from './tabbyHistoryService.js';
 
@@ -819,6 +820,20 @@ async function createPurchaseRecord(payment) {
       console.log(`🎁 Auto-approving programme purchase ${programmePurchase.id} and awarding loyalty points`);
       await approveProgrammePurchase(programmePurchase.id);
       console.log(`✅ Programme purchase ${programmePurchase.id} auto-approved and loyalty points awarded`);
+      
+      // Send programme delivery email
+      try {
+        console.log(`📧 Sending programme delivery email for purchase ${programmePurchase.id}`);
+        const emailResult = await sendProgrammeDeliveryEmail(programmePurchase.id);
+        if (emailResult.success) {
+          console.log(`✅ Programme delivery email sent successfully`);
+        } else {
+          console.warn(`⚠️ Failed to send programme delivery email: ${emailResult.message}`);
+        }
+      } catch (emailError) {
+        console.error(`❌ Error sending programme delivery email:`, emailError.message);
+        // Don't fail the approval if email sending fails
+      }
     } catch (error) {
       console.error(`❌ Failed to auto-approve programme purchase ${programmePurchase.id}:`, error.message);
       // Don't fail the webhook if auto-approval fails - admin can approve manually

@@ -35,6 +35,7 @@ export async function createSubscriptionWithPayment(req, res, next) {
       isMedical: z.boolean().optional(),
       currency: z.string().default("EGP"),
       couponId: z.string().uuid().nullable().optional(),
+      reason: z.string().optional(), // User's reason for subscribing
       // Remove all price fields - backend calculates everything
     });
     const data = parseOrThrow(schema, req.body || {});

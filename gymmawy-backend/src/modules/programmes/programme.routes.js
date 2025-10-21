@@ -16,6 +16,7 @@ import {
   approveProgrammePurchaseController,
   rejectProgrammePurchaseController
 } from './programme.controller.js';
+import programmeEmailRoutes from './programmeEmail.routes.js';
 
 const router = express.Router();
 
@@ -38,5 +39,8 @@ router.post('/:id/purchase-with-payment', requireAuth, purchaseProgrammeWithPaym
 router.get('/admin/pending-purchases', requireAuth, requireAdmin, getPendingProgrammePurchasesController);
 router.patch('/admin/purchases/:id/approve', requireAuth, requireAdmin, approveProgrammePurchaseController);
 router.patch('/admin/purchases/:id/reject', requireAuth, requireAdmin, rejectProgrammePurchaseController);
+
+// Programme email routes
+router.use('/emails', programmeEmailRoutes);
 
 export default router;

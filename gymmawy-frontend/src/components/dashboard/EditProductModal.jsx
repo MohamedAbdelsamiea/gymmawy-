@@ -310,9 +310,10 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
                   min="0"
                   value={formData.stock}
                   onChange={handleInputChange}
+                  disabled={true}
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent ${
                     errors.stock ? 'border-red-300' : 'border-gray-300'
-                  }`}
+                  } bg-gray-100 cursor-not-allowed`}
                   placeholder="0"
                 />
                 {errors.stock && (
@@ -321,6 +322,9 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
                     {errors.stock}
                   </p>
                 )}
+                <p className="mt-1 text-xs text-gray-500">
+                  Stock cannot be edited here. Use the "Add Stock" button in the products list to manage inventory.
+                </p>
               </div>
 
               <div>

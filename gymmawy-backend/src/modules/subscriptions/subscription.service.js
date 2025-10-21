@@ -86,27 +86,21 @@ export async function listPlans(req) {
     }
   });
 
-  // Process plans with price data
-  const processedPlans = await Promise.all(plans.map(async (plan) => {
-    // Get prices for this plan
-    const prices = await prisma.price.findMany({
-      where: {
-        purchasableId: plan.id,
-        purchasableType: 'SUBSCRIPTION'
-      }
-    });
-    
-    // Separate regular and medical prices
+  // Process plans with price data from direct fields
+  const processedPlans = plans.map((plan) => {
+    // Extract regular prices from direct fields
     const regularPrices = {};
-    const medicalPrices = {};
+    if (plan.priceAED) regularPrices.AED = parseFloat(plan.priceAED);
+    if (plan.priceEGP) regularPrices.EGP = parseFloat(plan.priceEGP);
+    if (plan.priceSAR) regularPrices.SAR = parseFloat(plan.priceSAR);
+    if (plan.priceUSD) regularPrices.USD = parseFloat(plan.priceUSD);
     
-    prices.forEach(price => {
-      if (price.id.endsWith('-NORMAL')) {
-        regularPrices[price.currency] = parseFloat(price.amount);
-      } else if (price.id.endsWith('-MEDICAL')) {
-        medicalPrices[price.currency] = parseFloat(price.amount);
-      }
-    });
+    // Extract medical prices from direct fields
+    const medicalPrices = {};
+    if (plan.medicalPriceAED) medicalPrices.AED = parseFloat(plan.medicalPriceAED);
+    if (plan.medicalPriceEGP) medicalPrices.EGP = parseFloat(plan.medicalPriceEGP);
+    if (plan.medicalPriceSAR) medicalPrices.SAR = parseFloat(plan.medicalPriceSAR);
+    if (plan.medicalPriceUSD) medicalPrices.USD = parseFloat(plan.medicalPriceUSD);
     
     // Process benefits
     const processedBenefits = (plan.benefits || []).map(benefitRelation => {
@@ -127,7 +121,7 @@ export async function listPlans(req) {
         medical: medicalPrices
       }
     };
-  }));
+  });
 
   return processedPlans;
 }
@@ -146,7 +140,8 @@ export async function subscribeToPlan(userId, planId) {
   );
   
   const start = new Date();
-  const end = new Date(start.getTime() + (plan.subscriptionPeriodDays + plan.giftPeriodDays) * 24 * 60 * 60 * 1000);
+  const totalDays = plan.subscriptionPeriodDays + plan.giftPeriodDays;
+  const end = new Date(start.getTime() + totalDays * 24 * 60 * 60 * 1000);
   return prisma.subscription.create({ 
     data: { 
       subscriptionNumber,
@@ -167,7 +162,8 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
     transactionId,
     isMedical = false,
     currency = 'EGP',
-    couponId
+    couponId,
+    reason
   } = subscriptionData;
 
   // Get plan from database
@@ -182,25 +178,66 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
     throw e; 
   }
 
-  // Get plan prices from Price model
-  const priceType = isMedical ? 'MEDICAL' : 'NORMAL';
-  const planPrice = await prisma.price.findFirst({
-    where: {
-      purchasableId: planId,
-      purchasableType: 'SUBSCRIPTION',
-      currency: currency,
-      id: {
-        endsWith: `-${priceType}`
-      }
-    }
+  // Debug: Log plan data
+  console.log('Plan data:', {
+    id: plan.id,
+    subscriptionPeriodDays: plan.subscriptionPeriodDays,
+    giftPeriodDays: plan.giftPeriodDays,
+    discountPercentage: plan.discountPercentage
   });
+
+  // Validate plan data
+  if (!plan.subscriptionPeriodDays && plan.subscriptionPeriodDays !== 0) {
+    console.error('Plan missing subscriptionPeriodDays:', plan);
+    throw new Error('Plan is missing subscriptionPeriodDays field');
+  }
+  if (!plan.giftPeriodDays && plan.giftPeriodDays !== 0) {
+    console.error('Plan missing giftPeriodDays:', plan);
+    throw new Error('Plan is missing giftPeriodDays field');
+  }
+
+  // Get plan price from direct fields
+  let originalPrice = null;
   
-  if (!planPrice) {
-    throw new Error(`Price not available for currency: ${currency} and type: ${priceType}`);
+  if (isMedical) {
+    // Get medical price for the requested currency
+    switch (currency) {
+      case 'AED':
+        originalPrice = plan.medicalPriceAED ? parseFloat(plan.medicalPriceAED) : null;
+        break;
+      case 'EGP':
+        originalPrice = plan.medicalPriceEGP ? parseFloat(plan.medicalPriceEGP) : null;
+        break;
+      case 'SAR':
+        originalPrice = plan.medicalPriceSAR ? parseFloat(plan.medicalPriceSAR) : null;
+        break;
+      case 'USD':
+        originalPrice = plan.medicalPriceUSD ? parseFloat(plan.medicalPriceUSD) : null;
+        break;
+    }
+  } else {
+    // Get regular price for the requested currency
+    switch (currency) {
+      case 'AED':
+        originalPrice = plan.priceAED ? parseFloat(plan.priceAED) : null;
+        break;
+      case 'EGP':
+        originalPrice = plan.priceEGP ? parseFloat(plan.priceEGP) : null;
+        break;
+      case 'SAR':
+        originalPrice = plan.priceSAR ? parseFloat(plan.priceSAR) : null;
+        break;
+      case 'USD':
+        originalPrice = plan.priceUSD ? parseFloat(plan.priceUSD) : null;
+        break;
+    }
+  }
+  
+  if (originalPrice === null) {
+    throw new Error(`Price not available for currency: ${currency} and type: ${isMedical ? 'MEDICAL' : 'REGULAR'}`);
   }
 
   // Calculate server-side price with plan discount
-  const originalPrice = parseFloat(planPrice.amount);
   const planDiscountPercentage = plan.discountPercentage || 0;
   const planDiscountAmount = (originalPrice * planDiscountPercentage) / 100;
   let finalPrice = originalPrice - planDiscountAmount;
@@ -262,19 +299,12 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
 
   // Calculate subscription dates using plan data from database
   const start = new Date();
-  const finalSubscriptionDays = plan.subscriptionPeriodDays;
-  const finalGiftDays = plan.giftPeriodDays;
-  
-  const totalDays = finalSubscriptionDays + finalGiftDays;
+  const totalDays = plan.subscriptionPeriodDays + plan.giftPeriodDays;
   const end = new Date(start.getTime() + totalDays * 24 * 60 * 60 * 1000);
   
   console.log('Subscription period calculation:', {
-    providedSubscriptionDays: subscriptionPeriodDays,
-    providedGiftDays: giftPeriodDays,
     planSubscriptionDays: plan.subscriptionPeriodDays,
     planGiftDays: plan.giftPeriodDays,
-    finalSubscriptionDays,
-    finalGiftDays,
     totalDays
   });
 
@@ -296,8 +326,8 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
         discountPercentage: planDiscountPercentage, // Use server-calculated plan discount
         couponId: couponId || null,
         couponDiscount: couponDiscountPercentage, // Store coupon discount percentage instead of amount
-        subscriptionPeriodDays: finalSubscriptionDays, // Store the actual subscription period used
-        giftPeriodDays: finalGiftDays // Store the actual gift period used
+        totalPeriodDays: totalDays, // Store the total subscription period used
+        reason: reason || null // User's reason for subscribing
       }
     });
 
@@ -363,7 +393,7 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
         paymentableType: 'SUBSCRIPTION',
         metadata: {
           subscriptionNumber: subscription.subscriptionNumber,
-          planName: planName,
+          planName: plan.name?.en || plan.name || 'Unknown Plan',
           isMedical: isMedical,
           discount: planDiscountAmount + couponDiscountAmount,
           originalPrice: originalPrice
@@ -456,21 +486,16 @@ export async function approveSubscription(id) {
   // Calculate start and end dates when approved using stored subscription data or plan data
   const startDate = new Date();
   
-  // Use stored subscription period data if available, otherwise fall back to plan data
-  const finalSubscriptionDays = subscription.subscriptionPeriodDays !== null ? subscription.subscriptionPeriodDays : subscription.subscriptionPlan.subscriptionPeriodDays;
-  const finalGiftDays = subscription.giftPeriodDays !== null ? subscription.giftPeriodDays : subscription.subscriptionPlan.giftPeriodDays;
-  
-  const totalDays = finalSubscriptionDays + finalGiftDays;
+  // Use stored total period data if available, otherwise calculate from plan data
+  const totalDays = subscription.totalPeriodDays !== null ? subscription.totalPeriodDays : (subscription.subscriptionPlan.subscriptionPeriodDays + subscription.subscriptionPlan.giftPeriodDays);
   const endDate = new Date(startDate.getTime() + totalDays * 24 * 60 * 60 * 1000);
   
   console.log('Subscription approval period calculation:', {
-    storedSubscriptionDays: subscription.subscriptionPeriodDays,
-    storedGiftDays: subscription.giftPeriodDays,
+    storedTotalDays: subscription.totalPeriodDays,
     planSubscriptionDays: subscription.subscriptionPlan.subscriptionPeriodDays,
     planGiftDays: subscription.subscriptionPlan.giftPeriodDays,
-    finalSubscriptionDays,
-    finalGiftDays,
-    totalDays
+    calculatedTotalDays: subscription.subscriptionPlan.subscriptionPeriodDays + subscription.subscriptionPlan.giftPeriodDays,
+    finalTotalDays: totalDays
   });
 
   const updatedSubscription = await prisma.subscription.update({
@@ -493,13 +518,22 @@ export async function approveSubscription(id) {
       }
     });
 
-    await prisma.loyaltyTransaction.create({
+    // Create loyalty points payment record
+    await prisma.payment.create({
       data: {
         userId: subscription.userId,
-        points: subscription.subscriptionPlan.loyaltyPointsAwarded,
-        type: 'EARNED',
-        source: 'SUBSCRIPTION',
-        sourceId: subscription.id
+        amount: new Decimal(subscription.subscriptionPlan.loyaltyPointsAwarded),
+        currency: 'GYMMAWY_COINS',
+        method: 'GYMMAWY_COINS',
+        status: 'SUCCESS',
+        paymentReference: `LOYALTY-${subscription.id}-${Date.now()}`,
+        paymentableId: subscription.id,
+        paymentableType: 'SUBSCRIPTION',
+        metadata: {
+          type: 'LOYALTY_POINTS_EARNED',
+          source: 'SUBSCRIPTION',
+          sourceId: subscription.id
+        }
       }
     });
 
@@ -644,13 +678,22 @@ export async function adminUpdateSubscriptionStatus(id, status) {
             }
           });
 
-          await tx.loyaltyTransaction.create({
+          // Create loyalty points reversal payment record
+          await tx.payment.create({
             data: {
               userId: currentSubscription.userId,
-              points: currentSubscription.subscriptionPlan.loyaltyPointsAwarded,
-              type: 'SPENT',
-              source: 'SUBSCRIPTION',
-              sourceId: currentSubscription.id
+              amount: new Decimal(-currentSubscription.subscriptionPlan.loyaltyPointsAwarded),
+              currency: 'GYMMAWY_COINS',
+              method: 'GYMMAWY_COINS',
+              status: 'SUCCESS',
+              paymentReference: `LOYALTY-REVERSAL-${currentSubscription.id}-${Date.now()}`,
+              paymentableId: currentSubscription.id,
+              paymentableType: 'SUBSCRIPTION',
+              metadata: {
+                type: 'LOYALTY_POINTS_REVERSED',
+                source: 'SUBSCRIPTION',
+                sourceId: currentSubscription.id
+              }
             }
           });
 
@@ -680,13 +723,22 @@ export async function adminUpdateSubscriptionStatus(id, status) {
             }
           });
 
-          await tx.loyaltyTransaction.create({
+          // Create loyalty points payment record
+          await tx.payment.create({
             data: {
               userId: currentSubscription.userId,
-              points: currentSubscription.subscriptionPlan.loyaltyPointsAwarded,
-              type: 'EARNED',
-              source: 'SUBSCRIPTION',
-              sourceId: currentSubscription.id
+              amount: new Decimal(currentSubscription.subscriptionPlan.loyaltyPointsAwarded),
+              currency: 'GYMMAWY_COINS',
+              method: 'GYMMAWY_COINS',
+              status: 'SUCCESS',
+              paymentReference: `LOYALTY-${currentSubscription.id}-${Date.now()}`,
+              paymentableId: currentSubscription.id,
+              paymentableType: 'SUBSCRIPTION',
+              metadata: {
+                type: 'LOYALTY_POINTS_EARNED',
+                source: 'SUBSCRIPTION',
+                sourceId: currentSubscription.id
+              }
             }
           });
 

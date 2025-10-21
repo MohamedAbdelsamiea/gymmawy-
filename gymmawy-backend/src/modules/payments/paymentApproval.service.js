@@ -3,6 +3,7 @@ import autoShipmentService from '../../services/autoShipmentService.js';
 import { activateOrder } from '../orders/order.service.js';
 import { approveSubscription } from '../subscriptions/subscription.service.js';
 import { approveProgrammePurchase } from '../programmes/programme.service.js';
+import { sendProgrammeDeliveryEmail } from '../programmes/programmeEmail.service.js';
 
 const prisma = getPrismaClient();
 
@@ -149,6 +150,25 @@ export async function approvePayment(paymentId, adminId) {
       console.log(`🎁 Awarding loyalty points for programme purchase ${result.programmePurchase.id}`);
       await approveProgrammePurchase(result.programmePurchase.id);
       console.log(`✅ Loyalty points awarded for programme purchase ${result.programmePurchase.id}`);
+      
+      // Send programme delivery email
+      try {
+        console.log(`📧 Sending programme delivery email for purchase ${result.programmePurchase.id}`);
+        const emailResult = await sendProgrammeDeliveryEmail(result.programmePurchase.id);
+        if (emailResult.success) {
+          console.log(`✅ Programme delivery email sent successfully`);
+          result.programmeEmailSent = true;
+        } else {
+          console.warn(`⚠️ Failed to send programme delivery email: ${emailResult.message}`);
+          result.programmeEmailSent = false;
+          result.programmeEmailError = emailResult.message;
+        }
+      } catch (emailError) {
+        console.error(`❌ Error sending programme delivery email:`, emailError.message);
+        result.programmeEmailSent = false;
+        result.programmeEmailError = emailError.message;
+        // Don't fail the payment approval if email sending fails
+      }
     }
   } catch (error) {
     console.error(`❌ Failed to award loyalty points:`, error.message);

@@ -30,13 +30,9 @@ model User {
   lockedUntil         DateTime?
   auditLogs           AuditLog[]
   cart                Cart?
-  loyaltyTransactions LoyaltyTransaction[]
   orders              Order[]
   payments            Payment[]
   programmePurchases  ProgrammePurchase[]
-  referrals           Referral[]
-  referralRewards     ReferralReward[]
-  referralUsages      ReferralUsage[]
   refreshTokens       RefreshToken[]
   subscriptions       Subscription[]
   redeemedCoupons     UserCouponRedemption[]
@@ -112,8 +108,8 @@ model Product {
   description           Json?
   deletedAt             DateTime?
   discountPercentage    Int            @default(0)
-  loyaltyPointsAwarded  Int            @default(0)
-  loyaltyPointsRequired Int            @default(0)
+  loyaltyPointsAwarded  Int            
+  loyaltyPointsRequired Int            
   stock                 Int            @default(0)
   isActive              Boolean        @default(true)
   order                 Int?           @default(0)
@@ -160,7 +156,7 @@ model CartItem {
   cartId    String
   quantity  Int     @default(1)
   productId String
-  size      String? @default("M")
+  size      String? 
   cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -188,16 +184,12 @@ model Order {
   discountPercentage Int         @default(0)
   deletedAt          DateTime?
   price              Decimal?    @db.Decimal(10, 2)
-  totalAmount        Decimal?    @db.Decimal(10, 2)
   paymentReference   String?
-  shippingAddress    Json?
-  language           String      @default("en")
   currency           Currency
   metadata           Json?
   coupon             Coupon?     @relation(fields: [couponId], references: [id])
   user               User        @relation(fields: [userId], references: [id])
   items              OrderItem[]
-  shipping           Shipping[]
 
   @@index([userId])
   @@index([status])
@@ -212,22 +204,17 @@ model OrderItem {
   id                 String         @id @default(uuid())
   orderId            String
   quantity           Int            @default(1)
-  size               String?        @default("M")
+  size               String?        
   discountPercentage Int            @default(0)
   productId          String?
-  rewardId           String?
   category           String?
   name               String?
   price              Decimal?       @db.Decimal(10, 2)
-  totalPrice         Decimal        @db.Decimal(10, 2)
-  loyaltyPointsUsed  Int?
   order              Order          @relation(fields: [orderId], references: [id])
   product            Product?       @relation(fields: [productId], references: [id])
-  shippingItems      ShippingItem[]
 
   @@index([orderId])
   @@index([productId])
-  @@index([rewardId])
   @@index([category])
 }
 
@@ -250,6 +237,16 @@ model SubscriptionPlan {
   isActive                     Boolean                   @default(true)
   crownColor                   String?
   order                        Int?                      @default(1)
+  // Regular subscription prices
+  priceAED                     Decimal?                  @db.Decimal(10, 2)
+  priceEGP                     Decimal?                  @db.Decimal(10, 2)
+  priceSAR                     Decimal?                  @db.Decimal(10, 2)
+  priceUSD                     Decimal?                  @db.Decimal(10, 2)
+  // Medical subscription prices
+  medicalPriceAED              Decimal?                  @db.Decimal(10, 2)
+  medicalPriceEGP              Decimal?                  @db.Decimal(10, 2)
+  medicalPriceSAR              Decimal?                  @db.Decimal(10, 2)
+  medicalPriceUSD              Decimal?                  @db.Decimal(10, 2)
   subscriptions                Subscription[]
   benefits                     SubscriptionPlanBenefit[]
 
@@ -299,8 +296,8 @@ model Subscription {
   couponId               String?
   isMedical              Boolean            @default(false)
   currency               Currency?
-  subscriptionPeriodDays Int? // Store the actual subscription period used
-  giftPeriodDays         Int? // Store the actual gift period used
+  totalPeriodDays        Int? // Store the total subscription period (subscription + gift days)
+  reason                 String?            // User's reason for subscribing
   coupon                 Coupon?            @relation(fields: [couponId], references: [id])
   subscriptionPlan       SubscriptionPlan   @relation(fields: [subscriptionPlanId], references: [id])
   user                   User               @relation(fields: [userId], references: [id])
@@ -309,25 +306,6 @@ model Subscription {
   @@index([status])
   @@index([createdAt])
   @@index([couponId])
-}
-
-model LoyaltyTransaction {
-  id        String                   @id @default(uuid())
-  userId    String
-  points    Int
-  createdAt DateTime                 @default(now())
-  source    LoyaltyTransactionSource
-  sourceId  String?
-  type      LoyaltyTransactionType
-  user      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([createdAt])
-  @@index([points])
-  @@index([type])
-  @@index([source])
-  @@index([sourceId])
-  @@index([userId, createdAt])
 }
 
 model Lead {
@@ -356,7 +334,6 @@ model Payment {
   updatedAt        DateTime         @updatedAt
   userId           String?
   metadata         Json?
-  customerInfo     Json?
   processedAt      DateTime?
   transactionId    String?
   paymentReference String           @unique
@@ -376,21 +353,19 @@ model Payment {
 }
 
 model Coupon {
-  id                    String                 @id @default(uuid())
-  code                  String                 @unique
-  expirationDate        DateTime
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  isActive              Boolean                @default(true)
-  deletedAt             DateTime?
-  discountPercentage    Int
-  maxRedemptionsPerUser Int?
-  totalRedemptions      Int                    @default(0)
-  maxRedemptions        Int?
-  orders                Order[]
-  programmePurchases    ProgrammePurchase[]
-  subscriptions         Subscription[]
-  redeemedBy            UserCouponRedemption[]
+  id                 String                 @id @default(uuid())
+  code               String                 @unique
+  expirationDate     DateTime
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  isActive           Boolean                @default(true)
+  deletedAt          DateTime?
+  discountPercentage Int
+  maxRedemptions     Int?
+  orders             Order[]
+  programmePurchases ProgrammePurchase[]
+  subscriptions      Subscription[]
+  redeemedBy         UserCouponRedemption[]
 
   @@index([code])
   @@index([isActive])
@@ -403,7 +378,6 @@ model UserCouponRedemption {
   userId     String
   couponId   String
   redeemedAt DateTime @default(now())
-  usageCount Int      @default(1) // Track how many times this user used this coupon
   coupon     Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -428,7 +402,6 @@ model AuditLog {
 
 model Transformation {
   id        String    @id @default(uuid())
-  title     Json
   imageUrl  String?
   order     Int       @default(0)
   createdAt DateTime  @default(now())
@@ -443,7 +416,6 @@ model Transformation {
 
 model Video {
   id          String    @id @default(uuid())
-  title       Json
   videoUrl    String
   order       Int       @default(0)
   createdAt   DateTime  @default(now())
@@ -506,193 +478,6 @@ model ProgrammePurchase {
   @@index([couponId])
 }
 
-model Referral {
-  id           String           @id @default(uuid())
-  code         String           @unique
-  userId       String
-  isActive     Boolean          @default(true)
-  expiresAt    DateTime
-  maxUses      Int              @default(1000)
-  currentUses  Int              @default(0)
-  totalRewards Decimal          @default(0) @db.Decimal(10, 2)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  user         User             @relation(fields: [userId], references: [id])
-  rewards      ReferralReward[]
-  usages       ReferralUsage[]
-}
-
-model ReferralUsage {
-  id             String   @id @default(uuid())
-  referralId     String
-  referredUserId String
-  discountAmount Decimal  @default(0.00) @db.Decimal(10, 2)
-  usedAt         DateTime @default(now())
-  isProcessed    Boolean  @default(false)
-  referral       Referral @relation(fields: [referralId], references: [id])
-  referredUser   User     @relation(fields: [referredUserId], references: [id])
-}
-
-model ReferralReward {
-  id         String               @id @default(uuid())
-  referralId String
-  userId     String
-  amount     Decimal              @db.Decimal(10, 2)
-  type       ReferralRewardType
-  status     ReferralRewardStatus @default(PENDING)
-  earnedAt   DateTime             @default(now())
-  redeemedAt DateTime?
-  points     Int?
-  referral   Referral             @relation(fields: [referralId], references: [id])
-  user       User                 @relation(fields: [userId], references: [id])
-}
-
-model Shipping {
-  id                String             @id @default(uuid())
-  orderId           String
-  trackingNumber    String             @unique
-  status            ShippingStatus     @default(PENDING)
-  senderInfo        Json
-  recipientInfo     Json
-  labelUrl          String?
-  estimatedDelivery DateTime?
-  actualDelivery    DateTime?
-  metadata          Json?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  // OTO Integration Fields
-  otoOrderId        String?            @unique
-  otoShipmentId     String?            @unique
-  otoStatus         String?
-  deliveryCompany   String?
-  packageWeight     Decimal?           @db.Decimal(10, 2)
-  packageCount      Int?               @default(1)
-  codAmount         Decimal?           @db.Decimal(10, 2)
-  shippingCost      Decimal?           @db.Decimal(10, 2)
-  order             Order              @relation(fields: [orderId], references: [id])
-  items             ShippingItem[]
-  otoEvents         OTOTrackingEvent[]
-  otoBoxes          OTOBox[]
-
-  @@index([orderId])
-  @@index([trackingNumber])
-  @@index([status])
-  @@index([createdAt])
-  @@index([otoOrderId])
-  @@index([otoShipmentId])
-}
-
-model OTOTrackingEvent {
-  id          String   @id @default(uuid())
-  shippingId  String
-  status      String
-  stage       String?
-  description String?
-  location    String?
-  timestamp   DateTime
-  metadata    Json?
-  createdAt   DateTime @default(now())
-  shipping    Shipping @relation(fields: [shippingId], references: [id], onDelete: Cascade)
-
-  @@index([shippingId])
-  @@index([timestamp])
-  @@index([status])
-}
-
-model OTOBox {
-  id            String   @id @default(uuid())
-  shippingId    String
-  boxName       String
-  weight        Decimal  @db.Decimal(10, 2)
-  height        Decimal? @db.Decimal(10, 2)
-  width         Decimal? @db.Decimal(10, 2)
-  length        Decimal? @db.Decimal(10, 2)
-  dimensionUnit String?  @default("cm")
-  createdAt     DateTime @default(now())
-  shipping      Shipping @relation(fields: [shippingId], references: [id], onDelete: Cascade)
-
-  @@index([shippingId])
-}
-
-model OTOPickupLocation {
-  id            String   @id @default(uuid())
-  code          String   @unique
-  name          String
-  type          String // 'warehouse' or 'branch'
-  contactName   String?
-  contactPhone  String?
-  contactEmail  String?
-  address       String
-  city          String
-  country       String
-  latitude      Decimal? @db.Decimal(10, 7)
-  longitude     Decimal? @db.Decimal(10, 7)
-  isActive      Boolean  @default(true)
-  servingRadius Int? // in km
-  metadata      Json?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([code])
-  @@index([isActive])
-  @@index([city])
-}
-
-model OTODriver {
-  id          String   @id @default(uuid())
-  otoDriverId String   @unique
-  name        String
-  phone       String?
-  email       String?
-  capacity    Int? // max orders per day
-  isActive    Boolean  @default(true)
-  metadata    Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([otoDriverId])
-  @@index([isActive])
-}
-
-model OTOWebhook {
-  id           String   @id @default(uuid())
-  otoWebhookId String?  @unique
-  url          String
-  events       String[] // Array of event types to listen to
-  isActive     Boolean  @default(true)
-  secretKey    String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([isActive])
-}
-
-model ShippingItem {
-  id          String    @id @default(uuid())
-  shippingId  String
-  orderItemId String
-  quantity    Int       @default(1)
-  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
-  shipping    Shipping  @relation(fields: [shippingId], references: [id], onDelete: Cascade)
-
-  @@unique([shippingId, orderItemId])
-  @@index([shippingId])
-  @@index([orderItemId])
-}
-
-model Price {
-  id              String          @id
-  amount          Decimal         @db.Decimal(10, 2)
-  currency        Currency
-  purchasableId   String
-  purchasableType PurchasableType
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime
-
-  @@index([currency])
-  @@index([purchasableId, purchasableType])
-  @@index([purchasableType])
-}
 
 enum UserRole {
   ADMIN
@@ -704,16 +489,13 @@ enum Currency {
   SAR
   AED
   USD
+  GYMMAWY_COINS
 }
 
 enum PurchasableType {
-  PRODUCT
   PROGRAMME
-  PROGRAMME_PURCHASE
-  MEDICAL_SUBSCRIPTION
   SUBSCRIPTION
   ORDER
-  CART
 }
 
 enum OrderStatus {
@@ -728,16 +510,13 @@ enum PaymentStatus {
   PENDING
   SUCCESS
   FAILED
-  REFUNDED
-  PENDING_VERIFICATION
 }
 
 enum PaymentMethod {
-  INSTA_PAY
-  VODAFONE_CASH
+  INSTAPAY
+  VODAFONECASH
   TABBY
   TAMARA
-  CARD
   PAYMOB
   GYMMAWY_COINS
 }
@@ -764,49 +543,6 @@ enum ProgrammePurchaseStatus {
 enum LeadStatus {
   NEW
   CONTACTED
-}
-
-enum ReferralRewardType {
-  LOYALTY_POINTS
-  DISCOUNT
-}
-
-enum ReferralRewardStatus {
-  PENDING
-  APPROVED
-  REDEEMED
-  EXPIRED
-}
-
-enum ShippingStatus {
-  PENDING
-  LABEL_CREATED
-  PICKED_UP
-  IN_TRANSIT
-  OUT_FOR_DELIVERY
-  DELIVERED
-  FAILED_DELIVERY
-  RETURNED
-}
-
-enum LoyaltyTransactionType {
-  EARNED
-  REDEEMED
-  REVOKED
-  SPENT
-}
-
-enum LoyaltyTransactionSource {
-  ORDER_ITEM
-  PROGRAMME_PURCHASE
-  SUBSCRIPTION
-  REFERRAL
-  REWARD_REDEMPTION
-}
-
-enum SubscriptionPriceType {
-  NORMAL
-  MEDICAL
 }
 
 model HomepagePopup {

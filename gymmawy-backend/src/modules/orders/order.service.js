@@ -1,5 +1,7 @@
 import { getPrismaClient } from "../../config/db.js";
 import { generateOrderNumber, generateUniqueId } from "../../utils/idGenerator.js";
+import { getOrderWithCalculatedTotal } from "../../utils/orderCalculations.js";
+import { getOrderItemsWithCalculatedTotals } from "../../utils/orderItemCalculations.js";
 
 const prisma = getPrismaClient();
 
@@ -108,7 +110,8 @@ export async function createSingleProductOrder(userId, orderData = {}) {
         productId: product.id,
         quantity: quantity,
         size: size || 'M',
-        totalPrice: finalPrice,
+        price: price.amount,
+        discountPercentage: Math.round(orderDiscountPercentage),
       }
     });
 
@@ -319,7 +322,7 @@ export async function createOrderFromCart(userId, orderData = {}) {
           productId: item.product.id,
           quantity: item.quantity,
           size: item.size || 'M',
-          totalPrice: totalItemPrice,
+          price: itemPrice,
           discountPercentage: productDiscountPercentage,
         },
       });
@@ -388,7 +391,7 @@ export async function createOrderFromCart(userId, orderData = {}) {
 }
 
 export async function listOrders(userId) {
-  return prisma.order.findMany({ 
+  const orders = await prisma.order.findMany({ 
     where: { userId }, 
     orderBy: { createdAt: "desc" }, 
     include: { 
@@ -406,10 +409,13 @@ export async function listOrders(userId) {
       coupon: true
     } 
   });
+  
+  // Add calculated total amount to each order
+  return orders.map(order => getOrderWithCalculatedTotal(order));
 }
 
 export async function getOrderById(userId, id) {
-  return prisma.order.findFirst({ 
+  const order = await prisma.order.findFirst({ 
     where: { id, userId }, 
     include: { 
       items: {
@@ -426,6 +432,11 @@ export async function getOrderById(userId, id) {
       coupon: true
     } 
   });
+  
+  if (!order) return null;
+  
+  // Add calculated total amount
+  return getOrderWithCalculatedTotal(order);
 }
 
 export async function updateOrder(userId, orderId, data) {
@@ -450,7 +461,6 @@ export async function updateOrder(userId, orderId, data) {
   return prisma.order.update({
     where: { id: orderId },
     data: {
-      ...(data.shippingAddress && { shippingAddress: data.shippingAddress }),
       ...(data.notes && { notes: data.notes })
     }
   });
@@ -974,7 +984,7 @@ export async function adminListOrders(params = {}) {
           id: true,
           quantity: true,
           size: true,
-          totalPrice: true,
+          price: true,
           discountPercentage: true,
           product: {
             select: {
@@ -1033,60 +1043,59 @@ export async function adminListOrders(params = {}) {
   );
   
   // Transform the data for frontend
-    return ordersWithSubscriptions.map(order => ({
-      id: order.id,
-      orderNumber: order.orderNumber,
-      price: order.price,
-      currency: order.currency,
-      status: order.status,
-      paymentMethod: order.payment?.method || null,
-      paymentProof: order.payment?.paymentProofUrl || null,
-      couponDiscount: order.couponDiscount,
-      discountPercentage: order.discountPercentage,
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt,
+    return ordersWithSubscriptions.map(order => {
+      // Calculate total amount dynamically
+      const orderWithTotal = getOrderWithCalculatedTotal(order);
+      
+      return {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        price: order.price,
+        totalAmount: orderWithTotal.totalAmount, // Calculated dynamically
+        currency: order.currency,
+        status: order.status,
+        paymentMethod: order.payment?.method || null,
+        paymentProof: order.payment?.paymentProofUrl || null,
+        couponDiscount: order.couponDiscount,
+        discountPercentage: order.discountPercentage,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
 
-      // User information
-      user: order.user,
+        // User information
+        user: order.user,
 
-      // Order items with product details
-      items: order.items.map(item => ({
-        id: item.id,
-        quantity: item.quantity,
-        size: item.size,
-        totalPrice: item.totalPrice,
-        discountPercentage: item.discountPercentage,
-        product: item.product
-      })),
+        // Order items with product details (with calculated total prices)
+        items: getOrderItemsWithCalculatedTotals(order.items, order),
 
-      // Shipping details
-      shippingBuilding: order.shippingBuilding,
-      shippingStreet: order.shippingStreet,
-      shippingCity: order.shippingCity,
-      shippingCountry: order.shippingCountry,
-      shippingPostcode: order.shippingPostcode,
+        // Shipping details
+        shippingBuilding: order.shippingBuilding,
+        shippingStreet: order.shippingStreet,
+        shippingCity: order.shippingCity,
+        shippingCountry: order.shippingCountry,
+        shippingPostcode: order.shippingPostcode,
 
-      // Coupon information
-      coupon: order.coupon,
+        // Coupon information
+        coupon: order.coupon,
 
-      // Payment information
-      payment: order.payment,
+        // Payment information
+        payment: order.payment,
 
-      // Metadata for original price tracking
-      metadata: {
-        originalPrice: order.metadata?.originalPrice || order.price
-      },
+        // Metadata for original price tracking
+        metadata: {
+          originalPrice: order.metadata?.originalPrice || order.price
+        },
 
-      // Subscription information (if applicable)
-      subscription: order.subscriptions?.[0] ? {
-        id: order.subscriptions[0].id,
-        isMedical: order.subscriptions[0].isMedical,
-        startDate: order.subscriptions[0].startDate,
-        endDate: order.subscriptions[0].endDate,
-        status: order.subscriptions[0].status,
-        planName: order.subscriptions[0].subscriptionPlan.name,
-        planDiscount: order.subscriptions[0].subscriptionPlan.discountPercentage
-      } : null
-    }));
+        // Subscription information (if applicable)
+        subscription: order.subscriptions?.[0] ? {
+          id: order.subscriptions[0].id,
+          isMedical: order.subscriptions[0].isMedical,
+          startDate: order.subscriptions[0].startDate,
+          endDate: order.subscriptions[0].endDate,
+          status: order.subscriptions[0].status,
+          planName: order.subscriptions[0].subscriptionPlan.name,
+          planDiscount: order.subscriptions[0].subscriptionPlan.discountPercentage
+        } : null
+      };
+    });
 }
 

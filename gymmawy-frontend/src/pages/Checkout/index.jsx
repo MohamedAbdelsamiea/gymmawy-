@@ -14,6 +14,7 @@ import rewardsService from '../../services/rewardsService';
 import useTabbyPromo from '../../hooks/useTabbyPromo';
 import countryDetectionService from '../../services/countryDetectionService';
 import { useSecureImage } from '../../hooks/useSecureImage';
+import { useFormPersistence } from '../../hooks/useFormPersistence';
 
 // Helper function to get consistent currency symbols
 const getCurrencySymbol = (currency, language = 'en') => {
@@ -73,6 +74,22 @@ return fallback;
   // Get data from location state (plan, product, or cart items)
   const { plan, product, cartItems, type, currency: passedCurrency, buyNow, subtotal: cartSubtotal, shipping: cartShipping, total: cartTotal, fromPaymentFailure, paymentFailureReason, fromPaymentCancel, preserveCart } = location.state || {};
   
+  // Initialize form persistence for checkout form
+  const {
+    hasStoredData,
+    isLoading: isPersistenceLoading,
+    saveData,
+    loadData,
+    clearData,
+    debouncedSave,
+    handleSubmit: handleSubmitWithPersistence
+  } = useFormPersistence('checkout', {
+    excludeFields: ['paymentProof'],
+    clearOnSubmit: true,
+    autoSave: true,
+    autoSaveDelay: 2000
+  });
+
   // All state management - moved to top to avoid hooks order issues
   const [loyaltyData, setLoyaltyData] = useState(null);
   const [isLoyaltyRedemption, setIsLoyaltyRedemption] = useState(false);
@@ -80,6 +97,7 @@ return fallback;
   const [loadedCartItems, setLoadedCartItems] = useState(null);
   const [cartLoadError, setCartLoadError] = useState(null);
   const [selectedDuration, setSelectedDuration] = useState('normal');
+  const [subscriptionReason, setSubscriptionReason] = useState('');
   const prescoringCalledRef = useRef(false);
   const [couponCode, setCouponCode] = useState('');
   const [couponValid, setCouponValid] = useState(null);
@@ -129,6 +147,53 @@ return fallback;
       }
     }
   }, []);
+
+  // Load stored checkout form data on mount
+  useEffect(() => {
+    if (hasStoredData && !isPersistenceLoading) {
+      const storedData = loadData();
+      if (storedData) {
+        // Restore form data
+        if (storedData.shippingDetails) {
+          setShippingDetails(storedData.shippingDetails);
+        }
+        if (storedData.couponCode) {
+          setCouponCode(storedData.couponCode);
+        }
+        if (storedData.paymentOption) {
+          setPaymentOption(storedData.paymentOption);
+        }
+        if (storedData.paymentMethod) {
+          setPaymentMethod(storedData.paymentMethod);
+        }
+        if (storedData.selectedDuration) {
+          setSelectedDuration(storedData.selectedDuration);
+        }
+        if (storedData.subscriptionReason) {
+          setSubscriptionReason(storedData.subscriptionReason);
+        }
+        console.log('Loaded stored checkout data');
+      }
+    }
+  }, [hasStoredData, isPersistenceLoading, loadData]);
+
+  // Auto-save checkout form data when it changes
+  useEffect(() => {
+    const formData = {
+      shippingDetails,
+      couponCode,
+      paymentOption,
+      paymentMethod,
+      selectedDuration,
+      subscriptionReason
+    };
+    
+    // Only save if there's meaningful data
+    if (shippingDetails.shippingBuilding || shippingDetails.shippingStreet || 
+        shippingDetails.shippingCity || couponCode || paymentOption) {
+      debouncedSave(formData);
+    }
+  }, [shippingDetails, couponCode, paymentOption, paymentMethod, selectedDuration, subscriptionReason, debouncedSave]);
 
   // Store original purchase data for payment retry
   useEffect(() => {
@@ -2160,8 +2225,11 @@ return;
   // Handle form submission
   const handleSubmit = async(e) => {
     e.preventDefault();
-    setSubmitting(true);
-    setError(null);
+    
+    // Use the persistence wrapper for submit handling
+    const submitWithPersistence = handleSubmitWithPersistence(async () => {
+      setSubmitting(true);
+      setError(null);
 
     // Client-side validation for payment option selection (skip for loyalty redemptions)
     if (!isLoyaltyRedemption && !paymentOption) {
@@ -2171,7 +2239,7 @@ return;
       setError(errorMessage);
       showError(errorMessage);
       setSubmitting(false);
-      return;
+      return { success: false, error: errorMessage };
     }
 
     // Client-side validation for payment proof (skip for loyalty redemptions)
@@ -2182,7 +2250,7 @@ return;
       setError(errorMessage);
       showError(errorMessage);
       setSubmitting(false);
-      return;
+      return { success: false, error: errorMessage };
     }
 
     // Client-side validation for shipping details (cart and product orders)
@@ -2195,20 +2263,20 @@ return;
         setError(errorMessage);
         showError(errorMessage);
         setSubmitting(false);
-        return;
+        return { success: false, error: errorMessage };
       }
     }
 
     // Handle Paymob payments separately
     if (paymentOption === 'paymob_card' || paymentOption === 'paymob_apple') {
       await handlePaymobPayment();
-      return;
+      return { success: true };
     }
 
     // Handle loyalty redemption separately
     if (isLoyaltyRedemption && loyaltyData) {
       await handleLoyaltyRedemption();
-      return;
+      return { success: true };
     }
 
     // Handle Tabby payment separately
@@ -2221,11 +2289,11 @@ return;
         setError(errorMessage);
         showError(errorMessage);
         setSubmitting(false);
-        return;
+        return { success: false, error: errorMessage };
       }
       
       await handleTabbyPayment();
-      return;
+      return { success: true };
     }
 
     // Prevent submission for Tamara (not yet available)
@@ -2236,7 +2304,7 @@ return;
       setError(errorMessage);
       showError(errorMessage);
       setSubmitting(false);
-      return;
+      return { success: false, error: errorMessage };
     }
 
     try {
@@ -2276,6 +2344,8 @@ return;
           currency: currency, // Current selected currency
           // Coupon information - backend will validate and calculate discount
           couponId: couponValid && couponData ? couponData.id : null,
+          // User's reason for subscribing
+          reason: subscriptionReason || null,
         };
 
         // Only include paymentProof if it has a value
@@ -2395,6 +2465,11 @@ return;
         // Clean up stored purchase data on successful payment
         sessionStorage.removeItem('originalPurchaseData');
         console.log('🧹 Cleaned up stored purchase data after successful payment');
+        
+        // Clear form data on successful submission
+        clearData();
+        
+        return { success: true };
     } catch (error) {
       console.error('Submission error:', error);
       
@@ -2418,7 +2493,12 @@ return;
       setError(userFriendlyMessage);
       showError(userFriendlyMessage);
       setSubmitting(false);
+      return { success: false, error: userFriendlyMessage };
     }
+    });
+
+    // Execute the wrapped submit function
+    await submitWithPersistence();
   };
 
   // Show loading state if no checkout data is available
@@ -2564,6 +2644,7 @@ return;
           {/* Main Form */}
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="space-y-6 mb-8 sm:mb-0">
+
               {/* Duration Selection (for subscriptions) */}
               {type === 'subscription' && (
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -2628,6 +2709,33 @@ return;
                         </div>
                       </div>
                     </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Reason for Subscription (for subscriptions) */}
+              {type === 'subscription' && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <User className={`h-5 w-5 ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'} text-gymmawy-primary`} />
+                    {t('checkout.reasonForSubscription', 'Why are you subscribing?')}
+                  </h3>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('checkout.shareYourGoal', 'Share your fitness goal or reason for subscribing')}
+                    </label>
+                    <textarea
+                      value={subscriptionReason}
+                      onChange={(e) => setSubscriptionReason(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent resize-none"
+                      rows={3}
+                      placeholder={t('checkout.reasonPlaceholder', 'e.g., I want to lose weight, build muscle, improve my health, etc.')}
+                      maxLength={500}
+                    />
+                    <div className="mt-1 text-xs text-gray-500 text-right">
+                      {subscriptionReason.length}/500
+                    </div>
                   </div>
                 </div>
               )}

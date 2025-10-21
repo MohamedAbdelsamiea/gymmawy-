@@ -8,26 +8,26 @@ const prisma = getPrismaClient();
  */
 export async function validateRedemption(req, res) {
   try {
-    const { rewardId, category, pointsRequired } = req.body;
+    const { itemId, category, pointsRequired } = req.body;
     const userId = req.user.id;
 
     console.log('🔍 Validate redemption request:', {
-      rewardId,
+      itemId,
       category,
       pointsRequired,
       userId,
       body: req.body
     });
 
-    if (!rewardId || !category || !pointsRequired) {
-      console.log('❌ Missing required fields:', { rewardId, category, pointsRequired });
+    if (!itemId || !category || !pointsRequired) {
+      console.log('❌ Missing required fields:', { itemId, category, pointsRequired });
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields: rewardId, category, pointsRequired'
+        error: 'Missing required fields: itemId, category, pointsRequired'
       });
     }
 
-    const validation = await rewardsService.validateRedemption(userId, rewardId, category, pointsRequired);
+    const validation = await rewardsService.validateRedemption(userId, itemId, category, pointsRequired);
 
     if (!validation.valid) {
       return res.status(400).json({
@@ -59,26 +59,25 @@ export async function validateRedemption(req, res) {
  */
 export async function processRedemption(req, res) {
   try {
-    const { rewardId, category, shippingAddress } = req.body;
+    const { itemId, category, shippingDetails } = req.body;
     const userId = req.user.id;
-    const language = req.headers['accept-language'] || 'en';
 
-    if (!rewardId || !category) {
+    if (!itemId || !category) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields: rewardId, category'
+        error: 'Missing required fields: itemId, category'
       });
     }
 
-    // Basic shipping address validation
-    if (!shippingAddress || !shippingAddress.firstName || !shippingAddress.lastName || !shippingAddress.phone) {
+    // Basic shipping details validation
+    if (!shippingDetails || !shippingDetails.building || !shippingDetails.street || !shippingDetails.city) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required shipping information: firstName, lastName, phone'
+        error: 'Missing required shipping information: building, street, city'
       });
     }
 
-    const result = await rewardsService.processRedemption(userId, rewardId, category, shippingAddress, language);
+    const result = await rewardsService.processRedemption(userId, itemId, category, shippingDetails);
 
     if (!result.success) {
       return res.status(400).json({

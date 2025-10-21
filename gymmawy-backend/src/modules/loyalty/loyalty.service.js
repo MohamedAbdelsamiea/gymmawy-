@@ -158,7 +158,6 @@ export async function getLoyaltyStats(userId) {
       _sum: { points: true },
       where: {
         userId: userId,
-        type: 'EARNED',
         points: { gt: 0 }
       }
     }),
@@ -167,7 +166,6 @@ export async function getLoyaltyStats(userId) {
       _sum: { points: true },
       where: {
         userId: userId,
-        type: 'REDEEMED',
         points: { lt: 0 }
       }
     }),
@@ -176,7 +174,6 @@ export async function getLoyaltyStats(userId) {
       _sum: { points: true },
       where: {
         userId: userId,
-        type: 'EARNED',
         points: { gt: 0 },
         createdAt: { gte: startOfMonth }
       }
@@ -186,7 +183,6 @@ export async function getLoyaltyStats(userId) {
       _sum: { points: true },
       where: {
         userId: userId,
-        type: 'REDEEMED',
         points: { lt: 0 },
         createdAt: { gte: startOfMonth }
       }
@@ -196,7 +192,6 @@ export async function getLoyaltyStats(userId) {
       _sum: { points: true },
       where: {
         userId: userId,
-        type: 'EARNED',
         points: { gt: 0 },
         createdAt: { gte: startOfWeek }
       }
@@ -206,7 +201,6 @@ export async function getLoyaltyStats(userId) {
       _sum: { points: true },
       where: {
         userId: userId,
-        type: 'REDEEMED',
         points: { lt: 0 },
         createdAt: { gte: startOfWeek }
       }

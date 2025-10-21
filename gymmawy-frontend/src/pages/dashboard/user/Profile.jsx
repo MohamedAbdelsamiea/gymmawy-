@@ -9,6 +9,8 @@ import {
   validateBirthDate 
 } from '../../../utils/validators';
 import CountryCodeSelector from '../../../components/auth/CountryCodeSelector';
+import CountrySelector from '../../../components/auth/CountrySelector';
+import { useCountryDetection } from '../../../hooks/useCountryDetection';
 import { 
   User, 
   Mail, 
@@ -73,6 +75,28 @@ const Profile = () => {
     country: '',
     postcode: '',
   });
+
+  // Country detection hook (only when editing and no country set)
+  const { isDetecting, detectedCountry, detect } = useCountryDetection(false);
+
+  // Detect country when editing starts and no country is set
+  useEffect(() => {
+    if (isEditing && !formData.country && !isDetecting) {
+      detect();
+    }
+  }, [isEditing, formData.country, isDetecting, detect]);
+
+  // Update form data when country is detected
+  useEffect(() => {
+    if (detectedCountry && !formData.country) {
+      setFormData(prev => ({
+        ...prev,
+        country: detectedCountry.country,
+        countryCode: detectedCountry.phoneCode,
+        city: detectedCountry.city || prev.city
+      }));
+    }
+  }, [detectedCountry, formData.country, formData.countryCode, formData.city]);
 
   // Load user data when component mounts
   useEffect(() => {
@@ -665,18 +689,23 @@ const Profile = () => {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('user.profile.country')}
-                    </label>
-                    <input
-                      type="text"
-                      name="country"
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        {t('user.profile.country')}
+                      </label>
+                      {isDetecting && (
+                        <div className="flex items-center text-xs text-blue-600">
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
+                          Detecting...
+                        </div>
+                      )}
+                    </div>
+                    <CountrySelector
                       value={formData.country ?? ''}
-                      onChange={handleInputChange}
-                      disabled={!isEditing}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 ${
-                        getFieldError('country') ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
-                      }`}
+                      onChange={(value) => handleInputChange({ target: { name: 'country', value } })}
+                      disabled={!isEditing || isDetecting}
+                      placeholder={isDetecting ? "Detecting your country..." : "Select your country"}
+                      className="w-full"
                     />
                     {getFieldError('country') && (
                       <p className="mt-1 text-sm text-red-600">{getErrorMessage('country')}</p>

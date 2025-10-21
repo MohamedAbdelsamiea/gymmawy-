@@ -462,7 +462,10 @@ params.date = filterDate;
                 amount: row.price,
                 currency: row.currency,
                 method: row.paymentMethod,
-                user: row.user
+                paymentableType: 'ORDER',
+                paymentableId: row.id,
+                user: row.user,
+                order: row // Include full order object for human-readable ID access
               })}
               className="text-blue-600 hover:text-blue-800 text-xs px-2 py-1 border border-blue-300 rounded hover:bg-blue-50 transition-colors flex items-center gap-1"
               title="Click to view payment proof"
