@@ -68,6 +68,20 @@ export const deleteUpload = async (fileId, category = 'products') => {
         console.log(`Video file not found with ID: ${fileId}`);
         return { success: false, message: 'Video file not found' };
       }
+    } else if (category === 'programmes' || category === 'pdf') {
+      // For PDFs, they are stored in uploads/programmes directory
+      const fileName = `${fileId}.pdf`;
+      const filePath = path.join('uploads', 'programmes', fileName);
+      
+      // Delete file from filesystem
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log(`Deleted PDF file: ${filePath}`);
+        return { success: true, message: 'PDF file deleted successfully' };
+      } else {
+        console.log(`PDF file not found: ${filePath}`);
+        return { success: false, message: 'PDF file not found' };
+      }
     } else {
       // For images, use .webp extension
       const fileName = `${fileId}.webp`;

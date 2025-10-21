@@ -311,11 +311,28 @@ return fallback;
       return;
     }
     
-    if (!plan && !product && !cartItems) {
+    // Check for loyalty data in sessionStorage as backup
+    const loyaltyCheckoutData = sessionStorage.getItem('loyaltyCheckoutData');
+    const hasLoyaltyData = !!loyaltyCheckoutData || !!loyaltyData;
+    
+    // Debug logging
+    console.log('🔍 Redirect check - Data status:', {
+      plan: !!plan,
+      product: !!product,
+      cartItems: !!cartItems,
+      loyaltyData: !!loyaltyData,
+      loyaltyCheckoutData: !!loyaltyCheckoutData,
+      hasLoyaltyData,
+      isLoyaltyRedemption
+    });
+    
+    if (!plan && !product && !cartItems && !hasLoyaltyData) {
       console.log('No checkout data found, redirecting to home');
       navigate('/');
+    } else {
+      console.log('✅ Checkout data found, staying on page');
     }
-  }, [plan, product, cartItems, cart, loadedCartItems, isLoadingCart, navigate]);
+  }, [plan, product, cartItems, cart, loadedCartItems, isLoadingCart, navigate, loyaltyData, isLoyaltyRedemption]);
 
   // Function to reset prescoring flag (for manual testing)
   const resetPrescoringFlag = () => {
@@ -2413,8 +2430,25 @@ return;
     );
   }
 
+  // Check for loyalty data in sessionStorage as backup
+  const loyaltyCheckoutData = sessionStorage.getItem('loyaltyCheckoutData');
+  const hasLoyaltyData = !!loyaltyData || !!loyaltyCheckoutData;
+  
+  // Debug logging for render condition
+  console.log('🔍 Render condition check:', {
+    plan: !!plan,
+    product: !!product,
+    cartItems: !!cartItems,
+    loadedCartItems: !!loadedCartItems,
+    loyaltyData: !!loyaltyData,
+    loyaltyCheckoutData: !!loyaltyCheckoutData,
+    hasLoyaltyData,
+    cart: !!cart,
+    cartItems: cart?.items?.length || 0
+  });
+
   // Show error state if no checkout data is available
-  if (!plan && !product && !cartItems && !loadedCartItems && (!cart || !cart.items || cart.items.length === 0)) {
+  if (!plan && !product && !cartItems && !loadedCartItems && !hasLoyaltyData && (!cart || !cart.items || cart.items.length === 0)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 sm:p-8 text-center">

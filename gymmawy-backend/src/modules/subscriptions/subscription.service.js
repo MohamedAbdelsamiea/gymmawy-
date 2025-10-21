@@ -12,6 +12,7 @@ const prisma = getPrismaClient();
 // Handles different payment method requirements:
 // - CARD/TABBY/TAMARA: require transactionId (online payment gateway response)
 // - INSTA_PAY/VODAFONE_CASH: require paymentProofUrl (manual payment proof)
+// - GYMMAWY_COINS: no additional validation required (loyalty points payment)
 function validatePaymentData(paymentMethod, transactionId, paymentProofUrl) {
   const errors = [];
   
@@ -29,8 +30,13 @@ function validatePaymentData(paymentMethod, transactionId, paymentProofUrl) {
     }
   }
   
+  // GYMMAWY_COINS payment method doesn't require transaction ID or payment proof
+  if (paymentMethod === 'GYMMAWY_COINS') {
+    // No additional validation required for coin payments
+  }
+  
   // Validate that we have a recognized payment method
-  const validMethods = ['CARD', 'TABBY', 'TAMARA', 'INSTA_PAY', 'VODAFONE_CASH'];
+  const validMethods = ['CARD', 'TABBY', 'TAMARA', 'INSTA_PAY', 'VODAFONE_CASH', 'GYMMAWY_COINS'];
   if (!validMethods.includes(paymentMethod)) {
     errors.push(`Invalid payment method: ${paymentMethod}. Must be one of: ${validMethods.join(', ')}`);
   }

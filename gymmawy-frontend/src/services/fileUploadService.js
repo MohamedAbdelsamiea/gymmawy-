@@ -92,11 +92,12 @@ class FileUploadService {
   /**
    * Delete a file from the server
    * @param {string} fileId - The file ID to delete
+   * @param {string} category - The file category (products, programmes, videos)
    * @returns {Promise<Object>} Delete result
    */
-  async deleteFile(fileId) {
+  async deleteFile(fileId, category = 'products') {
     try {
-      return await apiClient.delete(`/uploads/${fileId}`);
+      return await apiClient.delete(`/uploads/${fileId}?category=${category}`);
     } catch (error) {
       console.error('File deletion error:', error);
       throw new Error(error.response?.data?.error?.message || 'File deletion failed');
@@ -113,8 +114,17 @@ class FileUploadService {
       // Extract filename from URL
       const filename = fileUrl.split('/').pop();
       const fileId = filename.split('.')[0]; // Remove extension
+      const extension = filename.split('.')[1]; // Get extension
       
-      return await this.deleteFile(fileId);
+      // Determine category based on URL path and extension
+      let category = 'products'; // default
+      if (fileUrl.includes('/uploads/programmes/') || extension === 'pdf') {
+        category = 'programmes';
+      } else if (fileUrl.includes('/content/videos/')) {
+        category = 'videos';
+      }
+      
+      return await this.deleteFile(fileId, category);
     } catch (error) {
       console.error('File deletion by URL error:', error);
       throw new Error('Failed to delete file');

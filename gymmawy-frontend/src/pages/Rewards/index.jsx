@@ -26,12 +26,7 @@ const RewardsPage = () => {
   const [error, setError] = useState(null);
   const [redeeming, setRedeeming] = useState({});
 
-  // Show login popup automatically if user is not authenticated
-  useEffect(() => {
-    if (!isAuthenticated && !loading) {
-      setShowLoginPopup(true);
-    }
-  }, [isAuthenticated, loading]);
+  // Remove automatic login popup - let users see rewards first, then prompt for login when they try to redeem
 
   // Fetch rewards from backend API
   useEffect(() => {
@@ -261,6 +256,20 @@ const RewardsPage = () => {
           <p className="text-lg text-gray-600 mb-8">
             {t('subtitle')}
           </p>
+          
+          {/* Sign-in message for non-authenticated users */}
+          {!isAuthenticated && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 inline-block">
+              <div className="text-center">
+                <p className="text-blue-800 font-medium">
+                  {i18n.language === 'ar' 
+                    ? 'سجل الدخول لبدء كسب واستبدال نقاط جيماوي' 
+                    : 'Sign in to start earning and redeeming Gymmawy Coins'
+                  }
+                </p>
+              </div>
+            </div>
+          )}
           
           {/* User Points Display - Only show if authenticated */}
           {isAuthenticated && (

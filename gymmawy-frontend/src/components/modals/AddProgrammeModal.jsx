@@ -28,6 +28,7 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
   const [selectedImage, setSelectedImage] = useState(null);
   const [pdfUrl, setPdfUrl] = useState('');
   const [selectedPDF, setSelectedPDF] = useState(null);
+  const [originalPdfUrl, setOriginalPdfUrl] = useState(null); // Track original PDF URL for deletion
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [enableLoyaltyPoints, setEnableLoyaltyPoints] = useState(false);
@@ -72,7 +73,13 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
         setImageUrl(editData.imageUrl || '');
         setSelectedImage(null);
         setPdfUrl(editData.pdfUrl || '');
-        setSelectedPDF(null);
+        setOriginalPdfUrl(editData.pdfUrl || null); // Track original PDF URL
+        // Initialize selectedPDF with existing PDF data if available
+        setSelectedPDF(editData.pdfUrl ? { 
+          url: editData.pdfUrl, 
+          isLocal: false,
+          name: 'Existing PDF'
+        } : null);
       } else {
         // Reset form when modal opens for new programme
         setFormData({
@@ -97,6 +104,7 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
         setSelectedImage(null);
         setPdfUrl('');
         setSelectedPDF(null);
+        setOriginalPdfUrl(null);
       }
       
       setError(null);
@@ -267,9 +275,30 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
         finalImageUrl = editData.imageUrl;
       }
 
-      // Upload PDF if a new file is selected
-      let finalPdfUrl = pdfUrl;
-      if (selectedPDF?.file) {
+      // Handle PDF upload/removal
+      let finalPdfUrl = '';
+      
+      // Delete old PDF file if it's being replaced or removed
+      console.log('PDF deletion check:', {
+        originalPdfUrl,
+        selectedPDFIsLocal: selectedPDF?.isLocal,
+        selectedPDFExists: !!selectedPDF,
+        shouldDelete: originalPdfUrl && (selectedPDF?.isLocal || !selectedPDF)
+      });
+      
+      if (originalPdfUrl && (selectedPDF?.isLocal || !selectedPDF)) {
+        try {
+          console.log('Attempting to delete PDF:', originalPdfUrl);
+          await fileUploadService.deleteFileByUrl(originalPdfUrl);
+          console.log('Old PDF file deleted successfully:', originalPdfUrl);
+        } catch (deleteError) {
+          console.warn('Failed to delete old PDF file:', deleteError);
+          // Don't throw error here as the main operation should continue
+        }
+      }
+      
+      if (selectedPDF?.isLocal && selectedPDF?.file) {
+        // Upload new local PDF file
         try {
           const uploadResult = await fileUploadService.uploadPDF(selectedPDF.file);
           console.log('PDF Upload result in AddProgrammeModal:', uploadResult);
@@ -282,10 +311,14 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
         } catch (uploadError) {
           throw new Error(`Failed to upload PDF: ${uploadError.message}`);
         }
-      } else if (isEdit && editData?.pdfUrl) {
-        // When editing, preserve existing PDF if no new PDF is selected
+      } else if (selectedPDF && !selectedPDF.isLocal) {
+        // Keep existing PDF URL
+        finalPdfUrl = selectedPDF.url || '';
+      } else if (isEdit && editData?.pdfUrl && !selectedPDF) {
+        // When editing, preserve existing PDF if no new PDF is selected and no removal
         finalPdfUrl = editData.pdfUrl;
       }
+      // If selectedPDF is null and we're editing, it means user removed the PDF, so finalPdfUrl stays empty
 
       // Extract loyalty points fields from formData to avoid spreading them
       const { loyaltyPointsAwarded, loyaltyPointsRequired, ...restFormData } = formData;
@@ -540,14 +573,13 @@ return null;
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900">Programme PDF</h3>
               <AdminPDFUpload
-                initialPDF={pdfUrl ? { url: pdfUrl } : null}
+                initialPDF={pdfUrl ? { url: pdfUrl, isLocal: false } : null}
                 onPDFUpload={(pdfData) => {
-                  if (pdfData.isLocal) {
-                    setSelectedPDF(pdfData);
-                    setPdfUrl(pdfData.preview);
-                  } else {
-                    setSelectedPDF(null);
-                    setPdfUrl(pdfData.url);
+                  setSelectedPDF(pdfData);
+                  setPdfUrl(pdfData.preview);
+                  // If this is a new local file and we had an original PDF, mark it for deletion
+                  if (pdfData.isLocal && originalPdfUrl) {
+                    // The originalPdfUrl will be used for deletion during save
                   }
                 }}
                 onPDFRemove={() => {

@@ -739,6 +739,7 @@ enum PaymentMethod {
   TAMARA
   CARD
   PAYMOB
+  GYMMAWY_COINS
 }
 
 enum TokenType {
@@ -792,6 +793,7 @@ enum LoyaltyTransactionType {
   EARNED
   REDEEMED
   REVOKED
+  SPENT
 }
 
 enum LoyaltyTransactionSource {
@@ -799,6 +801,7 @@ enum LoyaltyTransactionSource {
   PROGRAMME_PURCHASE
   SUBSCRIPTION
   REFERRAL
+  REWARD_REDEMPTION
 }
 
 enum SubscriptionPriceType {

@@ -38,9 +38,6 @@ export async function validateRedemption(userId, rewardId, category, pointsRequi
           where: {
             id: rewardId,
             loyaltyPointsRequired: { gt: 0 }
-          },
-          include: {
-            prices: true
           }
         });
         console.log('📦 Found subscription plan:', reward ? { id: reward.id, loyaltyPointsRequired: reward.loyaltyPointsRequired } : null);
@@ -50,9 +47,6 @@ export async function validateRedemption(userId, rewardId, category, pointsRequi
           where: {
             id: rewardId,
             loyaltyPointsRequired: { gt: 0 }
-          },
-          include: {
-            prices: true
           }
         });
         break;
@@ -61,9 +55,6 @@ export async function validateRedemption(userId, rewardId, category, pointsRequi
           where: {
             id: rewardId,
             loyaltyPointsRequired: { gt: 0 }
-          },
-          include: {
-            prices: true
           }
         });
         break;
@@ -105,8 +96,7 @@ export async function processRedemption(userId, rewardId, category, shippingAddr
     switch (category) {
       case 'packages':
         reward = await prisma.subscriptionPlan.findUnique({
-          where: { id: rewardId },
-          include: { prices: true }
+          where: { id: rewardId }
         });
         rewardName = reward.name?.en || reward.name || 'Subscription Package';
         // For packages, price is typically 0 since it's redeemed with points
@@ -114,23 +104,19 @@ export async function processRedemption(userId, rewardId, category, shippingAddr
         break;
       case 'products':
         reward = await prisma.product.findUnique({
-          where: { id: rewardId },
-          include: { prices: true }
+          where: { id: rewardId }
         });
         rewardName = reward.name?.en || reward.name || 'Product';
-        // Get price for user's currency (default to EGP)
-        const productPrice = reward.prices?.find(p => p.currency === 'EGP') || reward.prices?.[0];
-        rewardPrice = productPrice?.amount || 0;
+        // For products, price is typically 0 since it's redeemed with points
+        rewardPrice = 0;
         break;
       case 'programmes':
         reward = await prisma.programme.findUnique({
-          where: { id: rewardId },
-          include: { prices: true }
+          where: { id: rewardId }
         });
         rewardName = reward.name?.en || reward.name || 'Programme';
-        // Get price for user's currency (default to EGP)
-        const programmePrice = reward.prices?.find(p => p.currency === 'EGP') || reward.prices?.[0];
-        rewardPrice = programmePrice?.amount || 0;
+        // For programmes, price is typically 0 since it's redeemed with points
+        rewardPrice = 0;
         break;
       default:
         throw new Error('Invalid reward category');
@@ -167,13 +153,7 @@ export async function processRedemption(userId, rewardId, category, shippingAddr
           points: pointsRequired,
           type: 'SPENT',
           source: 'REWARD_REDEMPTION',
-          sourceId: rewardId,
-          reason: `Redeemed ${rewardName}`,
-          metadata: {
-            category: category,
-            rewardName: rewardName,
-            rewardPrice: rewardPrice
-          }
+          sourceId: rewardId
         }
       });
 
@@ -193,8 +173,9 @@ export async function processRedemption(userId, rewardId, category, shippingAddr
           userId: userId,
           status: 'PAID', // Directly mark as paid since it's loyalty redemption
           totalAmount: rewardPrice,
+          price: rewardPrice, // Set the price field as well
           currency: 'EGP', // Default currency
-          paymentMethod: 'LOYALTY_POINTS',
+          paymentMethod: 'GYMMAWY_COINS',
           paymentReference: `LOYALTY-${loyaltyTransaction.id}`,
           shippingAddress: shippingAddress,
           language: language,
@@ -227,8 +208,7 @@ export async function processRedemption(userId, rewardId, category, shippingAddr
             endDate: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 days from now
             price: 0, // Free since redeemed with points
             currency: 'EGP',
-            paymentMethod: 'LOYALTY_POINTS',
-            orderId: order.id
+            paymentMethod: 'GYMMAWY_COINS'
           }
         });
         specificRecord = subscription;
@@ -238,13 +218,10 @@ export async function processRedemption(userId, rewardId, category, shippingAddr
           data: {
             userId: userId,
             programmeId: rewardId,
-            status: 'APPROVED', // Auto-approve loyalty redemptions
             price: 0, // Free since redeemed with points
-            currency: 'EGP',
-            paymentMethod: 'LOYALTY_POINTS',
-            orderId: order.id,
-            approvedAt: new Date(),
-            approvedBy: 'SYSTEM' // Auto-approved by system
+            purchaseNumber: `PROG-${orderNumber}`,
+            status: 'COMPLETE', // Auto-approve loyalty redemptions
+            currency: 'EGP'
           }
         });
         specificRecord = programmePurchase;

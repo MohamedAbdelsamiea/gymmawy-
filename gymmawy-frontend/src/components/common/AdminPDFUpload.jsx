@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, FileText, X, CheckCircle, AlertCircle } from 'lucide-react';
 import fileUploadService from '../../services/fileUploadService';
 
@@ -10,12 +10,26 @@ const AdminPDFUpload = ({
   showDetails = true,
   maxSize = 500 * 1024 * 1024 // 500MB default (no limit as requested)
 }) => {
-  const [selectedPDF, setSelectedPDF] = useState(null);
+  const [selectedPDF, setSelectedPDF] = useState(initialPDF);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
 
-  const handleFileSelect = async (file) => {
+  // Update selectedPDF when initialPDF changes (for edit mode)
+  useEffect(() => {
+    setSelectedPDF(initialPDF);
+  }, [initialPDF]);
+
+  // Cleanup object URLs to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (selectedPDF?.isLocal && selectedPDF?.url) {
+        URL.revokeObjectURL(selectedPDF.url);
+      }
+    };
+  }, [selectedPDF]);
+
+  const handleFileSelect = (file) => {
     if (!file) return;
 
     // Validate file
@@ -30,31 +44,19 @@ const AdminPDFUpload = ({
     }
 
     setError(null);
-    setUploading(true);
 
-    try {
-      // Upload PDF
-      const uploadResult = await fileUploadService.uploadPDF(file);
-      
-      if (uploadResult.success && uploadResult.upload) {
-        const pdfData = {
-          file: file,
-          url: fileUploadService.getFileUrl(uploadResult.upload.url),
-          preview: fileUploadService.getFileUrl(uploadResult.upload.url),
-          isLocal: false,
-          uploadResult: uploadResult.upload
-        };
-        
-        setSelectedPDF(pdfData);
-        onPDFUpload?.(pdfData);
-      } else {
-        throw new Error('Invalid upload response');
-      }
-    } catch (uploadError) {
-      setError(uploadError.message || 'Failed to upload PDF');
-    } finally {
-      setUploading(false);
-    }
+    // Store file locally without uploading to backend
+    const pdfData = {
+      file: file,
+      url: URL.createObjectURL(file), // Create local preview URL
+      preview: URL.createObjectURL(file),
+      isLocal: true,
+      name: file.name,
+      size: file.size
+    };
+    
+    setSelectedPDF(pdfData);
+    onPDFUpload?.(pdfData);
   };
 
   const handleFileInputChange = (e) => {
@@ -89,6 +91,10 @@ const AdminPDFUpload = ({
       };
 
   const handleRemove = () => {
+    // Clean up object URL if it's a local file
+    if (selectedPDF?.isLocal && selectedPDF?.url) {
+      URL.revokeObjectURL(selectedPDF.url);
+    }
     setSelectedPDF(null);
     setError(null);
     onPDFRemove?.();
@@ -106,7 +112,7 @@ const AdminPDFUpload = ({
     <div className="space-y-4">
       {/* Upload Area */}
       <div
-        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
           dragOver 
             ? 'border-gymmawy-primary bg-gymmawy-primary/5' 
             : 'border-gray-300 hover:border-gray-400'
@@ -114,6 +120,7 @@ const AdminPDFUpload = ({
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
+        onClick={() => !uploading && !selectedPDF && document.getElementById('pdf-upload').click()}
       >
         {selectedPDF ? (
           <div className="space-y-4">
@@ -122,11 +129,13 @@ const AdminPDFUpload = ({
             </div>
             <div className="text-center">
               <p className="text-sm font-medium text-gray-900">
-                {selectedPDF.file?.name || 'PDF File'}
+                {selectedPDF.file?.name || selectedPDF.name || 
+                 (selectedPDF.url && !selectedPDF.isLocal ? 
+                   selectedPDF.url.split('/').pop() || 'PDF File' : 'PDF File')}
               </p>
               {showDetails && (
                 <p className="text-xs text-gray-500 mt-1">
-                  Size: {formatFileSize(selectedPDF.file?.size || 0)}
+                  {selectedPDF.isLocal ? `Size: ${formatFileSize(selectedPDF.file?.size || selectedPDF.size || 0)}` : 'Existing PDF'}
                 </p>
               )}
             </div>
@@ -176,16 +185,6 @@ const AdminPDFUpload = ({
               className="hidden"
               id="pdf-upload"
             />
-            <label
-              htmlFor="pdf-upload"
-              className={`inline-block px-4 py-2 text-sm font-medium rounded-lg cursor-pointer transition-colors ${
-                uploading 
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                  : 'bg-gymmawy-primary text-white hover:bg-gymmawy-secondary'
-              }`}
-            >
-              {uploading ? 'Uploading...' : 'Select PDF File'}
-            </label>
           </div>
         )}
       </div>
@@ -209,7 +208,7 @@ const AdminPDFUpload = ({
       {selectedPDF && !error && (
         <div className="flex items-center space-x-2 text-sm text-green-600 bg-green-50 p-3 rounded-lg">
           <CheckCircle className="h-4 w-4 flex-shrink-0" />
-          <span>PDF uploaded successfully</span>
+          <span>{selectedPDF.isLocal ? 'PDF ready to upload' : 'PDF uploaded successfully'}</span>
         </div>
       )}
     </div>

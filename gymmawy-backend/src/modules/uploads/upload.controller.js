@@ -334,7 +334,8 @@ export const getAdminUploadsController = async (req, res, next) => {
 export const deleteUploadController = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await deleteUpload(id);
+    const { category = 'products' } = req.query;
+    const result = await deleteUpload(id, category);
     
     res.json({
       success: true,
