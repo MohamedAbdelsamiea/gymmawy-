@@ -21,6 +21,12 @@ function validatePaymentData(paymentMethod, transactionId, paymentProofUrl) {
     }
   }
   
+  // PAYMOB payments are created before payment, so transaction ID comes later from webhook
+  if (paymentMethod === 'PAYMOB') {
+    // No validation required for PAYMOB during subscription creation
+    // Transaction ID will be provided when payment is completed via webhook
+  }
+  
   // Manual payment methods (INSTAPAY, VODAFONECASH) require payment proof URL
   if (['INSTAPAY', 'VODAFONECASH'].includes(paymentMethod)) {
     if (!paymentProofUrl || paymentProofUrl.trim() === '') {
@@ -34,7 +40,7 @@ function validatePaymentData(paymentMethod, transactionId, paymentProofUrl) {
   }
   
   // Validate that we have a recognized payment method
-  const validMethods = ['CARD', 'TABBY', 'TAMARA', 'INSTAPAY', 'VODAFONECASH', 'GYMMAWY_COINS'];
+  const validMethods = ['CARD', 'TABBY', 'TAMARA', 'INSTAPAY', 'VODAFONECASH', 'GYMMAWY_COINS', 'PAYMOB'];
   if (!validMethods.includes(paymentMethod)) {
     errors.push(`Invalid payment method: ${paymentMethod}. Must be one of: ${validMethods.join(', ')}`);
   }
