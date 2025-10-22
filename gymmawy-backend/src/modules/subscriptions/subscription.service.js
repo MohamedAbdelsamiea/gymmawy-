@@ -204,19 +204,19 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
   let originalPrice = null;
   
   if (isMedical) {
-    // Get medical price for the requested currency
+    // Get medical price for the requested currency, fallback to regular price if medical price not available
     switch (currency) {
       case 'AED':
-        originalPrice = plan.medicalPriceAED ? parseFloat(plan.medicalPriceAED) : null;
+        originalPrice = plan.medicalPriceAED ? parseFloat(plan.medicalPriceAED) : (plan.priceAED ? parseFloat(plan.priceAED) : null);
         break;
       case 'EGP':
-        originalPrice = plan.medicalPriceEGP ? parseFloat(plan.medicalPriceEGP) : null;
+        originalPrice = plan.medicalPriceEGP ? parseFloat(plan.medicalPriceEGP) : (plan.priceEGP ? parseFloat(plan.priceEGP) : null);
         break;
       case 'SAR':
-        originalPrice = plan.medicalPriceSAR ? parseFloat(plan.medicalPriceSAR) : null;
+        originalPrice = plan.medicalPriceSAR ? parseFloat(plan.medicalPriceSAR) : (plan.priceSAR ? parseFloat(plan.priceSAR) : null);
         break;
       case 'USD':
-        originalPrice = plan.medicalPriceUSD ? parseFloat(plan.medicalPriceUSD) : null;
+        originalPrice = plan.medicalPriceUSD ? parseFloat(plan.medicalPriceUSD) : (plan.priceUSD ? parseFloat(plan.priceUSD) : null);
         break;
     }
   } else {
