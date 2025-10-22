@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, AlertCircle } from 'lucide-react';
+import { X, Save, AlertCircle, Upload } from 'lucide-react';
 import AdminImageUpload from '../common/AdminImageUpload';
 import adminApiService from '../../services/adminApiService';
-import fileUploadService from '../../services/fileUploadService';
+import draftUploadService from '../../services/draftUploadService';
 import { useToast } from '../../contexts/ToastContext';
 import { config } from '../../config';
 
@@ -36,9 +36,18 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
   const [loading, setLoading] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [enableLoyaltyPoints, setEnableLoyaltyPoints] = useState(false);
+  const [hasStagedChanges, setHasStagedChanges] = useState(false);
+
+  // File keys for draft upload service
+  const MAIN_IMAGE_KEY = 'productMainImage';
+  const CAROUSEL_IMAGE_KEY_PREFIX = 'productCarouselImage';
 
   useEffect(() => {
     if (isOpen) {
+      // Reset draft service for this modal
+      draftUploadService.reset();
+      setHasStagedChanges(false);
+      
       // Reset form when modal opens
       setFormData({
         name: { en: '' },
@@ -63,6 +72,10 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
       setSelectedCarouselImages([]);
       setErrors({});
       setEnableLoyaltyPoints(false);
+    } else {
+      // Clean up when modal closes
+      draftUploadService.reset();
+      setHasStagedChanges(false);
     }
   }, [isOpen]);
 
@@ -101,22 +114,33 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
 
   const handleCarouselImageUpload = (file) => {
     try {
+      // Create a unique key for this carousel image
+      const carouselKey = `${CAROUSEL_IMAGE_KEY_PREFIX}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      // Create preview URL
-      const previewUrl = URL.createObjectURL(file);
+      // Stage the file for upload
+      const stagedFile = draftUploadService.stageFile(
+        carouselKey,
+        file,
+        'products',
+        true
+      );
       
       const imageData = {
         file: file,
-        preview: previewUrl,
-        url: previewUrl, // For display purposes
+        preview: stagedFile.previewUrl,
+        url: stagedFile.previewUrl, // For display purposes
         name: file.name,
         size: file.size,
         type: file.type,
-        isLocal: true
+        isLocal: true,
+        isStaged: true,
+        stagedAt: stagedFile.stagedAt,
+        carouselKey: carouselKey
       };
       
       setSelectedCarouselImages(prev => [...prev, imageData]);
       setCarouselImages(prev => [...prev, imageData]);
+      setHasStagedChanges(true);
     } catch (error) {
       console.error('AddModal - Error adding carousel image:', error);
       showError(error.message || 'Failed to add carousel image');
@@ -124,6 +148,16 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
   };
 
   const handleCarouselImageRemove = (imageToRemove) => {
+    // If it's a staged file, clear it from draft service
+    if (imageToRemove.isStaged && imageToRemove.carouselKey) {
+      draftUploadService.clearStagedFile(imageToRemove.carouselKey);
+    }
+    
+    // If it's an existing uploaded file, stage it for removal
+    if (!imageToRemove.isLocal && imageToRemove.url) {
+      draftUploadService.stageRemoval(imageToRemove.carouselKey || 'unknown', imageToRemove.url);
+    }
+    
     // Clean up preview URL if it's a local file
     if (imageToRemove.isLocal && imageToRemove.preview) {
       URL.revokeObjectURL(imageToRemove.preview);
@@ -131,6 +165,7 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
     
     setCarouselImages(prev => prev.filter(img => img.url !== imageToRemove.url));
     setSelectedCarouselImages(prev => prev.filter(img => img.url !== imageToRemove.url));
+    setHasStagedChanges(true);
   };
 
   const validateForm = () => {
@@ -176,53 +211,24 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
     setUploadingImages(true);
     
     try {
+      // Commit all staged changes (upload new files and remove old ones)
+      const commitResults = await draftUploadService.commitChanges();
+      
       let uploadedImageUrl = imageUrl;
       let uploadedCarouselImages = [...carouselImages];
 
-      // Upload main image if a new file is selected
-      if (selectedMainImage?.file) {
-        try {
-          const uploadResult = await fileUploadService.uploadFile(
-            selectedMainImage.file, 
-            'products', 
-            true
-          );
-          
-          if (uploadResult.success && uploadResult.upload) {
-            uploadedImageUrl = fileUploadService.getFileUrl(uploadResult.upload.url);
-          } else {
-            throw new Error('Invalid upload response for main image');
-          }
-        } catch (uploadError) {
-          throw new Error(`Failed to upload main image: ${uploadError.message}`);
-        }
+      // Update main image URL if we uploaded a new file
+      if (commitResults.uploadResults[MAIN_IMAGE_KEY]) {
+        uploadedImageUrl = commitResults.uploadResults[MAIN_IMAGE_KEY].uploadedUrl;
       }
 
-      // Upload carousel images if new files are selected
-      if (selectedCarouselImages.length > 0) {
-        try {
-          const carouselUploadPromises = selectedCarouselImages.map(async (imageData) => {
-            if (imageData.file) {
-              const uploadResult = await fileUploadService.uploadFile(
-                imageData.file, 
-                'products', 
-                true
-              );
-              
-              if (uploadResult.success && uploadResult.upload) {
-                return fileUploadService.getFileUrl(uploadResult.upload.url);
-              } else {
-                throw new Error('Invalid upload response for carousel image');
-              }
-            }
-            return imageData.url; // Keep existing URL if no new file
-          });
-          
-          const uploadedCarouselUrls = await Promise.all(carouselUploadPromises);
-          uploadedCarouselImages = uploadedCarouselUrls.map(url => ({ url }));
-        } catch (uploadError) {
-          throw new Error(`Failed to upload carousel images: ${uploadError.message}`);
-        }
+      // Update carousel images if we uploaded new files
+      const carouselUploadResults = Object.entries(commitResults.uploadResults)
+        .filter(([key]) => key.startsWith(CAROUSEL_IMAGE_KEY_PREFIX))
+        .map(([key, result]) => result.uploadedUrl);
+      
+      if (carouselUploadResults.length > 0) {
+        uploadedCarouselImages = carouselUploadResults.map(url => ({ url }));
       }
 
       // Extract loyalty points fields from formData to avoid spreading them
@@ -264,6 +270,11 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
       
       await onSave(productData);
       showSuccess('Product created successfully!');
+      
+      // Reset draft service after successful save
+      draftUploadService.reset();
+      setHasStagedChanges(false);
+      
       onClose();
     } catch (error) {
       console.error('Error saving product:', error);
@@ -536,17 +547,40 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
               <AdminImageUpload
                 initialImage={imageUrl ? { url: imageUrl } : null}
                 onImageUpload={(imageData) => {
-                  if (imageData.isLocal) {
-                    setSelectedMainImage(imageData);
-                    setImageUrl(imageData.preview);
+                  if (imageData.isLocal && imageData.file) {
+                    // Stage the file for upload
+                    const stagedFile = draftUploadService.stageFile(
+                      MAIN_IMAGE_KEY,
+                      imageData.file,
+                      'products',
+                      true
+                    );
+                    
+                    setSelectedMainImage({
+                      ...imageData,
+                      isStaged: true,
+                      stagedAt: stagedFile.stagedAt
+                    });
+                    
+                    setImageUrl(stagedFile.previewUrl);
+                    setHasStagedChanges(true);
                   } else {
                     setImageUrl(imageData.url);
                     setSelectedMainImage(null);
                   }
                 }}
                 onImageRemove={() => {
+                  // Stage removal of existing file
+                  if (imageUrl) {
+                    draftUploadService.stageRemoval(MAIN_IMAGE_KEY, imageUrl);
+                  }
+                  
+                  // Clear staged file
+                  draftUploadService.clearStagedFile(MAIN_IMAGE_KEY);
+                  
                   setImageUrl('');
                   setSelectedMainImage(null);
+                  setHasStagedChanges(true);
                 }}
                 maxSize={100 * 1024 * 1024}
                 showPreview={true}
@@ -662,7 +696,7 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Points Awarded
+                    Coins Awarded
                   </label>
                   <input
                     type="number"
@@ -685,7 +719,7 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Points Required
+                    Coins Required
                   </label>
                   <input
                     type="number"
@@ -709,6 +743,22 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
             )}
           </div>
 
+          {/* Staged Changes Indicator */}
+          {hasStagedChanges && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mx-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <Upload className="h-5 w-5 text-blue-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-blue-800">
+                    You have staged changes. Click "Create Product" to upload files and create the product.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Footer */}
           <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
             <button
@@ -726,11 +776,12 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Creating...
+                  {hasStagedChanges ? 'Uploading & Creating...' : 'Creating...'}
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-2" />
+                  {hasStagedChanges && <Upload className="h-4 w-4 mr-2" />}
+                  {!hasStagedChanges && <Save className="h-4 w-4 mr-2" />}
                   Create Product
                 </>
               )}

@@ -87,13 +87,13 @@ class TabbyService {
   }
 
   /**
-   * Get payment status from Tabby
+   * Get payment status from Tabby (public endpoint - no auth required)
    * @param {string} paymentId - The payment ID
    * @returns {Promise<Object>} - The payment status
    */
   async getPaymentStatus(paymentId) {
     try {
-      return await apiClient.get(`${this.baseURL}/payment/${paymentId}/status`);
+      return await apiClient.get(`${this.baseURL}/payment/${paymentId}/verify`);
     } catch (error) {
       console.error('Failed to get Tabby payment status:', error);
       throw error;

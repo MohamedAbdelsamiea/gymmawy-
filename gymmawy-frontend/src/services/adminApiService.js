@@ -238,6 +238,12 @@ class AdminApiService {
     });
   }
 
+  async activateSubscription(id) {
+    return this.apiCall(`/subscriptions/admin/${id}/approve`, {
+      method: 'PATCH'
+    });
+  }
+
   async exportSubscriptions(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     return this.apiCall(`/admin/subscriptions/export${queryString ? `?${queryString}` : ''}`);

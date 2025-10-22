@@ -262,8 +262,8 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
           );
           console.log('Upload result in AddProgrammeModal:', uploadResult);
           
-          if (uploadResult.success && uploadResult.upload) {
-            finalImageUrl = fileUploadService.getFileUrl(uploadResult.upload.url);
+          if (uploadResult && uploadResult.url) {
+            finalImageUrl = fileUploadService.getFileUrl(uploadResult.url);
           } else {
             throw new Error('Invalid upload response');
           }
@@ -303,8 +303,8 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
           const uploadResult = await fileUploadService.uploadPDF(selectedPDF.file);
           console.log('PDF Upload result in AddProgrammeModal:', uploadResult);
           
-          if (uploadResult.success && uploadResult.upload) {
-            finalPdfUrl = fileUploadService.getFileUrl(uploadResult.upload.url);
+          if (uploadResult && uploadResult.url) {
+            finalPdfUrl = fileUploadService.getFileUrl(uploadResult.url);
           } else {
             throw new Error('Invalid PDF upload response');
           }
@@ -595,7 +595,7 @@ return null;
           {/* Loyalty Points */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Loyalty Points</h3>
+              <h3 className="text-lg font-medium text-gray-900">Gymmawy Coins</h3>
               <label className="flex items-center">
                 <input
                   type="checkbox"
@@ -619,7 +619,7 @@ return null;
                   }}
                   className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300 rounded"
                 />
-                <span className="ml-2 text-sm text-gray-700">Enable loyalty points</span>
+                <span className="ml-2 text-sm text-gray-700">Enable Gymmawy Coins</span>
               </label>
             </div>
             
@@ -627,7 +627,7 @@ return null;
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Points Awarded
+                    Coins Awarded
                   </label>
                   <input
                     type="number"
@@ -641,7 +641,7 @@ return null;
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Points Required
+                    Coins Required
                   </label>
                   <input
                     type="number"

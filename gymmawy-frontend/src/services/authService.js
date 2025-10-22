@@ -59,10 +59,25 @@ class AuthService {
 
   async refreshToken() {
     try {
-      const data = await apiClient.post('/auth/refresh', {
-        refreshToken: this.getRefreshToken(),
+      const refreshToken = this.getRefreshToken();
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
+      }
+
+      const response = await fetch(`${apiClient.baseURL}/api/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken }),
       });
-      
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Token refresh failed');
+      }
+
+      const data = await response.json();
       this.setToken(data.accessToken);
       
       // Store the new refresh token if provided
@@ -197,6 +212,59 @@ class AuthService {
     } catch (error) {
       throw new Error(`Email change verification error: ${error.message}`);
     }
+  }
+
+  // Debug method to check authentication status
+  getDebugInfo() {
+    const accessToken = this.getToken();
+    const refreshToken = this.getRefreshToken();
+    
+    return {
+      isAuthenticated: this.isAuthenticated(),
+      hasRefreshToken: this.hasRefreshToken(),
+      hasValidTokens: this.hasValidTokens(),
+      tokens: {
+        accessToken: accessToken ? `${accessToken.substring(0, 20)}...` : 'missing',
+        refreshToken: refreshToken ? `${refreshToken.substring(0, 20)}...` : 'missing'
+      },
+      localStorage: {
+        accessToken: localStorage.getItem('accessToken') ? 'present' : 'missing',
+        refreshToken: localStorage.getItem('refreshToken') ? 'present' : 'missing'
+      }
+    };
+  }
+
+  // Validate token storage consistency
+  validateTokenStorage() {
+    const accessToken = this.getToken();
+    const refreshToken = this.getRefreshToken();
+    const storedAccessToken = localStorage.getItem('accessToken');
+    const storedRefreshToken = localStorage.getItem('refreshToken');
+    
+    const isValid = {
+      accessToken: accessToken === storedAccessToken,
+      refreshToken: refreshToken === storedRefreshToken,
+      bothPresent: !!(accessToken && refreshToken),
+      bothMissing: !accessToken && !refreshToken
+    };
+    
+    console.log('Token storage validation:', isValid);
+    
+    if (!isValid.accessToken || !isValid.refreshToken) {
+      console.warn('Token storage inconsistency detected, clearing tokens');
+      this.removeToken();
+      this.removeRefreshToken();
+    }
+    
+    return isValid;
+  }
+
+  // Force clear all authentication data
+  forceLogout() {
+    console.log('Force logout: clearing all authentication data');
+    this.removeToken();
+    this.removeRefreshToken();
+    localStorage.removeItem('userCurrencyPreference');
   }
 }
 

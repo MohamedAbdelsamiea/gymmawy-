@@ -104,38 +104,38 @@ const PaymentSuccess = () => {
 
   const verifyPaymobPayment = async (paymentReference) => {
     try {
-      // Fetch payment status from backend
-      const response = await apiClient.get(`/paymob/payments?reference=${paymentReference}`);
+      // Fetch payment status from backend using public endpoint
+      const response = await apiClient.get(`/paymob/payment/${paymentReference}/verify`);
       
-      if (response.success && response.data.payments.length > 0) {
-        const payment = response.data.payments[0];
+      if (response.success && response.payment) {
+        const payment = response.payment;
         
         console.log('🔍 Paymob payment status:', payment);
         
         // Check payment status
-        if (payment.status === 'SUCCESS') {
+        if (payment.status === 'success') {
           setPaymentStatus({
-            payment_id: payment.transactionId || payment.paymentReference,
+            payment_id: payment.payment_id,
             amount: payment.amount,
             currency: payment.currency,
-            status: payment.status.toLowerCase(),
-            created_at: payment.processedAt || payment.createdAt,
-            provider: 'Paymob'
+            status: payment.status,
+            created_at: payment.created_at,
+            provider: 'PayMob'
           });
           showSuccess('Payment completed successfully!');
-        } else if (payment.status === 'FAILED') {
+        } else if (payment.status === 'failed') {
           // Redirect to failure page
           navigate(`/payment/failure?payment_id=${paymentReference}&provider=paymob`, { replace: true });
           return;
-        } else if (payment.status === 'PENDING') {
+        } else if (payment.status === 'pending') {
           // Payment is still processing, show pending state
           setPaymentStatus({
-            payment_id: payment.transactionId || payment.paymentReference,
+            payment_id: payment.payment_id,
             amount: payment.amount,
             currency: payment.currency,
             status: 'processing',
-            created_at: payment.createdAt,
-            provider: 'Paymob'
+            created_at: payment.created_at,
+            provider: 'PayMob'
           });
           showSuccess('Payment is being processed...');
         }

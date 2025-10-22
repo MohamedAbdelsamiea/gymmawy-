@@ -405,8 +405,8 @@ params.date = filterDate;
         
         return (
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-            paymentMethod === 'VODAFONE_CASH' ? 'bg-green-100 text-green-800' :
-            paymentMethod === 'INSTA_PAY' ? 'bg-blue-100 text-blue-800' :
+            paymentMethod === 'VODAFONECASH' ? 'bg-green-100 text-green-800' :
+            paymentMethod === 'INSTAPAY' ? 'bg-blue-100 text-blue-800' :
             paymentMethod === 'CASH_ON_DELIVERY' ? 'bg-orange-100 text-orange-800' :
             paymentMethod === 'CARD' ? 'bg-purple-100 text-purple-800' :
             'bg-gray-100 text-gray-800'

@@ -94,7 +94,7 @@ class LoyaltyService {
   getSourceDisplay(source) {
     const sourceMap = {
       'ORDER_ITEM': 'Order',
-      'PROGRAMME_PURCHASE': 'Programme',
+      'PROGRAMME': 'Programme',
       'SUBSCRIPTION': 'Subscription',
       'REFERRAL': 'Referral',
       'ADMIN': 'Admin',
@@ -135,7 +135,7 @@ class LoyaltyService {
   getSourceIcon(source) {
     const iconMap = {
       'ORDER_ITEM': 'shopping-bag',
-      'PROGRAMME_PURCHASE': 'book-open',
+      'PROGRAMME': 'book-open',
       'SUBSCRIPTION': 'credit-card',
       'REFERRAL': 'users',
       'ADMIN': 'settings',

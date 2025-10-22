@@ -12,8 +12,11 @@ class ApiClient {
       // Get authorization headers
       getAuthHeaders(customHeaders = {}, isFormData = false) {
         const token = localStorage.getItem('accessToken');
+        const refreshToken = localStorage.getItem('refreshToken');
         const userCurrencyPreference = localStorage.getItem('userCurrencyPreference');
-        console.log('API Client - Token from localStorage:', token);
+        
+        console.log('API Client - Token from localStorage:', token ? 'present' : 'null');
+        console.log('API Client - Refresh token from localStorage:', refreshToken ? 'present' : 'null');
         console.log('API Client - User currency preference:', userCurrencyPreference);
         
         const headers = {
@@ -44,7 +47,7 @@ class ApiClient {
     this.failedQueue = [];
   }
 
-  // Refresh token
+  // Refresh token - independent implementation to avoid circular dependency
   async refreshToken() {
     const refreshToken = localStorage.getItem('refreshToken');
     if (!refreshToken) {
@@ -61,7 +64,8 @@ class ApiClient {
       });
 
       if (!response.ok) {
-        throw new Error('Token refresh failed');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Token refresh failed');
       }
 
       const data = await response.json();
@@ -103,6 +107,18 @@ class ApiClient {
 
       // If token is expired, try to refresh (but not for auth endpoints)
       if (response.status === 401 && !options._retry && !endpoint.startsWith('/auth/')) {
+        // Check if we have a refresh token before attempting refresh
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (!refreshToken) {
+          console.log('No refresh token available, redirecting to login');
+          // Clear any existing tokens
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          // Dispatch event to notify components that user needs to login
+          window.dispatchEvent(new CustomEvent('authRequired'));
+          throw new Error('No refresh token available');
+        }
+
         if (this.isRefreshing) {
           // If already refreshing, queue this request
           return new Promise((resolve, reject) => {
@@ -208,6 +224,31 @@ class ApiClient {
 
   async delete(endpoint, options = {}) {
     return this.request(endpoint, { ...options, method: 'DELETE' });
+  }
+
+  // Utility method to check authentication status
+  getAuthStatus() {
+    const accessToken = localStorage.getItem('accessToken');
+    const refreshToken = localStorage.getItem('refreshToken');
+    
+    return {
+      hasAccessToken: !!accessToken,
+      hasRefreshToken: !!refreshToken,
+      isAuthenticated: !!accessToken,
+      canRefresh: !!refreshToken,
+      tokens: {
+        accessToken: accessToken ? 'present' : 'missing',
+        refreshToken: refreshToken ? 'present' : 'missing'
+      }
+    };
+  }
+
+  // Utility method to clear all authentication data
+  clearAuth() {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userCurrencyPreference');
+    console.log('All authentication data cleared');
   }
 }
 

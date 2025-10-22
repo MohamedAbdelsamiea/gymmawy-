@@ -29,6 +29,7 @@ import mediaRoutes from "./modules/media/media.routes.js";
 import rewardsRoutes from "./modules/rewards/rewards.routes.js";
 import currencyRoutes from "./modules/currency/currency.routes.js";
 import priceRoutes from "./modules/prices/price.routes.js";
+import shippingRoutes from "./modules/shipping/shipping.routes.js";
 import fileRoutes from "./routes/fileRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import { initializeTabbyCronService } from "./services/tabbyCronService.js";
@@ -105,6 +106,7 @@ app.use("/api/media", mediaRoutes);
 app.use("/api/rewards", rewardsRoutes);
 app.use("/api/currency", currencyRoutes);
 app.use("/api/prices", priceRoutes);
+app.use("/api/shipping", shippingRoutes);
 app.use("/api/uploads", uploadRoutes);
 
 // Upload routes (for file uploads) - must come before static file serving

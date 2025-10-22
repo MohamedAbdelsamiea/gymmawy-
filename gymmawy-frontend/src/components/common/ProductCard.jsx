@@ -38,7 +38,7 @@ const ProductCard = ({
 }) => {
   // Handle both local assets and API URLs
   const getImageSrc = (imagePath) => {
-    if (!imagePath) return '/assets/common/store/product1-1.png';
+    if (!imagePath || imagePath.trim() === '') return '/assets/common/store/product1-1.png';
     
     // If it's already a full URL, use it directly
     if (imagePath.startsWith('http')) {
@@ -58,7 +58,10 @@ const ProductCard = ({
 
   // Use useAsset for local assets, direct URL for API images
   const isApiImage = product.image && (product.image.startsWith('/uploads/') || product.image.startsWith('http'));
-  const productImage = isApiImage ? getImageSrc(product.image) : useAsset(product.image, "common");
+  const productImage = isApiImage ? getImageSrc(product.image) : (product.image && product.image.trim() !== '' ? useAsset(product.image, "common") : '/assets/common/store/product1-1.png');
+  
+  // Ensure we never have an empty string as image source
+  const finalImageSrc = productImage && productImage.trim() !== '' ? productImage : '/assets/common/store/product1-1.png';
   
   // Debug logging (remove in production)
   if (config.ENABLE_DEBUG) {
@@ -78,7 +81,7 @@ const ProductCard = ({
       <div className={`bg-white transition-all duration-300 group ${className}`} dir="ltr" style={{ direction: 'ltr' }}>
         <div className="relative overflow-hidden">
           <img
-            src={productImage}
+            src={finalImageSrc}
             alt={product.name}
             className={`${imageClassName} transition-transform duration-300 group-hover:scale-110`}
             loading="lazy"
@@ -102,20 +105,41 @@ const ProductCard = ({
           <h3 className={titleClassName} dir="ltr" style={{ direction: 'ltr', textAlign: 'left' }}>{product.name}</h3>
           
           <div className="relative">
-            {product.hasDiscount ? (
-              <div className="flex items-center gap-2">
-                <span className={discountedPriceClassName}>
-                  {formatPrice(product.discountedPrice)}
-                </span>
-                <span className={originalPriceClassName}>
-                  {formatPrice(product.price)}
-                </span>
-              </div>
-            ) : (
-              <span className={priceClassName}>
-                {formatPrice(product.price)}
-              </span>
-            )}
+            {(() => {
+              const hasMonetaryPrice = typeof product.price === 'number' && product.price > 0;
+              const hasDiscount = !!product.hasDiscount && hasMonetaryPrice && typeof product.discountedPrice === 'number' && product.discountedPrice > 0 && product.discountedPrice < product.price;
+              const hasCoins = !hasMonetaryPrice && typeof product.loyaltyPointsRequired === 'number' && product.loyaltyPointsRequired > 0;
+
+              if (hasMonetaryPrice) {
+                return hasDiscount ? (
+                  <div className="flex items-center gap-2">
+                    <span className={discountedPriceClassName}>
+                      {formatPrice(product.discountedPrice)}
+                    </span>
+                    <span className={originalPriceClassName}>
+                      {formatPrice(product.price)}
+                    </span>
+                  </div>
+                ) : (
+                  <span className={priceClassName}>
+                    {formatPrice(product.price)}
+                  </span>
+                );
+              }
+
+              if (hasCoins) {
+                return (
+                  <div className="flex items-center gap-2 text-[#190143]">
+                    <Gift className="w-5 h-5" />
+                    <span className={priceClassName}>
+                      {product.loyaltyPointsRequired} Gymmawy Coins
+                    </span>
+                  </div>
+                );
+              }
+
+              return null;
+            })()}
           </div>
         </div>
       </div>

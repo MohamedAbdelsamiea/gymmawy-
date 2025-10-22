@@ -32,6 +32,25 @@ class LanguageEventService {
     console.log('LanguageEventService: Language changed to', newLanguage);
     this.currentLanguage = newLanguage;
     
+    // Force immediate DOM updates
+    const isRTL = newLanguage === 'ar';
+    document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+    document.documentElement.lang = newLanguage;
+    
+    // Update body classes for immediate styling
+    if (isRTL) {
+      document.body.classList.add('rtl-active');
+      document.body.classList.remove('ltr-active');
+    } else {
+      document.body.classList.add('ltr-active');
+      document.body.classList.remove('rtl-active');
+    }
+    
+    // Trigger a custom event for additional components that might need it
+    window.dispatchEvent(new CustomEvent('languageChanged', {
+      detail: { language: newLanguage, isRTL }
+    }));
+    
     // Notify all listeners
     this.listeners.forEach(callback => {
       try {

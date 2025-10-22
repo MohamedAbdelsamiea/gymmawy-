@@ -179,7 +179,7 @@ return false;
       
       // Check if refresh token exists before attempting refresh
       if (!authService.hasRefreshToken()) {
-        console.log('No refresh token available');
+        console.log('No refresh token available, clearing all tokens');
         authService.removeToken();
         authService.removeRefreshToken();
         window.dispatchEvent(new CustomEvent('tokenRefreshFailed'));
@@ -194,8 +194,13 @@ return false;
         // Restart the refresh cycle with the new token
         this.startTokenRefresh();
         return true;
+      } else {
+        console.log('Token refresh failed: Invalid response from server');
+        authService.removeToken();
+        authService.removeRefreshToken();
+        window.dispatchEvent(new CustomEvent('tokenRefreshFailed'));
+        return false;
       }
-      return false;
     } catch (error) {
       console.error('Token refresh failed:', error);
       
@@ -206,8 +211,9 @@ return false;
           error.message.includes('No refresh token available') ||
           error.message.includes('Invalid or expired refresh token') ||
           error.message.includes('Refresh token required')) {
-        console.log('Authentication failed, clearing tokens');
+        console.log('Authentication failed, clearing all tokens');
         authService.removeToken();
+        authService.removeRefreshToken();
         window.dispatchEvent(new CustomEvent('tokenRefreshFailed'));
       } else {
         console.log('Token refresh failed due to network error, will retry later');
@@ -242,6 +248,35 @@ return false;
   async forceRefreshToken() {
     console.log('Force refreshing token...');
     return await this.refreshToken();
+  }
+
+  // Check token persistence and validity
+  checkTokenPersistence() {
+    const accessToken = authService.getToken();
+    const refreshToken = authService.getRefreshToken();
+    
+    console.log('Token persistence check:', {
+      hasAccessToken: !!accessToken,
+      hasRefreshToken: !!refreshToken,
+      accessTokenValid: accessToken ? !this.isTokenExpired(accessToken) : false,
+      canRefresh: !!refreshToken
+    });
+    
+    return {
+      hasAccessToken: !!accessToken,
+      hasRefreshToken: !!refreshToken,
+      accessTokenValid: accessToken ? !this.isTokenExpired(accessToken) : false,
+      canRefresh: !!refreshToken
+    };
+  }
+
+  // Clear all tokens and stop refresh
+  clearAllTokens() {
+    console.log('Clearing all tokens and stopping refresh...');
+    this.stopTokenRefresh();
+    authService.removeToken();
+    authService.removeRefreshToken();
+    window.dispatchEvent(new CustomEvent('tokenRefreshFailed'));
   }
 }
 

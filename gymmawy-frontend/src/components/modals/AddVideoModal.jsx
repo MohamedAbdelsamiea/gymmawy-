@@ -132,8 +132,8 @@ const AddVideoModal = ({ isOpen, onClose, onSuccess, editData = null }) => {
             'videos'
           );
           
-          if (uploadResult.success && uploadResult.upload) {
-            finalFormData.videoUrl = fileUploadService.getFileUrl(uploadResult.upload.url);
+          if (uploadResult && uploadResult.videoUrl) {
+            finalFormData.videoUrl = fileUploadService.getFileUrl(uploadResult.videoUrl);
           } else {
             throw new Error('Invalid upload response for video');
           }
@@ -151,8 +151,8 @@ const AddVideoModal = ({ isOpen, onClose, onSuccess, editData = null }) => {
             true
           );
           
-          if (uploadResult.success && uploadResult.upload) {
-            finalFormData.thumbnailAr = fileUploadService.getFileUrl(uploadResult.upload.url);
+          if (uploadResult && uploadResult.url) {
+            finalFormData.thumbnailAr = fileUploadService.getFileUrl(uploadResult.url);
           } else {
             throw new Error('Invalid upload response for Arabic thumbnail');
           }
@@ -170,8 +170,8 @@ const AddVideoModal = ({ isOpen, onClose, onSuccess, editData = null }) => {
             true
           );
           
-          if (uploadResult.success && uploadResult.upload) {
-            finalFormData.thumbnailEn = fileUploadService.getFileUrl(uploadResult.upload.url);
+          if (uploadResult && uploadResult.url) {
+            finalFormData.thumbnailEn = fileUploadService.getFileUrl(uploadResult.url);
           } else {
             throw new Error('Invalid upload response for English thumbnail');
           }

@@ -109,6 +109,7 @@
     "enterBuildingName": "أدخل اسم/رقم المبنى",
     "enterStreetAddress": "أدخل عنوان الشارع",
     "enterCity": "أدخل مدينتك",
+    "noCitiesFound": "لم يتم العثور على مدن",
     "enterCountry": "أدخل بلدك",
     "enterPostalCode": "أدخل الرمز البريدي (اختياري)",
     "size": "المقاس",

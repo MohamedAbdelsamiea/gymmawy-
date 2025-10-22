@@ -4,7 +4,7 @@ class VideoService {
   async getVideos(filters = {}) {
     try {
       const queryParams = new URLSearchParams(filters).toString();
-      const endpoint = `/videos${queryParams ? `?${queryParams}` : ''}`;
+      const endpoint = `/cms/videos${queryParams ? `?${queryParams}` : ''}`;
       return await apiClient.get(endpoint);
     } catch (error) {
       console.error('🎥 Videos fetch error:', error);
@@ -14,7 +14,7 @@ class VideoService {
 
   async getVideo(id) {
     try {
-      return await apiClient.get(`/videos/${id}`);
+      return await apiClient.get(`/cms/videos/${id}`);
     } catch (error) {
       throw new Error(`Video fetch error: ${error.message}`);
     }

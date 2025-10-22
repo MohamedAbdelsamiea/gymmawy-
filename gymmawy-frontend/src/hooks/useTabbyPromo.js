@@ -2,35 +2,56 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import countryDetectionService from '../services/countryDetectionService';
 
+// Tabby supported countries
+const TABBY_SUPPORTED_COUNTRIES = ['AE', 'SA', 'KW', 'BH', 'EG'];
+
+// Country configurations for Tabby
+const TABBY_COUNTRY_CONFIGS = {
+  'AE': { currency: 'AED', language: 'ar', name: 'UAE' },
+  'SA': { currency: 'SAR', language: 'ar', name: 'Saudi Arabia' },
+  'KW': { currency: 'KWD', language: 'ar', name: 'Kuwait' },
+  'BH': { currency: 'BHD', language: 'ar', name: 'Bahrain' },
+  'EG': { currency: 'EGP', language: 'ar', name: 'Egypt' }
+};
+
 /**
  * Hook for managing Tabby promo functionality
  */
 export const useTabbyPromo = () => {
   const { i18n } = useTranslation();
   const [isSupported, setIsSupported] = useState(false);
-  const [supportedCountries, setSupportedCountries] = useState(countryDetectionService.getSupportedCountries());
-  const [currentCountry, setCurrentCountry] = useState(countryDetectionService.getUserCountry());
+  const [supportedCountries, setSupportedCountries] = useState(TABBY_SUPPORTED_COUNTRIES);
+  const [currentCountry, setCurrentCountry] = useState(null);
 
   // Detect user's country using the service
-  const detectCountry = useCallback(() => {
-    return countryDetectionService.detectCountry();
+  const detectCountry = useCallback(async () => {
+    try {
+      const result = await countryDetectionService.detectCountry();
+      return result;
+    } catch (error) {
+      console.error('Error detecting country:', error);
+      return { country: 'Egypt', countryCode: 'EG', phoneCode: '+20' };
+    }
   }, []);
 
   // Check if Tabby is supported for current country
-  const checkSupport = useCallback((country = currentCountry) => {
-    const supported = countryDetectionService.isTabbySupported(country);
+  const checkSupport = useCallback((countryCode) => {
+    const supported = TABBY_SUPPORTED_COUNTRIES.includes(countryCode);
     setIsSupported(supported);
     return supported;
-  }, [currentCountry]);
+  }, []);
 
   // Get Tabby configuration for current country
-  const getTabbyConfig = useCallback(() => {
-    return countryDetectionService.getCountryConfig(currentCountry);
+  const getTabbyConfig = useCallback((countryCode = currentCountry?.countryCode) => {
+    if (!countryCode) return null;
+    return TABBY_COUNTRY_CONFIGS[countryCode] || null;
   }, [currentCountry]);
 
-  // Convert price to Tabby-supported currency
+  // Convert price to Tabby-supported currency (simplified version)
   const convertPriceForTabby = useCallback((price, fromCurrency, toCurrency) => {
-    return countryDetectionService.convertCurrencyForTabby(price, fromCurrency, toCurrency);
+    // For now, just return the price as-is
+    // In a real implementation, you would use an exchange rate service
+    return price;
   }, []);
 
   // Validate price for Tabby
@@ -56,25 +77,41 @@ export const useTabbyPromo = () => {
   }, [i18n.language]);
 
   // Update country and check support
-  const updateCountry = useCallback((country) => {
-    const success = countryDetectionService.setUserCountry(country);
-    if (success) {
-      setCurrentCountry(country);
-      checkSupport(country);
+  const updateCountry = useCallback((countryCode) => {
+    const countryInfo = TABBY_COUNTRY_CONFIGS[countryCode];
+    if (countryInfo) {
+      setCurrentCountry({ countryCode, ...countryInfo });
+      checkSupport(countryCode);
+      return true;
     }
-    return success;
+    return false;
   }, [checkSupport]);
 
   // Initialize on mount
   useEffect(() => {
-    const detectedCountry = detectCountry();
-    setCurrentCountry(detectedCountry);
-    checkSupport(detectedCountry);
+    const initializeCountry = async () => {
+      try {
+        const detectedCountry = await detectCountry();
+        setCurrentCountry(detectedCountry);
+        if (detectedCountry?.countryCode) {
+          checkSupport(detectedCountry.countryCode);
+        }
+      } catch (error) {
+        console.error('Error initializing country:', error);
+        // Set default to Egypt if detection fails
+        setCurrentCountry({ country: 'Egypt', countryCode: 'EG', phoneCode: '+20' });
+        checkSupport('EG');
+      }
+    };
+
+    initializeCountry();
   }, [detectCountry, checkSupport]);
 
   // Check support when country changes
   useEffect(() => {
-    checkSupport();
+    if (currentCountry?.countryCode) {
+      checkSupport(currentCountry.countryCode);
+    }
   }, [currentCountry, checkSupport]);
 
   return {

@@ -7,7 +7,6 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
     code: '',
     discountValue: '',
     expirationDate: '',
-    maxRedemptionsPerUser: '',
     maxRedemptions: '',
     isActive: true,
   });
@@ -21,7 +20,6 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
         code: editData.code || '',
         discountValue: editData.discountPercentage?.toString() || '',
         expirationDate: editData.expirationDate ? new Date(editData.expirationDate).toISOString().split('T')[0] : '',
-        maxRedemptionsPerUser: editData.maxRedemptionsPerUser?.toString() || '',
         maxRedemptions: editData.maxRedemptions?.toString() || '',
         isActive: editData.isActive ?? true,
       });
@@ -30,7 +28,6 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
         code: '',
         discountValue: '',
         expirationDate: '',
-        maxRedemptionsPerUser: '',
         maxRedemptions: '',
         isActive: true,
       });
@@ -66,14 +63,6 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
       newErrors.expirationDate = 'Expiration date must be in the future';
     }
 
-    // Max redemptions per user is optional - if empty, it defaults to unlimited (0)
-    if (formData.maxRedemptionsPerUser && formData.maxRedemptionsPerUser !== '') {
-      const maxRedemptionsPerUser = parseInt(formData.maxRedemptionsPerUser);
-      if (isNaN(maxRedemptionsPerUser) || maxRedemptionsPerUser < 0) {
-        newErrors.maxRedemptionsPerUser = 'Max redemptions per user must be a non-negative number';
-      }
-    }
-
     // Max total redemptions is optional - if empty, it defaults to unlimited (0)
     if (formData.maxRedemptions && formData.maxRedemptions !== '') {
       const maxRedemptions = parseInt(formData.maxRedemptions);
@@ -100,7 +89,6 @@ const AddCouponModal = ({ isOpen, onClose, onSuccess, editData, isEdit = false }
       const submitData = {
         ...formData,
         discountValue: parseFloat(formData.discountValue),
-        maxRedemptionsPerUser: formData.maxRedemptionsPerUser ? (parseInt(formData.maxRedemptionsPerUser) === 0 ? null : parseInt(formData.maxRedemptionsPerUser)) : null,
         maxRedemptions: formData.maxRedemptions ? (parseInt(formData.maxRedemptions) === 0 ? null : parseInt(formData.maxRedemptions)) : null,
         expirationDate: new Date(formData.expirationDate).toISOString(),
       };
@@ -236,28 +224,6 @@ return null;
             {errors.expirationDate && (
               <p className="mt-1 text-sm text-red-600">{errors.expirationDate}</p>
             )}
-          </div>
-
-          {/* Max Redemptions Per User */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Max Redemptions Per User
-            </label>
-            <input
-              type="number"
-              name="maxRedemptionsPerUser"
-              value={formData.maxRedemptionsPerUser}
-              onChange={handleInputChange}
-              min="0"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                errors.maxRedemptionsPerUser ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder="0 = unlimited"
-            />
-            {errors.maxRedemptionsPerUser && (
-              <p className="mt-1 text-sm text-red-600">{errors.maxRedemptionsPerUser}</p>
-            )}
-            <p className="mt-1 text-xs text-gray-500">Maximum times a single user can redeem this coupon. Set to 0 for unlimited redemptions per user.</p>
           </div>
 
           {/* Max Total Redemptions */}

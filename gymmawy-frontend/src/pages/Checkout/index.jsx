@@ -15,6 +15,7 @@ import useTabbyPromo from '../../hooks/useTabbyPromo';
 import countryDetectionService from '../../services/countryDetectionService';
 import { useSecureImage } from '../../hooks/useSecureImage';
 import { useFormPersistence } from '../../hooks/useFormPersistence';
+import CityAutocomplete from '../../components/common/CityAutocomplete';
 
 // Helper function to get consistent currency symbols
 const getCurrencySymbol = (currency, language = 'en') => {
@@ -127,6 +128,7 @@ return fallback;
     shippingCountry: '',
     shippingPostalCode: ''
   });
+  const [cityValidationError, setCityValidationError] = useState(null);
   const [cartLoadAttempted, setCartLoadAttempted] = useState(false);
   const cartLoadTimeoutRef = useRef(null);
   
@@ -1807,6 +1809,14 @@ return;
           </div>
         )}
         
+        {/* Plan discount (for subscriptions/programmes only) */}
+        {type !== 'cart' && type !== 'product' && (plan?.discountPercentage > 0) && (
+          <div className="flex justify-between text-sm text-green-600">
+            <span>{t('checkout.planDiscount')} ({plan.discountPercentage}%):</span>
+            <span>-{formatPrice(discount.planDiscount)}</span>
+          </div>
+        )}
+        
         {/* Coupon discount (for all order types) */}
         {couponValid && couponCode.trim() && discount.couponDiscount > 0 && (
           <div className="flex justify-between text-sm text-green-600">
@@ -1820,14 +1830,6 @@ return;
               :
             </span>
             <span>-{formatPrice(discount.couponDiscount)}</span>
-          </div>
-        )}
-        
-        {/* Plan discount (for subscriptions/programmes only) */}
-        {type !== 'cart' && type !== 'product' && (plan?.discountPercentage > 0) && (
-          <div className="flex justify-between text-sm text-green-600">
-            <span>{t('checkout.planDiscount')} ({plan.discountPercentage}%):</span>
-            <span>-{formatPrice(discount.planDiscount)}</span>
           </div>
         )}
         
@@ -2265,6 +2267,17 @@ return;
         setSubmitting(false);
         return { success: false, error: errorMessage };
       }
+      
+      // Check for city validation errors
+      if (cityValidationError) {
+        const errorMessage = i18n.language === 'ar' 
+          ? 'يرجى اختيار مدينة صحيحة للتوصيل' 
+          : 'Please select a valid city for delivery';
+        setError(errorMessage);
+        showError(errorMessage);
+        setSubmitting(false);
+        return { success: false, error: errorMessage };
+      }
     }
 
     // Handle Paymob payments separately
@@ -2335,8 +2348,8 @@ return;
         // Send only essential data - let backend calculate all prices
         const subscriptionData = {
           planId: plan.id,
-          paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONE_CASH' : 
-                        paymentOption?.toUpperCase() === 'INSTAPAY' ? 'INSTA_PAY' : 
+          paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONECASH' : 
+                        paymentOption?.toUpperCase() === 'INSTAPAY' ? 'INSTAPAY' : 
                         paymentOption === 'paymob_card' ? 'PAYMOB' :
                         paymentOption === 'paymob_apple' ? 'PAYMOB' :
                         paymentOption?.toUpperCase(),
@@ -2368,8 +2381,8 @@ return;
         
         // Create programme purchase data - send minimal data, let backend calculate prices
         const programmeData = {
-          paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONE_CASH' : 
-                        paymentOption?.toUpperCase() === 'INSTAPAY' ? 'INSTA_PAY' : 
+          paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONECASH' : 
+                        paymentOption?.toUpperCase() === 'INSTAPAY' ? 'INSTAPAY' : 
                         paymentOption === 'paymob_card' ? 'PAYMOB' :
                         paymentOption === 'paymob_apple' ? 'PAYMOB' :
                         paymentOption?.toUpperCase(),
@@ -2404,12 +2417,24 @@ return;
 
         const result = await checkoutService.purchaseProgramme(plan.id, programmeData);
         console.log('Programme purchased:', result);
-        showSuccess(i18n.language === 'ar' ? 'تم شراء البرنامج بنجاح!' : 'Programme purchased successfully!');
+        
+        // Show appropriate message based on purchase status
+        if (result.purchase?.status === 'PAID') {
+          showSuccess(i18n.language === 'ar' ? 
+            'تم شراء البرنامج بنجاح! ستحصل على برنامجك عبر البريد الإلكتروني قريباً.' : 
+            'Programme purchased successfully! You will receive your programme via email shortly.');
+        } else if (result.purchase?.status === 'PENDING') {
+          showSuccess(i18n.language === 'ar' ? 
+            'تم إرسال طلب شراء البرنامج! سيتم مراجعته من قبل فريقنا وإرسال البرنامج عبر البريد الإلكتروني بعد الموافقة.' : 
+            'Programme purchase request submitted! It will be reviewed by our team and the programme will be sent via email after approval.');
+        } else {
+          showSuccess(i18n.language === 'ar' ? 'تم شراء البرنامج بنجاح!' : 'Programme purchased successfully!');
+        }
       } else if (type === 'cart') {
         // Handle cart order
         const orderData = {
-          paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONE_CASH' : 
-                        paymentOption?.toUpperCase() === 'INSTAPAY' ? 'INSTA_PAY' : 
+          paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONECASH' : 
+                        paymentOption?.toUpperCase() === 'INSTAPAY' ? 'INSTAPAY' : 
                         paymentOption?.toUpperCase() === 'CASH_ON_DELIVERY' ? 'CASH_ON_DELIVERY' :
                         paymentOption === 'paymob_card' ? 'PAYMOB' :
                         paymentOption === 'paymob_apple' ? 'PAYMOB' :
@@ -2433,8 +2458,8 @@ return;
           productId: product.id,
           quantity: product.quantity,
           size: product.size,
-          paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONE_CASH' : 
-                        paymentOption?.toUpperCase() === 'INSTAPAY' ? 'INSTA_PAY' : 
+          paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONECASH' : 
+                        paymentOption?.toUpperCase() === 'INSTAPAY' ? 'INSTAPAY' : 
                         paymentOption?.toUpperCase() === 'CASH_ON_DELIVERY' ? 'CASH_ON_DELIVERY' :
                         paymentOption === 'paymob_card' ? 'PAYMOB' :
                         paymentOption === 'paymob_apple' ? 'PAYMOB' :
@@ -2608,7 +2633,7 @@ return;
           <p className="text-gray-600 mt-2">
             {isLoyaltyRedemption 
               ? (i18n.language === 'ar' 
-                  ? 'أكمل بياناتك لاستبدال المكافأة بنقاط جيماوي الخاصة بك'
+                  ? 'أكمل بياناتك لاستبدال المكافأة بعملات جيماوي الخاصة بك'
                   : 'Complete your details to redeem your reward with Gymmawy Coins'
                 )
               : t('checkout.subtitle')
@@ -2624,7 +2649,7 @@ return;
               </div>
               <div className="flex items-center mt-2">
                 <span className="text-sm text-gray-600">
-                  {i18n.language === 'ar' ? 'النقاط المطلوبة:' : 'Points Required:'} {loyaltyData.pointsRequired}
+                  {i18n.language === 'ar' ? 'العملات المطلوبة:' : 'Points Required:'} {loyaltyData.pointsRequired}
                 </span>
               </div>
             </div>
@@ -2912,14 +2937,34 @@ return;
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         {t('checkout.city')} *
                       </label>
-                      <input
-                        type="text"
+                      <CityAutocomplete
                         value={shippingDetails.shippingCity}
-                        onChange={(e) => setShippingDetails(prev => ({ ...prev, shippingCity: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                        onChange={(city) => setShippingDetails(prev => ({ ...prev, shippingCity: city }))}
+                        onError={setCityValidationError}
                         placeholder={t('checkout.enterCity')}
                         required
                       />
+                      {/* City validation error display */}
+                      {cityValidationError && (
+                        <div className="mt-2">
+                          <div className="text-sm text-red-600 mb-2">
+                            {cityValidationError.message}
+                          </div>
+                          {cityValidationError.suggestions && cityValidationError.suggestions.length > 0 && (
+                            <div className="text-sm text-gray-600">
+                              <p className="mb-1">Did you mean:</p>
+                              <ul className="list-disc list-inside space-y-1">
+                                {cityValidationError.suggestions.map((suggestion, index) => (
+                                  <li key={index} className="cursor-pointer hover:text-gymmawy-primary" 
+                                      onClick={() => setShippingDetails(prev => ({ ...prev, shippingCity: suggestion }))}>
+                                    {suggestion}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     
                     <div>

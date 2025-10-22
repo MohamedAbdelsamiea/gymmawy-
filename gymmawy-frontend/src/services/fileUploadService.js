@@ -19,14 +19,52 @@ class FileUploadService {
       formData.append('category', category);
       
       const endpoint = isPublic ? '/uploads/public/images' : '/uploads/admin/images';
-      const response = await apiClient.post(endpoint, formData);
       
-      console.log('FileUploadService - Full response:', response);
+      // Upload routes are mounted directly at /uploads, not /api/uploads
+      // So we need to bypass the apiClient's automatic /api prefix
+      const uploadUrl = `${this.baseURL}${endpoint}`;
       
-      return response;
+      const token = localStorage.getItem('accessToken');
+      const userCurrencyPreference = localStorage.getItem('userCurrencyPreference');
+      
+      const headers = {
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+        ...(userCurrencyPreference && { 'X-User-Currency': userCurrencyPreference }),
+      };
+      
+      console.log('FileUploadService - Upload URL:', uploadUrl);
+      console.log('FileUploadService - Headers:', headers);
+      
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error && errorData.error.message) {
+            errorMessage = errorData.error.message;
+          }
+        } catch (parseError) {
+          errorMessage = response.statusText || `HTTP error! status: ${response.status}`;
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      const responseData = await response.json();
+      console.log('FileUploadService - Full response:', responseData);
+      
+      return responseData;
     } catch (error) {
       console.error('File upload error:', error);
-      throw new Error(error.response?.data?.error?.message || 'Upload failed');
+      throw new Error(error.message || 'Upload failed');
     }
   }
 
@@ -42,12 +80,45 @@ class FileUploadService {
       formData.append('video', file);
       formData.append('category', category);
       
-      const response = await apiClient.post('/uploads/admin/videos', formData);
+      // Upload routes are mounted directly at /uploads, not /api/uploads
+      const uploadUrl = `${this.baseURL}/uploads/admin/videos`;
       
-      return response;
+      const token = localStorage.getItem('accessToken');
+      const userCurrencyPreference = localStorage.getItem('userCurrencyPreference');
+      
+      const headers = {
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+        ...(userCurrencyPreference && { 'X-User-Currency': userCurrencyPreference }),
+      };
+      
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error && errorData.error.message) {
+            errorMessage = errorData.error.message;
+          }
+        } catch (parseError) {
+          errorMessage = response.statusText || `HTTP error! status: ${response.status}`;
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      const responseData = await response.json();
+      return responseData;
     } catch (error) {
       console.error('Video upload error:', error);
-      throw new Error(error.response?.data?.error?.message || 'Video upload failed');
+      throw new Error(error.message || 'Video upload failed');
     }
   }
 
@@ -61,12 +132,45 @@ class FileUploadService {
       const formData = new FormData();
       formData.append('pdf', file);
       
-      const response = await apiClient.post('/uploads/admin/pdfs', formData);
+      // Upload routes are mounted directly at /uploads, not /api/uploads
+      const uploadUrl = `${this.baseURL}/uploads/admin/pdfs`;
       
-      return response;
+      const token = localStorage.getItem('accessToken');
+      const userCurrencyPreference = localStorage.getItem('userCurrencyPreference');
+      
+      const headers = {
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+        ...(userCurrencyPreference && { 'X-User-Currency': userCurrencyPreference }),
+      };
+      
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error && errorData.error.message) {
+            errorMessage = errorData.error.message;
+          }
+        } catch (parseError) {
+          errorMessage = response.statusText || `HTTP error! status: ${response.status}`;
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      const responseData = await response.json();
+      return responseData;
     } catch (error) {
       console.error('PDF upload error:', error);
-      throw new Error(error.response?.data?.error?.message || 'PDF upload failed');
+      throw new Error(error.message || 'PDF upload failed');
     }
   }
 
@@ -80,12 +184,45 @@ class FileUploadService {
       const formData = new FormData();
       formData.append('image', file);
       
-      const response = await apiClient.post('/uploads/payment-proof', formData);
+      // Upload routes are mounted directly at /uploads, not /api/uploads
+      const uploadUrl = `${this.baseURL}/uploads/payment-proof`;
       
-      return response;
+      const token = localStorage.getItem('accessToken');
+      const userCurrencyPreference = localStorage.getItem('userCurrencyPreference');
+      
+      const headers = {
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+        ...(userCurrencyPreference && { 'X-User-Currency': userCurrencyPreference }),
+      };
+      
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error && errorData.error.message) {
+            errorMessage = errorData.error.message;
+          }
+        } catch (parseError) {
+          errorMessage = response.statusText || `HTTP error! status: ${response.status}`;
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      const responseData = await response.json();
+      return responseData;
     } catch (error) {
       console.error('Payment proof upload error:', error);
-      throw new Error(error.response?.data?.error?.message || 'Payment proof upload failed');
+      throw new Error(error.message || 'Payment proof upload failed');
     }
   }
 
@@ -97,10 +234,33 @@ class FileUploadService {
    */
   async deleteFile(fileId, category = 'products') {
     try {
-      return await apiClient.delete(`/uploads/${fileId}?category=${category}`);
+      // Use the CMS module DELETE route
+      const deleteUrl = `${this.baseURL}/api/cms/files/${fileId}?category=${category}`;
+      
+      const token = localStorage.getItem('accessToken');
+      const userCurrencyPreference = localStorage.getItem('userCurrencyPreference');
+      
+      const headers = {
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+        ...(userCurrencyPreference && { 'X-User-Currency': userCurrencyPreference }),
+      };
+      
+      const response = await fetch(deleteUrl, {
+        method: 'DELETE',
+        headers,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const responseData = await response.json();
+      console.log('FileUploadService - Delete response:', responseData);
+      return responseData;
     } catch (error) {
       console.error('File deletion error:', error);
-      throw new Error(error.response?.data?.error?.message || 'File deletion failed');
+      throw new Error(error.message || 'File deletion failed');
     }
   }
 

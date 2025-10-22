@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Menu, X, Globe, User, LogOut, ShoppingBag, Gift, Home, ShoppingCart, ChevronDown } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
+import { useReactiveLanguage } from "../../hooks/useLanguageUpdate";
 import languageEventService from "../../services/languageEventService";
 import { useCart } from "../../contexts/CartContext";
 import logo from "/assets/common/logo.webp"; // import your logo directly
@@ -10,6 +11,7 @@ import { getGymmawyCoinIcon } from "../../utils/currencyUtils";
 
 const Header = () => {
   const { t, i18n } = useTranslation("header"); // using "header" namespace
+  const { isRTL } = useReactiveLanguage(); // Get reactive RTL state
   const { user, logout } = useAuth();
   const { getCartTotals } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -97,7 +99,6 @@ const Header = () => {
         { key: "trainingPrograms", path: "/programmes", isPage: true },
         { key: "store", path: "/store", isPage: true },
         { key: "rewards", path: "/rewards", isPage: true },
-        { key: "joinTheTeam", sectionId: "packages", isSection: true },
         { key: "contactUs", path: "/contact", isPage: true },
         { key: "languageToggle", isToggle: true },
       ];
@@ -108,7 +109,6 @@ const Header = () => {
         { key: "trainingPrograms", path: "/programmes", isPage: true },
         { key: "store", path: "/store", isPage: true },
         { key: "rewards", path: "/rewards", isPage: true },
-        { key: "joinTheTeam", sectionId: "packages", isSection: true },
         { key: "contactUs", path: "/contact", isPage: true },
         { key: "languageToggle", isToggle: true },
       ];
@@ -238,8 +238,8 @@ const Header = () => {
       <div className="container mx-auto px-4 py-4 flex items-center justify-between xlg:justify-between">
         {/* Left Navigation */}
         <nav className="hidden xlg:flex items-center justify-end" style={{ width: 'calc(50% - 100px)' }}>
-          <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-12' : 'space-x-12'}`}>
-            {navItems.slice(0, i18n.language === 'ar' ? 4 : 4).map((item) => (
+          <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-12' : 'space-x-12'}`}>
+             {navItems.slice(0, 4).map((item) => (
               item.isDropdown ? (
                 <div key={item.key} className="relative" ref={homeDropdownRef}>
                   <button
@@ -264,7 +264,7 @@ const Header = () => {
                             handleHomeSectionNavigation(dropdownItem);
                           }}
                           className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 gap-2"
-                          style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
+                          style={isRTL ? { direction: 'rtl' } : {}}
                         >
                           <span className="whitespace-nowrap">{t(`nav.${dropdownItem.key}`)}</span>
                         </button>
@@ -426,8 +426,8 @@ const Header = () => {
 
         {/* Right Navigation */}
         <nav className="hidden xlg:flex items-center justify-start" style={{ width: 'calc(50% - 100px)' }}>
-          <div className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-12' : 'space-x-12'}`}>
-            {navItems.slice(i18n.language === 'ar' ? 4 : 4, 6).map((item) => (
+          <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-12' : 'space-x-12'}`}>
+            {navItems.slice(4, 5).map((item) => (
               <button
                 key={item.key}
                 onClick={() => handleNavigation(item)}

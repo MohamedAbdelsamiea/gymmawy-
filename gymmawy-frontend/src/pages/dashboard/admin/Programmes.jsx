@@ -68,7 +68,7 @@ const AdminProgrammes = () => {
 
   // Helper function to get full image URL
   const getImageUrl = (imagePath) => {
-    if (!imagePath) return '';
+    if (!imagePath || imagePath.trim() === '') return '/assets/common/store/product1-1.png';
     // Convert full URLs to API routes
     if (imagePath.startsWith('https://gym.omarelnemr.xyz/uploads/')) {
       // Convert to API route
@@ -118,11 +118,12 @@ const AdminProgrammes = () => {
         currency: purchase.currency,
         method: payment.method,
         status: payment.status || 'PENDING_VERIFICATION',
-        paymentableType: payment.paymentableType || 'PROGRAMME_PURCHASE',
+        paymentableType: payment.paymentableType || 'PROGRAMME',
         paymentableId: payment.paymentableId || purchase.id,
         createdAt: payment.createdAt,
         user: purchase.user,
-        programme: purchase // Include full programme purchase object for human-readable ID access
+        programme: purchase, // Include full programme purchase object for human-readable ID access
+        programmePurchase: purchase // Also include as programmePurchase for modal compatibility
       };
       
       console.log('Payment data being passed to modal:', paymentData);
@@ -885,7 +886,7 @@ const AdminProgrammes = () => {
               return 'text-blue-600';
             case 'ORDER':
               return 'text-green-600';
-            case 'PROGRAMME_PURCHASE':
+            case 'PROGRAMME':
               return 'text-purple-600';
             case 'PACKAGE_PURCHASE':
               return 'text-orange-600';
@@ -942,8 +943,8 @@ const AdminProgrammes = () => {
         
         return (
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-            payment.method === 'VODAFONE_CASH' ? 'bg-green-100 text-green-800' :
-            payment.method === 'INSTA_PAY' ? 'bg-blue-100 text-blue-800' :
+            payment.method === 'VODAFONECASH' ? 'bg-green-100 text-green-800' :
+            payment.method === 'INSTAPAY' ? 'bg-blue-100 text-blue-800' :
             payment.method === 'CARD' ? 'bg-purple-100 text-purple-800' :
             'bg-gray-100 text-gray-800'
           }`}>

@@ -6,7 +6,9 @@ import { getOrderItemsWithCalculatedTotals } from "../../utils/orderItemCalculat
 const prisma = getPrismaClient();
 
 export async function createSingleProductOrder(userId, orderData = {}) {
-  const { productId, quantity = 1, size = 'M', couponId, currency = 'EGP', shippingDetails, paymentMethod, paymentProof, shippingCost = 0 } = orderData;
+  const {
+    productId, quantity = 1, size = 'M', couponId, currency = 'EGP', shippingDetails, paymentMethod, paymentProof, shippingCost = 0, isCashOnDelivery = false
+  } = orderData;
   
   // Get product details
   const product = await prisma.product.findUnique({
@@ -99,7 +101,9 @@ export async function createSingleProductOrder(userId, orderData = {}) {
         shippingStreet: shippingDetails?.shippingStreet || null,
         shippingCity: shippingDetails?.shippingCity || null,
         shippingCountry: shippingDetails?.shippingCountry || null,
-        shippingPostcode: shippingDetails?.shippingPostcode || null
+        shippingPostcode: shippingDetails?.shippingPostcode || null,
+        shippingCost: shippingCost,
+        isCashOnDelivery: isCashOnDelivery
       }
     });
 
@@ -147,7 +151,9 @@ export async function createSingleProductOrder(userId, orderData = {}) {
 }
 
 export async function createOrderFromCart(userId, orderData = {}) {
-  const { couponId, currency = 'EGP', shippingDetails, paymentMethod, paymentProof, shippingCost = 0 } = orderData;
+  const {
+    couponId, currency = 'EGP', shippingDetails, paymentMethod, paymentProof, shippingCost = 0, isCashOnDelivery = false
+  } = orderData;
   
   const cart = await prisma.cart.findUnique({ 
     where: { userId }, 
@@ -289,8 +295,10 @@ export async function createOrderFromCart(userId, orderData = {}) {
         shippingStreet: shippingDetails?.shippingStreet || null,
         shippingCity: shippingDetails?.shippingCity || null,
         shippingCountry: shippingDetails?.shippingCountry || null,
-        shippingPostcode: shippingDetails?.shippingPostcode || null
-      } 
+        shippingPostcode: shippingDetails?.shippingPostcode || null,
+        shippingCost: shippingCost,
+        isCashOnDelivery: isCashOnDelivery
+      }
     });
     
     // Create order items for each cart item

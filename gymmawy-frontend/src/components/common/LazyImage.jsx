@@ -21,7 +21,7 @@ const LazyImage = ({
   loading = 'lazy',
   ...props 
 }) => {
-  const [imageSrc, setImageSrc] = useState(placeholderSrc || src);
+  const [imageSrc, setImageSrc] = useState(placeholderSrc || src || null);
   const [isLoaded, setIsLoaded] = useState(false);
   const imgRef = useRef(null);
 
@@ -51,6 +51,11 @@ const LazyImage = ({
       }
     };
   }, [src]);
+
+  // Don't render the image if src is empty or null
+  if (!imageSrc) {
+    return null;
+  }
 
   return (
     <img

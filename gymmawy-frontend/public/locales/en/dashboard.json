@@ -9,14 +9,14 @@
       "revenue": "Revenue",
       "newUsersThisMonth": "New Users This Month",
       "productsInStore": "Products in Store",
-      "loyaltyPointsIssued": "Gymmawy Points Issued",
+      "loyaltyPointsIssued": "Gymmawy Coins Issued",
       "subscriptionTrend": "Subscription Trend",
       "leadsConversion": "Leads Conversion",
       "recentActivity": "Recent Activity",
       "newSubscription": "New subscription",
       "orderCompleted": "Order completed",
       "leadConverted": "Lead converted",
-      "loyaltyPointsEarned": "Gymmawy Points earned"
+      "loyaltyPointsEarned": "Gymmawy Coins earned"
     },
     "subscriptions": {
       "title": "Subscriptions Management",
@@ -126,8 +126,8 @@
   "user": {
     "overview": {
       "title": "Welcome back",
-      "subtitle": "Track your purchases and Gymmawy Points",
-      "loyaltyPoints": "Gymmawy Points",
+      "subtitle": "Track your purchases and Gymmawy Coins",
+      "loyaltyPoints": "Gymmawy Coins",
       "purchaseHistory": "Purchase History",
       "date": "Date",
       "type": "Type",
@@ -181,24 +181,24 @@
       "no": "No"
     },
     "loyaltyPoints": {
-      "title": "Gymmawy Points",
-      "subtitle": "Manage your points and rewards",
-      "currentPoints": "Current Points",
+      "title": "Gymmawy Coins",
+      "subtitle": "Manage your coins and rewards",
+      "currentPoints": "Current Coins",
       "member": "Member",
-      "pointsTo": "points to",
+      "pointsTo": "coins to",
       "totalEarned": "Total Earned",
       "totalRedeemed": "Total Redeemed",
       "yourRanking": "Your Ranking",
       "top": "Top",
       "availableRewards": "Available Rewards",
       "transactionHistory": "Transaction History",
-      "pointsRequired": "pts",
+      "pointsRequired": "coins",
       "validUntil": "Valid until",
       "redeemNow": "Redeem Now",
       "notEnoughPoints": "Not Enough Coins",
       "transactionId": "Transaction ID",
       "type": "Type",
-      "points": "Points",
+      "points": "Coins",
       "reason": "Reason",
       "date": "Date",
       "status": "Status"

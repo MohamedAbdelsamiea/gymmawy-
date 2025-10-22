@@ -123,7 +123,7 @@ const LoyaltyHistory = () => {
   const getSourceIcon = (source) => {
     const iconMap = {
       'ORDER_ITEM': 'shopping-bag',
-      'PROGRAMME_PURCHASE': 'book-open',
+      'PROGRAMME': 'book-open',
       'SUBSCRIPTION': 'credit-card',
       'REFERRAL': 'users',
       'ADMIN': 'settings',

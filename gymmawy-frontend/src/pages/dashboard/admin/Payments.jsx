@@ -509,7 +509,7 @@ return <span className="text-gray-500">N/A</span>;
               { value: "CARD", label: "Card" },
               { value: "TABBY", label: "Tabby" },
               { value: "TAMARA", label: "Tamara" },
-              { value: "VODAFONE_CASH", label: "Vodafone Cash" },
+              { value: "VODAFONECASH", label: "Vodafone Cash" },
               { value: "INSTAPAY", label: "InstaPay" },
               { value: "OTHER", label: "Other" },
             ],

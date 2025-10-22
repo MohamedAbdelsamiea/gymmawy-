@@ -46,20 +46,28 @@ export const CurrencyProvider = ({ children }) => {
 
             // No stored preference, detect from location
             console.log('🔄 No stored preference found, starting country detection...');
-            const detectedCountry = countryDetectionService.detectCountry();
-            const countryConfig = countryDetectionService.getCountryConfig(detectedCountry);
-            setDetectedCountry(countryConfig);
+            const detectedCountry = await countryDetectionService.detectCountry();
+            setDetectedCountry(detectedCountry);
             
             console.log('🌍 Country Detection Results:');
-            console.log('  - Detected Country Code:', detectedCountry);
-            console.log('  - Country Config:', countryConfig);
-            console.log('  - Country Name:', countryConfig.name);
-            console.log('  - Country Currency:', countryConfig.currency);
+            console.log('  - Detected Country:', detectedCountry);
+            console.log('  - Country Code:', detectedCountry?.countryCode);
+            console.log('  - Country Name:', detectedCountry?.country);
+            // Map country codes to currencies
+            const countryCurrencyMap = {
+              'EG': 'EGP',
+              'SA': 'SAR', 
+              'AE': 'AED',
+              'US': 'USD'
+            };
             
-            if (availableCurrencies.includes(countryConfig.currency)) {
-              setCurrency(countryConfig.currency);
+            const detectedCurrency = countryCurrencyMap[detectedCountry?.countryCode] || 'EGP';
+            console.log('  - Country Currency:', detectedCurrency);
+            
+            if (availableCurrencies.includes(detectedCurrency)) {
+              setCurrency(detectedCurrency);
               setIsDetectedCurrency(true);
-              console.log('✅ Currency detected from country:', detectedCountry, '->', countryConfig.currency);
+              console.log('✅ Currency detected from country:', detectedCountry, '->', detectedCurrency);
             } else {
               // Fallback to API detection
               try {

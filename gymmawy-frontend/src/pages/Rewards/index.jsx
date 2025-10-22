@@ -263,7 +263,7 @@ const RewardsPage = () => {
               <div className="text-center">
                 <p className="text-blue-800 font-medium">
                   {i18n.language === 'ar' 
-                    ? 'سجل الدخول لبدء كسب واستبدال نقاط جيماوي' 
+                    ? 'سجل الدخول لبدء كسب واستبدال عملات جيماوي' 
                     : 'Sign in to start earning and redeeming Gymmawy Coins'
                   }
                 </p>
@@ -374,7 +374,7 @@ const RewardsPage = () => {
                           {!isAuthenticated ? (
                             <p className="text-xs">
                               {isArabic 
-                                ? 'سجل الدخول إلى حسابك لبدء كسب واستبدال نقاط جيماوي للحصول على مكافآت حصرية!'
+                                ? 'سجل الدخول إلى حسابك لبدء كسب واستبدال عملات جيماوي للحصول على مكافآت حصرية!'
                                 : 'Sign in to your account to start earning and redeeming Gymmawy Coins for exclusive rewards!'
                               }
                             </p>
@@ -505,7 +505,7 @@ const RewardsPage = () => {
               
               <p className="text-gray-600 mb-4">
                 {isArabic 
-                  ? `تحتاج إلى ${insufficientPointsData.pointsNeeded} نقاط إضافية لاستبدال "${insufficientPointsData.rewardName}".`
+                  ? `تحتاج إلى ${insufficientPointsData.pointsNeeded} عملات إضافية لاستبدال "${insufficientPointsData.rewardName}".`
                   : `You need ${insufficientPointsData.pointsNeeded} more points to redeem "${insufficientPointsData.rewardName}".`
                 }
               </p>

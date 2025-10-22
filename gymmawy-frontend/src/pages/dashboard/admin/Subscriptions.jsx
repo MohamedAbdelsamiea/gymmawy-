@@ -62,12 +62,12 @@ const SortableRow = ({ id, children, ...props }) => {
 
 const AdminSubscriptions = () => {
   const { user, loading: authLoading } = useAuth();
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
   const [activeTab, setActiveTab] = useState('subscriptions');
 
   // Helper function to get full image URL
   const getImageUrl = (imagePath) => {
-    if (!imagePath) return '';
+    if (!imagePath || imagePath.trim() === '') return '/assets/common/store/product1-1.png';
     if (imagePath.startsWith('http')) return imagePath;
     if (imagePath.startsWith('/uploads/')) {
       return `${config.STATIC_BASE_URL}${imagePath}`;
@@ -454,6 +454,24 @@ params.plan = filterPlan;
       showError(`Failed to reject payment: ${err.message || 'Please try again.'}`);
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleActivateSubscription = async (subscriptionId) => {
+    if (window.confirm('Are you sure you want to activate this subscription? This will set the start date to today and calculate the expiry date based on the subscription period.')) {
+      try {
+        setError(null); // Clear any previous errors
+        await adminApiService.activateSubscription(subscriptionId);
+        fetchSubscriptions();
+        // Refetch stats to update revenue and counts
+        fetchSubscriptionStats();
+        // Show success toast
+        showSuccess('Subscription activated successfully!');
+      } catch (err) {
+        console.error('Error activating subscription:', err);
+        // Display the specific error message from the server
+        setError(err.message || 'Failed to activate subscription. Please try again.');
+      }
     }
   };
 
@@ -890,8 +908,8 @@ return 'Expires tomorrow';
       render: (value, row) => (
         <div className="flex flex-col space-y-1">
           <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-            value === 'VODAFONE_CASH' ? 'bg-green-100 text-green-800' :
-            value === 'INSTA_PAY' ? 'bg-blue-100 text-blue-800' :
+            value === 'VODAFONECASH' ? 'bg-green-100 text-green-800' :
+            value === 'INSTAPAY' ? 'bg-blue-100 text-blue-800' :
             value === 'CARD' ? 'bg-purple-100 text-purple-800' :
             value === 'TABBY' ? 'bg-orange-100 text-orange-800' :
             value === 'TAMARA' ? 'bg-pink-100 text-pink-800' :
@@ -919,7 +937,7 @@ return 'Expires tomorrow';
               return 'text-blue-600';
             case 'ORDER':
               return 'text-green-600';
-            case 'PROGRAMME_PURCHASE':
+            case 'PROGRAMME':
               return 'text-purple-600';
             case 'PACKAGE_PURCHASE':
               return 'text-orange-600';
@@ -938,32 +956,6 @@ return 'Expires tomorrow';
             {row.payment?.transactionId && (
               <div className="text-xs text-gray-400">
                 TXN: {row.payment.transactionId.substring(0, 8)}...
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      key: 'processedAt',
-      label: 'Processed At',
-      sortable: true,
-      render: (value, row) => {
-        // Processed at could be when status changed to ACTIVE, or when payment was processed
-        const processedDate = row.startDate || row.updatedAt || row.createdAt;
-        return (
-          <div className="text-sm">
-            <div className={processedDate ? 'text-gray-900' : 'text-gray-400'}>
-              {processedDate ? new Date(processedDate).toLocaleDateString() : 'Not processed'}
-            </div>
-            {processedDate && (
-              <div className="text-xs text-gray-500">
-                {Math.floor((Date.now() - new Date(processedDate).getTime()) / (1000 * 60 * 60 * 24)) + ' days ago'}
-              </div>
-            )}
-            {!processedDate && row.status === 'PENDING' && (
-              <div className="text-xs text-yellow-600">
-                Awaiting processing
               </div>
             )}
           </div>
@@ -993,16 +985,27 @@ return 'Expires tomorrow';
       label: 'Actions',
       render: (_, row) => (
         <div className="flex items-center space-x-2">
-          <select
-            value={row.status}
-            onChange={(e) => handleStatusChange(row.id, e.target.value)}
-            className="text-xs px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-          >
-            <option value="PENDING">Pending</option>
-            <option value="ACTIVE">Active</option>
-            <option value="EXPIRED">Expired</option>
-            <option value="CANCELLED">Cancelled</option>
-          </select>
+          {row.status === 'PAID' ? (
+            <button
+              onClick={() => handleActivateSubscription(row.id)}
+              className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+              title="Activate this subscription"
+            >
+              Activate
+            </button>
+          ) : (
+            <select
+              value={row.status}
+              onChange={(e) => handleStatusChange(row.id, e.target.value)}
+              className="text-xs px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+            >
+              <option value="PENDING">Pending</option>
+              <option value="PAID">Paid</option>
+              <option value="ACTIVE">Active</option>
+              <option value="EXPIRED">Expired</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+          )}
           {(row.payment?.proofFile || row.payment?.paymentProofUrl) && (
             <PaymentProofButton payment={row.payment} subscription={row} />
           )}
@@ -1392,15 +1395,12 @@ return null;
     );
   }
 
+
   return (
     <div className="space-y-6">
       {/* Error Message */}
       {error && (
-        <div className={`p-4 rounded-lg border ${
-          error.includes('successfully') || error.includes('✅')
-            ? 'bg-green-50 border-green-200 text-green-800' 
-            : 'bg-red-50 border-red-200 text-red-800'
-        }`}>
+        <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg">
           <div className="flex items-center justify-between">
             <p className="font-medium">{error}</p>
             <button 
@@ -1412,6 +1412,7 @@ return null;
           </div>
         </div>
       )}
+
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -1635,6 +1636,7 @@ return null;
               options: [
                 { value: "all", label: "All Status" },
                 { value: "pending", label: "Pending" },
+                { value: "paid", label: "Paid" },
                 { value: "active", label: "Active" },
                 { value: "expired", label: "Expired" },
                 { value: "cancelled", label: "Cancelled" },

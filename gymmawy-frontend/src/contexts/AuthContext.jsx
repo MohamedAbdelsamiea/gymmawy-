@@ -20,18 +20,35 @@ export const AuthProvider = ({ children }) => {
       console.log('Token refresh failed, clearing user state');
       setUser(null);
       setError('Session expired. Please log in again.');
+      // Ensure all tokens are cleared
+      authService.removeToken();
+      authService.removeRefreshToken();
+    };
+
+    // Listen for auth required events from API client
+    const handleAuthRequired = () => {
+      console.log('Authentication required, clearing user state');
+      setUser(null);
+      setError('Please log in to continue.');
+      authService.removeToken();
+      authService.removeRefreshToken();
     };
     
     window.addEventListener('tokenRefreshFailed', handleTokenRefreshFailed);
+    window.addEventListener('authRequired', handleAuthRequired);
     
     return () => {
       window.removeEventListener('tokenRefreshFailed', handleTokenRefreshFailed);
+      window.removeEventListener('authRequired', handleAuthRequired);
       tokenManager.stopTokenRefresh();
     };
   }, []);
 
   const checkAuthStatus = async() => {
     try {
+      // Validate token storage consistency first
+      authService.validateTokenStorage();
+      
       // Check if we have valid tokens
       if (!authService.hasValidTokens()) {
         console.log('No valid tokens found');
@@ -146,6 +163,9 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      // Always clear all tokens and user state on logout
+      authService.removeToken();
+      authService.removeRefreshToken();
       setUser(null);
       setError(null);
       tokenManager.stopTokenRefresh();

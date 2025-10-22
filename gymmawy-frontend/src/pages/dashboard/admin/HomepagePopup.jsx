@@ -204,8 +204,8 @@ const AdminHomepagePopup = () => {
           );
           console.log('Upload result in HomepagePopup:', uploadResult);
           
-          if (uploadResult.success && uploadResult.upload) {
-            finalFormData.imageUrl = fileUploadService.getFileUrl(uploadResult.upload.url);
+          if (uploadResult && uploadResult.url) {
+            finalFormData.imageUrl = fileUploadService.getFileUrl(uploadResult.url);
             // Clear selected image after successful upload
             setSelectedImage(null);
           } else {

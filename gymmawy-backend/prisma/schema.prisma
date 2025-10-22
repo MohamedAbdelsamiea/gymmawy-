@@ -187,6 +187,9 @@ model Order {
   paymentReference   String?
   currency           Currency
   metadata           Json?
+  shippingCost       Decimal?    @db.Decimal(10, 2)
+  isCashOnDelivery   Boolean     @default(false)
+  otoShipmentId      String?
   coupon             Coupon?     @relation(fields: [couponId], references: [id])
   user               User        @relation(fields: [userId], references: [id])
   items              OrderItem[]
@@ -198,6 +201,7 @@ model Order {
   @@index([deletedAt])
   @@index([couponId])
   @@index([paymentReference])
+  @@index([otoShipmentId])
 }
 
 model OrderItem {
@@ -529,6 +533,7 @@ enum PurchasableType {
 enum OrderStatus {
   PENDING
   PAID
+  NOT_ENOUGH_CREDIT
   SHIPPED
   DELIVERED
   CANCELLED

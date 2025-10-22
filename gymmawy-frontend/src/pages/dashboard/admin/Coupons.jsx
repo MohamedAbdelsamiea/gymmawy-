@@ -155,16 +155,6 @@ const AdminCoupons = () => {
       ),
     },
     {
-      key: 'maxRedemptionsPerUser',
-      label: 'Max Per User',
-      sortable: true,
-      render: (value) => (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-          {value === 0 ? 'UNLIMITED' : value}
-        </span>
-      ),
-    },
-    {
       key: 'maxRedemptions',
       label: 'Max Total',
       sortable: true,

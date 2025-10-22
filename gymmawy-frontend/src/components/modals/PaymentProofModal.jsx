@@ -67,8 +67,8 @@ const PaymentProofModal = ({
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Payment Method</label>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    payment.method === 'VODAFONE_CASH' ? 'bg-green-100 text-green-800' :
-                    payment.method === 'INSTA_PAY' ? 'bg-blue-100 text-blue-800' :
+                    payment.method === 'VODAFONECASH' ? 'bg-green-100 text-green-800' :
+                    payment.method === 'INSTAPAY' ? 'bg-blue-100 text-blue-800' :
                     'bg-gray-100 text-gray-800'
                   }`}>
                     {payment.method}
@@ -97,7 +97,7 @@ const PaymentProofModal = ({
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       payment.paymentableType === 'SUBSCRIPTION' ? 'bg-blue-100 text-blue-800' :
                       payment.paymentableType === 'ORDER' ? 'bg-green-100 text-green-800' :
-                      payment.paymentableType === 'PROGRAMME_PURCHASE' ? 'bg-purple-100 text-purple-800' :
+                      payment.paymentableType === 'PROGRAMME' ? 'bg-purple-100 text-purple-800' :
                       'bg-gray-100 text-gray-600'
                     }`}>
                       {payment.paymentableType || 'N/A'}
@@ -113,7 +113,7 @@ const PaymentProofModal = ({
                         return payment.subscription.subscriptionNumber;
                       } else if (payment.paymentableType === 'ORDER' && payment.order?.orderNumber) {
                         return payment.order.orderNumber;
-                      } else if (payment.paymentableType === 'PROGRAMME_PURCHASE' && payment.programmePurchase?.purchaseNumber) {
+                      } else if (payment.paymentableType === 'PROGRAMME' && payment.programmePurchase?.purchaseNumber) {
                         return payment.programmePurchase.purchaseNumber;
                       } else if (payment.paymentableId) {
                         return payment.paymentableId;

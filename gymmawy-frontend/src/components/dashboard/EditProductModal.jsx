@@ -628,7 +628,7 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Points Awarded
+                    Coins Awarded
                   </label>
                   <input
                     type="number"
@@ -651,7 +651,7 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Points Required
+                    Coins Required
                   </label>
                   <input
                     type="number"

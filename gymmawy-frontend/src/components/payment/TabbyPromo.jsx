@@ -117,7 +117,7 @@ const TabbyPromo = ({
   const getTabbyCurrencyAndPrice = () => {
     // Use the passed currency prop directly
     const currentCurrency = currency || appCurrency;
-    const isActuallySupported = isTabbySupported && countryDetectionService.isTabbySupported(country);
+    const isActuallySupported = isTabbySupported;
     
     console.log('🔍 TabbyPromo - Currency Debug:', {
       passedCurrency: currency,
@@ -179,7 +179,7 @@ const TabbyPromo = ({
       }
 
       // Validate requirements - always show, but handle gracefully
-      const isActuallySupported = isTabbySupported && countryDetectionService.isTabbySupported(country);
+      const isActuallySupported = isTabbySupported;
       if (!isActuallySupported) {
         console.log(`Tabby not natively supported for country: ${country}, using fallback`);
       }

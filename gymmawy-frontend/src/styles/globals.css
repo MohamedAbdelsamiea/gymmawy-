@@ -43,6 +43,35 @@
     transition: none;
   }
   
+  /* RTL/LTR active classes for immediate styling updates */
+  body.rtl-active {
+    direction: rtl;
+  }
+  
+  body.ltr-active {
+    direction: ltr;
+  }
+  
+  /* Ensure immediate font updates */
+  body.rtl-active,
+  body.rtl-active * {
+    font-family: 'Alexandria', 'Noto Sans Arabic', 'Cairo', 'Amiri', sans-serif !important;
+  }
+  
+  /* Smooth transitions for language switching */
+  * {
+    transition: direction 0.1s ease-in-out;
+  }
+  
+  /* Ensure text alignment updates immediately */
+  [dir="rtl"] {
+    text-align: right !important;
+  }
+  
+  [dir="ltr"] {
+    text-align: left !important;
+  }
+  
   /* Prevent FOUC (Flash of Unstyled Content) */
   body:not(.loaded) {
     opacity: 0;

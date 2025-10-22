@@ -714,8 +714,8 @@ const AddSubscriptionModal = ({ isOpen, onClose, onSuccess, editData = null, isE
           );
           console.log('Upload result in AddSubscriptionModal:', uploadResult);
           
-          if (uploadResult.success && uploadResult.upload) {
-            finalImageUrl = fileUploadService.getFileUrl(uploadResult.upload.url);
+          if (uploadResult && uploadResult.url) {
+            finalImageUrl = fileUploadService.getFileUrl(uploadResult.url);
           } else {
             throw new Error('Invalid upload response');
           }
@@ -1194,7 +1194,7 @@ return null;
           {/* Loyalty Points */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Loyalty Points & Rewards</h3>
+              <h3 className="text-lg font-medium text-gray-900">Gymmawy Coins & Rewards</h3>
               <label className="flex items-center">
                 <input
                   type="checkbox"
@@ -1223,7 +1223,7 @@ return null;
                   }}
                   className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300 rounded"
                 />
-                <span className="ml-2 text-sm text-gray-700">Enable loyalty points & rewards</span>
+                <span className="ml-2 text-sm text-gray-700">Enable Gymmawy Coins & rewards</span>
               </label>
             </div>
             
@@ -1232,7 +1232,7 @@ return null;
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Regular Points Awarded
+                      Regular Coins Awarded
                     </label>
                     <input
                       type="number"
@@ -1246,7 +1246,7 @@ return null;
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Regular Points Required
+                      Regular Coins Required
                     </label>
                     <input
                       type="number"
@@ -1259,10 +1259,10 @@ return null;
                           ? 'border-red-500 bg-red-50 ring-2 ring-red-200' 
                           : 'border-gray-300'
                       }`}
-                      placeholder="Enter points required (minimum 1)"
+                      placeholder="Enter coins required (minimum 1)"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Minimum 1 point required for redemption
+                      Minimum 1 coin required for redemption
                     </p>
                   </div>
                 </div>
@@ -1270,7 +1270,7 @@ return null;
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Medical Points Awarded
+                      Medical Coins Awarded
                     </label>
                     <input
                       type="number"
@@ -1284,7 +1284,7 @@ return null;
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Medical Points Required
+                      Medical Coins Required
                     </label>
                     <input
                       type="number"
@@ -1293,10 +1293,10 @@ return null;
                       onChange={handleInputChange}
                       min="0"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
-                      placeholder="Enter medical points required"
+                      placeholder="Enter medical coins required"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Medical plan loyalty points (optional)
+                      Medical plan loyalty coins (optional)
                     </p>
                   </div>
                 </div>
@@ -1308,9 +1308,9 @@ return null;
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                   </svg>
                 </div>
-                <h4 className="text-lg font-medium text-gray-900 mb-1">No Loyalty Rewards</h4>
+                <h4 className="text-lg font-medium text-gray-900 mb-1">No Gymmawy Coins Rewards</h4>
                 <p className="text-sm text-gray-600">
-                  This subscription plan will not include any loyalty points or rewards system.
+                  This subscription plan will not include any Gymmawy Coins or rewards system.
                 </p>
               </div>
             )}

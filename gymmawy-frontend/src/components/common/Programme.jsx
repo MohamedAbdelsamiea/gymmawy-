@@ -68,9 +68,9 @@ return fallback;
 
     // Construct full image URL if it's a relative path
     const getImageUrl = (imagePath) => {
-        if (!imagePath) {
-return '';
-}
+        if (!imagePath || imagePath.trim() === '') {
+            return '/assets/common/store/product1-1.png';
+        }
         // Convert full URLs to API routes
         if (imagePath.startsWith('https://gym.omarelnemr.xyz/uploads/')) {
             // Convert to API route
@@ -121,6 +121,69 @@ return imagePath;
 
     return (
       <div className="bg-[#190143] overflow-hidden flex flex-col relative" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
+        {/* Gymmawy Coins Badge - Top corner */}
+        {((programme?.loyaltyPointsAwarded > 0 || programme?.loyaltyPointsRequired > 0)) && (
+          <div className="absolute top-3 right-3 z-10">
+            <div className="group relative" ref={loyaltyCardRef}>
+              {/* Info Icon Trigger */}
+              <div 
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200 w-fit shadow-lg"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowLoyaltyCard(!showLoyaltyCard);
+                }}
+              >
+                <span className="text-sm font-bold text-purple-700">
+                  {i18n.language === 'ar' ? 'عملات جيماوي' : 'Gymmawy Coins'}
+                </span>
+                <Info className="h-4 w-4 text-purple-500" />
+              </div>
+              
+              {/* Hover Card */}
+              <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} top-full mt-2 w-64 max-w-[calc(100vw-2rem)] p-3 bg-white rounded-lg shadow-xl border-2 border-purple-200 transition-all duration-300 z-[99999] ${showLoyaltyCard ? 'opacity-100 visible' : 'opacity-0 invisible group-hover:opacity-100 group-hover:visible'}`}>
+                {/* Arrow */}
+                <div className={`absolute -top-2 ${i18n.language === 'ar' ? 'left-4' : 'right-4'} w-4 h-4 bg-white border-l-2 border-t-2 border-purple-200 rotate-45`}></div>
+                
+                {/* Content */}
+                <div className="relative">
+                  <div className="text-center mb-2">
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      {i18n.language === 'ar' 
+                        ? 'عملات جيماوي المتضمنة'
+                        : 'Gymmawy Coins included'}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center justify-around gap-2 pt-2 border-t border-gray-200">
+                    {programme.loyaltyPointsAwarded > 0 && (
+                      <div className="flex items-center gap-1 flex-1 justify-center">
+                        {getGymmawyCoinIcon({ size: 32 })}
+                        <div className="flex flex-col">
+                          <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
+                          <span className="text-xs font-bold text-green-700">
+                            {programme.loyaltyPointsAwarded}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {programme.loyaltyPointsRequired > 0 && (
+                      <div className="flex items-center gap-1 flex-1 justify-center">
+                        {getGymmawyCoinIcon({ size: 32 })}
+                        <div className="flex flex-col">
+                          <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكلف' : 'Cost'}</span>
+                          <span className="text-xs font-bold text-orange-700">
+                            {programme.loyaltyPointsRequired}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <img 
           src={getImageUrl(image)} 
           alt={getBilingualText(name, 'Programme')} 
@@ -128,69 +191,6 @@ return imagePath;
           loading="lazy"
         />
          <div className="p-3 sm:p-4 flex flex-col flex-grow text-start" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
-          {/* Gymmawy Coins Badge - above name on mobile, hidden on desktop */}
-          {((programme?.loyaltyPointsAwarded > 0 || programme?.loyaltyPointsRequired > 0)) && (
-            <div className="block sm:hidden mb-2">
-              <div className="group relative" ref={loyaltyCardRef}>
-                {/* Info Icon Trigger */}
-                <div 
-                  className="flex items-center gap-1.5 px-2 py-1 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200 w-fit"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowLoyaltyCard(!showLoyaltyCard);
-                  }}
-                >
-                  <span className="text-xs font-bold text-purple-700">
-                    {i18n.language === 'ar' ? 'عملات جيماوي' : 'Gymmawy Coins'}
-                  </span>
-                </div>
-                
-                {/* Hover Card */}
-                <div className={`absolute ${i18n.language === 'ar' ? 'left-1/2 -translate-x-1/2' : 'right-1/2 translate-x-1/2'} top-full mt-2 w-48 sm:w-48 max-w-[calc(100vw-2rem)] p-2 bg-white rounded-lg shadow-xl border-2 border-purple-200 transition-all duration-300 z-[99999] ${showLoyaltyCard ? 'opacity-100 visible' : 'opacity-0 invisible group-hover:opacity-100 group-hover:visible'}`}>
-                  {/* Arrow */}
-                  <div className={`absolute -top-2 ${i18n.language === 'ar' ? 'left-1/2 -translate-x-1/2' : 'right-1/2 translate-x-1/2'} w-4 h-4 bg-white border-l-2 border-t-2 border-purple-200 rotate-45`}></div>
-                  
-                  {/* Content */}
-                  <div className="relative">
-                    <div className="text-center mb-1">
-                      <p className="text-xs text-gray-600 leading-relaxed">
-                        {i18n.language === 'ar' 
-                          ? 'نقاط جيماوي المتضمنة'
-                          : 'Gymmawy Coins included'}
-                      </p>
-                    </div>
-                    
-                    <div className="flex items-center justify-around gap-2 pt-2 border-t border-gray-200">
-                      {programme.loyaltyPointsAwarded > 0 && (
-                        <div className="flex items-center gap-1 flex-1 justify-center">
-                          {getGymmawyCoinIcon({ size: 32 })}
-                          <div className="flex flex-col">
-                            <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
-                            <span className="text-xs font-bold text-green-700">
-                              {programme.loyaltyPointsAwarded}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      {programme.loyaltyPointsRequired > 0 && (
-                        <div className="flex items-center gap-1 flex-1 justify-center">
-                          <div className="p-1 bg-orange-100 rounded-full">
-                            {getGymmawyCoinIcon({ size: 12, className: "text-orange-600" })}
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكلف' : 'Cost'}</span>
-                            <span className="text-xs font-bold text-orange-700">
-                              {programme.loyaltyPointsRequired}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
           
           <h3 className="text-lg sm:text-2xl font-bold mb-2">{getBilingualText(name, 'Programme')}</h3>
           
@@ -226,63 +226,6 @@ return imagePath;
                     </span>
                   </div>
                   
-                  {/* Gymmawy Coins Badge - on the opposite side (desktop only) */}
-                  {((programme.loyaltyPointsAwarded > 0 || programme.loyaltyPointsRequired > 0)) && (
-                    <div className="hidden sm:block self-start sm:ml-auto">
-                    <div className="group relative">
-                      {/* Info Icon Trigger */}
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200">
-                        <span className="text-xs font-bold text-purple-700">
-                          {i18n.language === 'ar' ? 'عملات جيماوي' : 'Gymmawy Coins'}
-                        </span>
-                      </div>
-                      
-                      {/* Hover Card */}
-                      <div className={`absolute ${i18n.language === 'ar' ? 'left-1/2 -translate-x-1/2' : 'right-1/2 translate-x-1/2'} top-full mt-2 w-48 max-w-[calc(100vw-2rem)] p-2 bg-white rounded-lg shadow-xl border-2 border-purple-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-active:opacity-100 group-active:visible transition-all duration-300 z-[99999]`}>
-                        {/* Arrow */}
-                        <div className={`absolute -top-2 ${i18n.language === 'ar' ? 'left-1/2 -translate-x-1/2' : 'right-1/2 translate-x-1/2'} w-4 h-4 bg-white border-l-2 border-t-2 border-purple-200 rotate-45`}></div>
-                        
-                        {/* Content */}
-                        <div className="relative">
-                          <div className="text-center mb-1">
-                            <p className="text-xs text-gray-600 leading-relaxed">
-                              {i18n.language === 'ar' 
-                                ? 'نقاط جيماوي المتضمنة'
-                                : 'Gymmawy Coins included'}
-                            </p>
-                          </div>
-                          
-                          <div className="flex items-center justify-around gap-2 pt-2 border-t border-gray-200">
-                            {programme.loyaltyPointsAwarded > 0 && (
-                              <div className="flex items-center gap-1 flex-1 justify-center">
-                                <div className="p-1 bg-green-100 rounded-full">
-                                  {getGymmawyCoinIcon({ size: 12 })}
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
-                                  <span className="text-xs font-bold text-green-700">
-                                    {programme.loyaltyPointsAwarded}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                            {programme.loyaltyPointsRequired > 0 && (
-                              <div className="flex items-center gap-1 flex-1 justify-center">
-                          {getGymmawyCoinIcon({ size: 32 })}
-                                <div className="flex flex-col">
-                                  <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكلف' : 'Cost'}</span>
-                                  <span className="text-xs font-bold text-orange-700">
-                                    {programme.loyaltyPointsRequired}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  )}
                 </div>
                 <span className="text-xl sm:text-2xl font-bold text-orange-400 mt-1">
                   {price}
@@ -294,64 +237,6 @@ return imagePath;
                   <p className="text-xl sm:text-2xl">
                     {price}
                   </p>
-                  
-                  {/* Gymmawy Coins Badge - for non-discounted programmes (desktop only) */}
-                  {((programme?.loyaltyPointsAwarded > 0 || programme?.loyaltyPointsRequired > 0)) && (
-                    <div className="hidden sm:block self-start sm:ml-auto">
-                    <div className="group relative">
-                      {/* Info Icon Trigger */}
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-100 hover:bg-purple-200 rounded-full cursor-help transition-colors duration-200">
-                        <span className="text-xs font-bold text-purple-700">
-                          {i18n.language === 'ar' ? 'عملات جيماوي' : 'Gymmawy Coins'}
-                        </span>
-                      </div>
-                      
-                      {/* Hover Card */}
-                      <div className={`absolute ${i18n.language === 'ar' ? 'left-1/2 -translate-x-1/2' : 'right-1/2 translate-x-1/2'} top-full mt-2 w-48 max-w-[calc(100vw-2rem)] p-2 bg-white rounded-lg shadow-xl border-2 border-purple-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-active:opacity-100 group-active:visible transition-all duration-300 z-[99999]`}>
-                        {/* Arrow */}
-                        <div className={`absolute -top-2 ${i18n.language === 'ar' ? 'left-1/2 -translate-x-1/2' : 'right-1/2 translate-x-1/2'} w-4 h-4 bg-white border-l-2 border-t-2 border-purple-200 rotate-45`}></div>
-                        
-                        {/* Content */}
-                        <div className="relative">
-                          <div className="text-center mb-1">
-                            <p className="text-xs text-gray-600 leading-relaxed">
-                              {i18n.language === 'ar' 
-                                ? 'نقاط جيماوي المتضمنة'
-                                : 'Gymmawy Coins included'}
-                            </p>
-                          </div>
-                          
-                          <div className="flex items-center justify-around gap-2 pt-2 border-t border-gray-200">
-                            {programme.loyaltyPointsAwarded > 0 && (
-                              <div className="flex items-center gap-1 flex-1 justify-center">
-                                <div className="p-1 bg-green-100 rounded-full">
-                                  {getGymmawyCoinIcon({ size: 12 })}
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكسب' : 'Earn'}</span>
-                                  <span className="text-xs font-bold text-green-700">
-                                    {programme.loyaltyPointsAwarded}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                            {programme.loyaltyPointsRequired > 0 && (
-                              <div className="flex items-center gap-1 flex-1 justify-center">
-                          {getGymmawyCoinIcon({ size: 32 })}
-                                <div className="flex flex-col">
-                                  <span className="text-xs text-gray-600">{i18n.language === 'ar' ? 'تكلف' : 'Cost'}</span>
-                                  <span className="text-xs font-bold text-orange-700">
-                                    {programme.loyaltyPointsRequired}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  )}
                 </div>
               </div>
             )}

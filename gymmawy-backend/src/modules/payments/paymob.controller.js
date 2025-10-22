@@ -386,6 +386,23 @@ export const handleWebhook = async (req, res) => {
               }
             });
             console.log(`Order ${payment.paymentableId} status updated to PAID`);
+            
+        // Create OTO shipment for paid orders
+        try {
+          const { createOTOShipment } = await import('../../modules/shipping/shipping.service.js');
+          const shipmentResult = await createOTOShipment(payment.paymentableId);
+          
+          if (shipmentResult.success) {
+            console.log(`✅ OTO shipment created for order ${payment.paymentableId}:`, shipmentResult.shipmentId);
+          } else if (shipmentResult.reason === 'NOT_ENOUGH_CREDIT') {
+            console.log(`⚠️ Not enough OTO credit for order ${payment.paymentableId}. Required: ${shipmentResult.requiredAmount} SAR, Available: ${shipmentResult.currentBalance} SAR`);
+          } else {
+            console.error(`❌ Failed to create OTO shipment for order ${payment.paymentableId}:`, shipmentResult.message);
+          }
+        } catch (error) {
+          console.error(`❌ Failed to create OTO shipment for order ${payment.paymentableId}:`, error);
+          // Don't fail the payment process if shipment creation fails
+        }
             break;
             
           default:
@@ -410,6 +427,16 @@ export const handleWebhook = async (req, res) => {
           }
         });
         console.log(`Legacy order ${paymentMetadata.orderId} status updated to PAID`);
+        
+        // Create OTO shipment for legacy paid orders
+        try {
+          const { createOTOShipment } = await import('../../modules/shipping/shipping.service.js');
+          const shipmentResult = await createOTOShipment(paymentMetadata.orderId);
+          console.log(`✅ OTO shipment created for legacy order ${paymentMetadata.orderId}:`, shipmentResult.shipmentId);
+        } catch (error) {
+          console.error(`❌ Failed to create OTO shipment for legacy order ${paymentMetadata.orderId}:`, error);
+          // Don't fail the payment process if shipment creation fails
+        }
       } catch (error) {
         console.error(`Failed to update legacy order status:`, error);
       }

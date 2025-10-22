@@ -43,7 +43,7 @@ class RewardsService {
         ...filters,
         hasLoyaltyPoints: 'true'
       }).toString();
-      const endpoint = `/subscriptions${queryParams ? `?${queryParams}` : ''}`;
+      const endpoint = `/subscriptions/plans${queryParams ? `?${queryParams}` : ''}`;
       return await apiClient.get(endpoint);
     } catch (error) {
       throw new Error(`Package rewards fetch error: ${error.message}`);

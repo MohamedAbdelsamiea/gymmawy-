@@ -18,23 +18,29 @@ const StorePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Transform API product data to ProductCard format
+  // Transform API product data to ProductCard format (no placeholders)
   const transformProduct = (apiProduct) => {
     const primaryImage = apiProduct.images?.find(img => img.isPrimary) || apiProduct.images?.[0];
-    const price = apiProduct.price?.amount ? parseFloat(apiProduct.price.amount) : 0;
-    const discountPercentage = apiProduct.discountPercentage || 0;
-    const discountedPrice = discountPercentage > 0 ? price * (1 - discountPercentage / 100) : price;
-    
+    // Monetary price may not exist; treat as null rather than 0
+    const price = apiProduct.price?.amount !== undefined && apiProduct.price?.amount !== null
+      ? parseFloat(apiProduct.price.amount)
+      : null;
+    const discountPercentage = typeof apiProduct.discountPercentage === 'number' ? apiProduct.discountPercentage : 0;
+    const discountedPrice = price !== null && discountPercentage > 0
+      ? price * (1 - discountPercentage / 100)
+      : null;
+
     return {
       id: apiProduct.id,
-      name: apiProduct.name?.en || apiProduct.name || 'Unnamed Product',
-      price: price,
-      discountedPrice: discountedPrice,
-      hasDiscount: discountPercentage > 0,
-      stock: apiProduct.stock || 0,
-      image: primaryImage?.url || '/assets/common/store/product1-1.png',
-      loyaltyPointsAwarded: apiProduct.loyaltyPointsAwarded || 0,
-      loyaltyPointsRequired: apiProduct.loyaltyPointsRequired || 0
+      name: apiProduct.name?.en || apiProduct.name || '',
+      // Only include monetary price fields if present
+      ...(price !== null ? { price } : {}),
+      ...(discountedPrice !== null ? { discountedPrice } : {}),
+      hasDiscount: !!(price !== null && discountedPrice !== null && discountedPrice < price),
+      stock: typeof apiProduct.stock === 'number' ? apiProduct.stock : 0,
+      image: primaryImage?.url || '',
+      loyaltyPointsAwarded: typeof apiProduct.loyaltyPointsAwarded === 'number' ? apiProduct.loyaltyPointsAwarded : 0,
+      loyaltyPointsRequired: typeof apiProduct.loyaltyPointsRequired === 'number' ? apiProduct.loyaltyPointsRequired : 0
     };
   };
 

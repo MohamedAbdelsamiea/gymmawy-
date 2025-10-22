@@ -3,6 +3,7 @@ import axios from 'axios';
 /**
  * OTO Shipping API Service
  * Documentation: https://api.tryoto.com
+ * Staging: https://staging-api.tryoto.com
  */
 class OTOService {
   constructor() {
@@ -167,38 +168,37 @@ class OTOService {
   }
 
   /**
-   * Create an order/shipment in OTO
+   * Update order in OTO (using updateOrder endpoint)
    * @param {Object} orderData - Order details
-   * @returns {Promise<Object>} - Created order response
+   * @returns {Promise<Object>} - Updated order response
    */
-  async createOrder(orderData) {
+  async updateOrder(orderData) {
     try {
-      const response = await this.axiosInstance.post('/rest/v2/orders', orderData);
-      return {
-        success: true,
-        data: response.data
-      };
-    } catch (error) {
-      console.error('OTO Create Order Error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update an existing order
-   * @param {string} orderId - OTO Order ID
-   * @param {Object} updateData - Order update details
-   * @returns {Promise<Object>}
-   */
-  async updateOrder(orderId, updateData) {
-    try {
-      const response = await this.axiosInstance.put(`/rest/v2/orders/${orderId}`, updateData);
+      const response = await this.axiosInstance.post('/rest/v2/updateOrder', orderData);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
       console.error('OTO Update Order Error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a shipment using createShipment endpoint
+   * @param {Object} shipmentData - Shipment details with orderId and deliveryOptionId
+   * @returns {Promise<Object>}
+   */
+  async createShipment(shipmentData) {
+    try {
+      const response = await this.axiosInstance.post('/rest/v2/createShipment', shipmentData);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('OTO Create Shipment Error:', error);
       throw error;
     }
   }
@@ -240,19 +240,21 @@ class OTOService {
   }
 
   /**
-   * Create a shipment
-   * @param {Object} shipmentData - Shipment details
+   * Get delivery fee for an order
+   * @param {string} orderId - Order ID
    * @returns {Promise<Object>}
    */
-  async createShipment(shipmentData) {
+  async getDeliveryFee(orderId) {
     try {
-      const response = await this.axiosInstance.post('/rest/v2/shipments', shipmentData);
+      const response = await this.axiosInstance.post('/rest/v2/getDeliveryFee', {
+        orderId: orderId
+      });
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.error('OTO Create Shipment Error:', error);
+      console.error('OTO Get Delivery Fee Error:', error);
       throw error;
     }
   }
@@ -538,6 +540,24 @@ class OTOService {
   }
 
   /**
+   * Calculate shipping cost for checkout
+   * @param {Object} shippingData - Shipping calculation data
+   * @returns {Promise<Object>}
+   */
+  async calculateShippingCost(shippingData) {
+    try {
+      const response = await this.axiosInstance.post('/rest/v2/checkDeliveryFee', shippingData);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('OTO Calculate Shipping Cost Error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Check delivery fee (with your own contract rates)
    * @param {Object} feeData - Fee calculation data
    * @returns {Promise<Object>}
@@ -586,6 +606,44 @@ class OTOService {
       };
     } catch (error) {
       console.error('OTO Get Delivery Company List Error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get available cities for delivery
+   * @param {Object} filters - Optional filters
+   * @returns {Promise<Object>}
+   */
+  async getAvailableCities(filters = {}) {
+    try {
+      const response = await this.axiosInstance.post('/rest/v2/availableCities', filters);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('OTO Get Available Cities Error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get delivery options for a city
+   * @param {string} city - City name
+   * @returns {Promise<Object>}
+   */
+  async getDeliveryOptions(city) {
+    try {
+      const response = await this.axiosInstance.get('/rest/v2/getDeliveryOptions', {
+        params: { city }
+      });
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('OTO Get Delivery Options Error:', error);
       throw error;
     }
   }
@@ -682,6 +740,39 @@ class OTOService {
       };
     } catch (error) {
       console.error('OTO Create Shipment Separately Error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create complete order and shipment for Gymmawy
+   * @param {Object} orderData - Complete order data
+   * @returns {Promise<Object>}
+   */
+  async createGymmawyOrder(orderData) {
+    try {
+      // First update/create the order
+      const orderResponse = await this.updateOrder(orderData);
+      
+      if (!orderResponse.success) {
+        throw new Error('Failed to create order in OTO');
+      }
+
+      // Then create shipment
+      const shipmentData = {
+        orderId: orderData.orderId,
+        deliveryOptionId: orderData.deliveryOptionId || null
+      };
+
+      const shipmentResponse = await this.createShipment(shipmentData);
+      
+      return {
+        success: true,
+        order: orderResponse.data,
+        shipment: shipmentResponse.data
+      };
+    } catch (error) {
+      console.error('OTO Create Gymmawy Order Error:', error);
       throw error;
     }
   }

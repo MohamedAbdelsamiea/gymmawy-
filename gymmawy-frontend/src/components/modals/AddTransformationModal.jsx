@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Upload, Image } from 'lucide-react';
 import AdminImageUpload from '../common/AdminImageUpload';
 import adminApiService from '../../services/adminApiService';
-import fileUploadService from '../../services/fileUploadService';
+import draftUploadService from '../../services/draftUploadService';
 
 const AddTransformationModal = ({ isOpen, onClose, onSuccess, editData = null }) => {
   const [formData, setFormData] = useState({
@@ -14,11 +14,17 @@ const AddTransformationModal = ({ isOpen, onClose, onSuccess, editData = null })
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [errors, setErrors] = useState({});
+  const [hasStagedChanges, setHasStagedChanges] = useState(false);
 
   const isEdit = !!editData;
+  const FILE_KEY = 'transformationImage';
 
   useEffect(() => {
     if (isOpen) {
+      // Reset draft service for this modal
+      draftUploadService.reset();
+      setHasStagedChanges(false);
+      
       if (isEdit && editData) {
         setFormData({
           title: editData.title || { en: '', ar: '' },
@@ -35,6 +41,10 @@ const AddTransformationModal = ({ isOpen, onClose, onSuccess, editData = null })
       }
       setError(null);
       setErrors({});
+    } else {
+      // Clean up when modal closes
+      draftUploadService.reset();
+      setHasStagedChanges(false);
     }
   }, [isOpen, isEdit, editData]);
 
@@ -75,7 +85,9 @@ const AddTransformationModal = ({ isOpen, onClose, onSuccess, editData = null })
       newErrors.titleAr = 'Arabic title is required';
     }
 
-    if (!formData.imageUrl || !formData.imageUrl.trim()) {
+    // Check if we have either an existing image URL or a staged file
+    const hasStagedFile = draftUploadService.isStaged(FILE_KEY);
+    if (!formData.imageUrl && !hasStagedFile) {
       newErrors.imageUrl = 'Transformation image is required';
     }
 
@@ -96,25 +108,12 @@ const AddTransformationModal = ({ isOpen, onClose, onSuccess, editData = null })
 
       let finalFormData = { ...formData };
 
-      // Upload image if a new file is selected
-      if (selectedImage?.file) {
-        try {
-          const uploadResult = await fileUploadService.uploadFile(
-            selectedImage.file, 
-            'transformations', 
-            true
-          );
-          console.log('Upload result in AddTransformationModal:', uploadResult);
-          console.log('Upload result.upload:', uploadResult.upload);
-          
-          if (uploadResult.success && uploadResult.upload) {
-            finalFormData.imageUrl = fileUploadService.getFileUrl(uploadResult.upload.url);
-          } else {
-            throw new Error('Invalid upload response');
-          }
-        } catch (uploadError) {
-          throw new Error(`Failed to upload image: ${uploadError.message}`);
-        }
+      // Commit all staged changes (upload new files and remove old ones)
+      const commitResults = await draftUploadService.commitChanges();
+      
+      // Update image URL if we uploaded a new file
+      if (commitResults.uploadResults[FILE_KEY]) {
+        finalFormData.imageUrl = commitResults.uploadResults[FILE_KEY].uploadedUrl;
       }
 
       if (isEdit) {
@@ -123,6 +122,10 @@ const AddTransformationModal = ({ isOpen, onClose, onSuccess, editData = null })
         await adminApiService.createTransformation(finalFormData);
       }
 
+      // Reset draft service after successful save
+      draftUploadService.reset();
+      setHasStagedChanges(false);
+      
       onSuccess();
       onClose();
     } catch (err) {
@@ -206,17 +209,40 @@ return null;
             <AdminImageUpload
               initialImage={formData.imageUrl ? { url: formData.imageUrl } : null}
               onImageUpload={(imageData) => {
-                if (imageData.isLocal) {
-                  setSelectedImage(imageData);
-                  setFormData(prev => ({ ...prev, imageUrl: imageData.preview }));
+                if (imageData.isLocal && imageData.file) {
+                  // Stage the file for upload
+                  const stagedFile = draftUploadService.stageFile(
+                    FILE_KEY,
+                    imageData.file,
+                    'transformations',
+                    true
+                  );
+                  
+                  setSelectedImage({
+                    ...imageData,
+                    isStaged: true,
+                    stagedAt: stagedFile.stagedAt
+                  });
+                  
+                  setFormData(prev => ({ ...prev, imageUrl: stagedFile.previewUrl }));
+                  setHasStagedChanges(true);
                 } else {
                   setSelectedImage(null);
                   setFormData(prev => ({ ...prev, imageUrl: imageData.url }));
                 }
               }}
               onImageRemove={() => {
+                // Stage removal of existing file
+                if (formData.imageUrl) {
+                  draftUploadService.stageRemoval(FILE_KEY, formData.imageUrl);
+                }
+                
+                // Clear staged file
+                draftUploadService.clearStagedFile(FILE_KEY);
+                
                 setSelectedImage(null);
                 setFormData(prev => ({ ...prev, imageUrl: '' }));
+                setHasStagedChanges(true);
               }}
               maxSize={100 * 1024 * 1024}
               showPreview={true}
@@ -226,6 +252,22 @@ return null;
               <p className="mt-1 text-sm text-red-600">{errors.imageUrl}</p>
             )}
           </div>
+
+          {/* Staged Changes Indicator */}
+          {hasStagedChanges && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <Upload className="h-5 w-5 text-blue-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-blue-800">
+                    You have staged changes. Click "Save" to upload files and apply changes.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Status */}
           <div className="flex items-center">
@@ -254,9 +296,19 @@ return null;
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
-              {loading ? 'Saving...' : (isEdit ? 'Update Transformation' : 'Create Transformation')}
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  {hasStagedChanges ? 'Uploading & Saving...' : 'Saving...'}
+                </>
+              ) : (
+                <>
+                  {hasStagedChanges && <Upload className="h-4 w-4" />}
+                  {isEdit ? 'Update Transformation' : 'Create Transformation'}
+                </>
+              )}
             </button>
           </div>
         </form>

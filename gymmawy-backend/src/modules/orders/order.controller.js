@@ -23,9 +23,28 @@ export async function createOrder(req, res, next) {
       paymentMethod: z.string().optional(),
       paymentProof: z.string().optional(),
       // Shipping details
-      shippingCost: z.number().optional().default(0)
+      shippingCost: z.number().optional().default(0),
+      isCashOnDelivery: z.boolean().optional().default(false)
     });
     const orderData = schema.parse(req.body || {});
+    
+    // Validate shipping city if provided
+    if (orderData.shippingDetails?.shippingCity) {
+      const { validateCity } = await import('../shipping/shipping.service.js');
+      const cityValidation = await validateCity(orderData.shippingDetails.shippingCity);
+      
+      if (!cityValidation.isValid) {
+        return res.status(400).json({
+          success: false,
+          message: cityValidation.message,
+          suggestions: cityValidation.suggestions,
+          field: 'shippingCity'
+        });
+      }
+      
+      // Use the validated city name (in case it was normalized)
+      orderData.shippingDetails.shippingCity = cityValidation.city;
+    }
     
     // If it's a single product order, create it directly
     if (orderData.productId && orderData.buyNow) {
@@ -56,9 +75,29 @@ export async function createOrderFromCart(req, res, next) {
       paymentMethod: z.string().optional(),
       paymentProof: z.string().optional(),
       // Shipping details
-      shippingCost: z.number().optional().default(0)
+      shippingCost: z.number().optional().default(0),
+      isCashOnDelivery: z.boolean().optional().default(false)
     });
     const orderData = schema.parse(req.body || {});
+    
+    // Validate shipping city if provided
+    if (orderData.shippingDetails?.shippingCity) {
+      const { validateCity } = await import('../shipping/shipping.service.js');
+      const cityValidation = await validateCity(orderData.shippingDetails.shippingCity);
+      
+      if (!cityValidation.isValid) {
+        return res.status(400).json({
+          success: false,
+          message: cityValidation.message,
+          suggestions: cityValidation.suggestions,
+          field: 'shippingCity'
+        });
+      }
+      
+      // Use the validated city name (in case it was normalized)
+      orderData.shippingDetails.shippingCity = cityValidation.city;
+    }
+    
     const order = await service.createOrderFromCart(req.user.id, orderData);
     res.status(201).json({ order });
   } catch (e) { next(e); }

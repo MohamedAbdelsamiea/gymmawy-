@@ -25,16 +25,30 @@ const RTLHandler = () => {
         
         // Only apply RTL to non-admin dashboard routes
         if (!isAdminDashboard) {
-          document.documentElement.dir = i18n.dir();
+          const isRTL = i18n.language === 'ar';
+          document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+          document.documentElement.lang = i18n.language;
+          
+          // Add/remove RTL class to body for additional styling control
+          if (isRTL) {
+            document.body.classList.add('rtl-active');
+            document.body.classList.remove('ltr-active');
+          } else {
+            document.body.classList.add('ltr-active');
+            document.body.classList.remove('rtl-active');
+          }
         } else {
           // Force LTR for admin dashboard
           document.documentElement.dir = 'ltr';
+          document.documentElement.lang = 'en';
+          document.body.classList.add('ltr-active');
+          document.body.classList.remove('rtl-active');
         }
       });
     };
     
     updateDirection();
-  }, [i18n, location.pathname]);
+  }, [i18n.language, location.pathname]);
   
   // Load currency namespace
   useEffect(() => {
