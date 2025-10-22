@@ -648,6 +648,13 @@ export async function createProduct(data) {
     awarded: data.loyaltyPointsAwarded,
     required: data.loyaltyPointsRequired
   });
+  console.log('Backend - Prices:', data.prices);
+  console.log('Backend - Shipping info:', {
+    weight: data.weight,
+    length: data.length,
+    width: data.width,
+    height: data.height
+  });
 
   const product = await prisma.product.create({
     data: {
@@ -657,9 +664,31 @@ export async function createProduct(data) {
       loyaltyPointsAwarded: data.loyaltyPointsAwarded || 0,
       loyaltyPointsRequired: data.loyaltyPointsRequired || 0,
       stock: data.stock || 0,
-      isActive: data.isActive !== undefined ? data.isActive : true
+      isActive: data.isActive !== undefined ? data.isActive : true,
+      // Shipping information
+      weight: data.weight || null,
+      length: data.length || null,
+      width: data.width || null,
+      height: data.height || null
     }
   });
+
+  // Handle prices if provided
+  if (data.prices && Array.isArray(data.prices) && data.prices.length > 0) {
+    console.log('Backend - Creating product prices:', data.prices);
+    await prisma.price.createMany({
+      data: data.prices.map(price => ({
+        id: `${product.id}-${price.currency}`,
+        amount: price.amount,
+        currency: price.currency,
+        purchasableId: product.id,
+        purchasableType: 'PRODUCT'
+      }))
+    });
+    console.log('Backend - Product prices created successfully');
+  } else {
+    console.log('Backend - No prices provided');
+  }
 
   // Handle main image if provided
   if (data.imageUrl && data.imageUrl.trim() !== '') {
@@ -698,8 +727,17 @@ export async function createProduct(data) {
     }
   });
 
+  // Fetch prices for the product
+  const prices = await prisma.price.findMany({
+    where: {
+      purchasableId: product.id,
+      purchasableType: 'PRODUCT'
+    }
+  });
+
   console.log('Backend - Final product:', productWithImages);
-  return productWithImages;
+  console.log('Backend - Product prices:', prices);
+  return { ...productWithImages, prices };
 }
 
 export async function getProductById(id) {
@@ -741,7 +779,12 @@ export async function updateProduct(id, data) {
       loyaltyPointsAwarded: data.loyaltyPointsAwarded,
       loyaltyPointsRequired: data.loyaltyPointsRequired,
       stock: data.stock,
-      isActive: data.isActive
+      isActive: data.isActive,
+      // Shipping information
+      weight: data.weight !== undefined ? data.weight : undefined,
+      length: data.length !== undefined ? data.length : undefined,
+      width: data.width !== undefined ? data.width : undefined,
+      height: data.height !== undefined ? data.height : undefined
     }
   });
 
@@ -763,8 +806,7 @@ export async function updateProduct(id, data) {
           amount: price.amount,
           currency: price.currency,
           purchasableId: id,
-          purchasableType: 'PRODUCT',
-          updatedAt: new Date()
+          purchasableType: 'PRODUCT'
         }))
       });
     }

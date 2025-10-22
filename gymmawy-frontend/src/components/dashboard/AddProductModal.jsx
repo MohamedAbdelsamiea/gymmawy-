@@ -240,8 +240,7 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
         if (amount && parseFloat(amount) > 0) {
           prices.push({
             amount: parseFloat(amount),
-            currency: currency,
-            type: 'NORMAL'
+            currency: currency
           });
         }
       });
@@ -267,6 +266,13 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
       console.log('AddProductModal - Sending product data:', productData);
       console.log('AddProductModal - Stock:', productData.stock, 'Type:', typeof productData.stock);
       console.log('AddProductModal - Discount:', productData.discountPercentage, 'Type:', typeof productData.discountPercentage);
+      console.log('AddProductModal - Prices:', productData.prices);
+      console.log('AddProductModal - Weight:', productData.weight, 'Type:', typeof productData.weight);
+      console.log('AddProductModal - Dimensions:', {
+        length: productData.length,
+        width: productData.width,
+        height: productData.height
+      });
       
       await onSave(productData);
       showSuccess('Product created successfully!');

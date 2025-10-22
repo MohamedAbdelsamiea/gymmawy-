@@ -202,8 +202,7 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
         if (amount && parseFloat(amount) > 0) {
           prices.push({
             amount: parseFloat(amount),
-            currency: currency,
-            type: 'NORMAL'
+            currency: currency
           });
         }
       });
@@ -226,6 +225,14 @@ const EditProductModal = ({ isOpen, onClose, onSave, product }) => {
         height: formData.height ? parseFloat(formData.height) : null,
       };
       
+      console.log('EditProductModal - Sending product data:', productData);
+      console.log('EditProductModal - Prices:', productData.prices);
+      console.log('EditProductModal - Weight:', productData.weight, 'Type:', typeof productData.weight);
+      console.log('EditProductModal - Dimensions:', {
+        length: productData.length,
+        width: productData.width,
+        height: productData.height
+      });
       
       await onSave(productData);
       showSuccess('Product updated successfully!');
