@@ -34,8 +34,8 @@ const PaymentSuccess = () => {
     try {
       setLoading(true);
       
-      // Check if this is a Paymob payment (by checking if it starts with 'gymmawy_')
-      if (id.startsWith('gymmawy_')) {
+      // Check if this is a Paymob payment (by checking if it starts with 'PAY-' or 'gymmawy_')
+      if (id.startsWith('PAY-') || id.startsWith('gymmawy_')) {
         console.log('🔍 Detected Paymob payment, fetching status...');
         await verifyPaymobPayment(id);
         return;

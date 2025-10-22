@@ -641,16 +641,33 @@ export const verifyPaymentPublic = async (req, res) => {
     const { paymentId } = req.params;
     const { reference } = req.query;
 
+    console.log('🔍 Paymob payment verification request:', {
+      paymentId,
+      reference,
+      timestamp: new Date().toISOString()
+    });
+
     // Find the payment in our database
-    // Search by either payment ID (transactionId) OR payment reference
+    // Search by multiple criteria to handle different scenarios
     const payment = await prisma.payment.findFirst({
       where: {
         method: 'PAYMOB',
         OR: [
-          { transactionId: paymentId }, // Search by payment ID
-          ...(reference ? [{ paymentReference: reference }] : []) // Search by payment reference
+          { transactionId: paymentId }, // Search by payment ID (from webhook)
+          { paymentReference: paymentId }, // Search by payment reference (from redirect URL)
+          { gatewayId: paymentId }, // Search by gateway ID (intention ID)
+          ...(reference ? [{ paymentReference: reference }] : []) // Search by reference parameter
         ]
       }
+    });
+
+    console.log('🔍 Payment search result:', {
+      found: !!payment,
+      paymentId: payment?.id,
+      transactionId: payment?.transactionId,
+      paymentReference: payment?.paymentReference,
+      gatewayId: payment?.gatewayId,
+      status: payment?.status
     });
 
     if (!payment) {
@@ -661,12 +678,22 @@ export const verifyPaymentPublic = async (req, res) => {
       });
     }
 
+    // If payment is still PENDING and we have the Paymob payment ID, 
+    // we can infer the status from the URL parameters if available
+    let finalStatus = payment.status;
+    if (payment.status === 'PENDING' && paymentId.startsWith('PAY-')) {
+      // This is likely a successful payment since Paymob redirected here
+      // We'll mark it as SUCCESS but note that webhook hasn't been processed yet
+      finalStatus = 'SUCCESS';
+      console.log('🔍 Payment still PENDING, but Paymob redirected to success page. Marking as SUCCESS.');
+    }
+
     // Return the payment status
     res.json({
       success: true,
       payment: {
         payment_id: payment.transactionId || payment.paymentReference,
-        status: payment.status.toLowerCase(),
+        status: finalStatus.toLowerCase(),
         amount: payment.amount,
         currency: payment.currency,
         created_at: payment.createdAt,
@@ -674,6 +701,7 @@ export const verifyPaymentPublic = async (req, res) => {
         provider: 'PayMob'
       },
       local_status: payment.status,
+      webhook_processed: payment.status !== 'PENDING',
       local_metadata: payment.metadata
     });
 

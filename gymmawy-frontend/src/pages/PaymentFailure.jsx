@@ -33,7 +33,7 @@ const PaymentFailure = () => {
       setLoading(true);
       
       // Check if this is a Paymob payment
-      const provider = searchParams.get('provider') || (id.startsWith('gymmawy_') ? 'paymob' : 'tabby');
+      const provider = searchParams.get('provider') || (id.startsWith('PAY-') || id.startsWith('gymmawy_') ? 'paymob' : 'tabby');
       
       if (provider === 'paymob') {
         console.log('🔍 Detected Paymob payment, fetching status...');
