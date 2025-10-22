@@ -1,25 +1,10 @@
-import * as service from "./subscription.service.js";
 import { z } from "zod";
+import * as service from "./subscription.service.js";
 import { parseOrThrow } from "../../utils/validation.js";
-
-export async function listPlans(req, res, next) {
-  try { 
-    const items = await service.listPlans(req); 
-    res.json({ 
-      items,
-      currency: req.currency,
-      meta: {
-        timestamp: new Date().toISOString()
-      }
-    }); 
-  } catch (e) { next(e); }
-}
 
 export async function subscribe(req, res, next) {
   try {
-    const schema = z.object({ planId: z.string().uuid() });
-    const { planId } = parseOrThrow(schema, req.body || {});
-    const sub = await service.subscribeToPlan(req.user.id, planId);
+    const sub = await service.subscribeToPlan(req.user.id, req.body.planId);
     res.status(201).json({ subscription: sub });
   } catch (e) { next(e); }
 }
@@ -57,41 +42,77 @@ export async function listUserSubscriptions(req, res, next) {
 export async function cancel(req, res, next) {
   try {
     const sub = await service.cancelSubscription(req.user.id, req.params.id);
-    if (!sub) return res.status(404).json({ error: { message: "Not found" } });
     res.json({ subscription: sub });
   } catch (e) { next(e); }
 }
 
-// Admin functions
-export async function getPendingSubscriptions(req, res, next) {
+export async function listPlans(req, res, next) {
   try {
-    const subscriptions = await service.getPendingSubscriptions();
-    res.json({ subscriptions });
+    const plans = await service.listPlans(req);
+    res.json({ plans });
   } catch (e) { next(e); }
 }
 
-export async function approveSubscription(req, res, next) {
+export async function activateSubscription(req, res, next) {
   try {
-    const subscription = await service.activateSubscription(req.params.id);
+    const { id } = req.params;
+    const subscription = await service.activateSubscription(id, req.user.id);
     res.json({ subscription });
   } catch (e) { next(e); }
 }
 
-export async function rejectSubscription(req, res, next) {
+export async function adminUpdateSubscriptionStatus(req, res, next) {
   try {
-    const schema = z.object({
-      reason: z.string().optional()
+    const { id } = req.params;
+    const { status } = req.body;
+    const subscription = await service.adminUpdateSubscriptionStatus(id, status);
+    res.json({ subscription });
+  } catch (e) { next(e); }
+}
+
+// New endpoint to manually fix subscription status
+export async function fixSubscriptionStatus(req, res, next) {
+  try {
+    const { subscriptionId } = req.params;
+    const { status = 'PAID' } = req.body;
+    
+    console.log(`🔧 Manually fixing subscription ${subscriptionId} to status: ${status}`);
+    
+    const subscription = await service.adminUpdateSubscriptionStatus(subscriptionId, status);
+    
+    // Also update any related payment records
+    const { getPrismaClient } = await import('../../config/db.js');
+    const prisma = getPrismaClient();
+    
+    const payments = await prisma.payment.findMany({
+      where: {
+        paymentableId: subscriptionId,
+        paymentableType: 'SUBSCRIPTION'
+      }
     });
-    const { reason } = parseOrThrow(schema, req.body || {});
-    const subscription = await service.rejectSubscription(req.params.id, reason);
-    res.json({ subscription });
-  } catch (e) { next(e); }
+    
+    if (payments.length > 0) {
+      await prisma.payment.updateMany({
+        where: {
+          paymentableId: subscriptionId,
+          paymentableType: 'SUBSCRIPTION'
+        },
+        data: {
+          status: 'SUCCESS',
+          processedAt: new Date()
+        }
+      });
+      
+      console.log(`✅ Updated ${payments.length} payment records to SUCCESS`);
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `Subscription ${subscriptionId} status updated to ${status}`,
+      subscription 
+    });
+  } catch (e) { 
+    console.error('Error fixing subscription status:', e);
+    next(e); 
+  }
 }
-
-export async function expireSubscriptions(req, res, next) {
-  try {
-    const result = await service.expireSubscriptions();
-    res.json(result);
-  } catch (e) { next(e); }
-}
-

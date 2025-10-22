@@ -225,13 +225,9 @@ const PaymentSuccess = () => {
           </div>
           
           {/* Success Message */}
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">
             Payment Successful! 🎉
           </h1>
-          
-          <p className="text-gray-600 mb-6">
-            Thank you for your purchase! Your payment has been processed successfully and your order is confirmed.
-          </p>
           
           {/* Order Reference - Critical for Support */}
           {paymentStatus && (
@@ -262,42 +258,9 @@ const PaymentSuccess = () => {
                   <span className="font-medium text-green-900">{new Date(paymentStatus.created_at).toLocaleString()}</span>
                 </div>
               </div>
-              <p className="text-xs text-green-600 mt-3 bg-white p-2 rounded border">
-                <strong>Important:</strong> Save this reference number for support. You can always view your order details in your dashboard.
-              </p>
             </div>
           )}
           
-          {/* Next Steps */}
-          <div className="w-full bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <h4 className="font-semibold text-blue-900 mb-3 flex items-center">
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              What's Next?
-            </h4>
-            <ul className="text-sm text-blue-800 space-y-2">
-              <li className="flex items-start">
-                <svg className="w-4 h-4 mr-2 mt-0.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Your order is confirmed and being processed</span>
-              </li>
-              <li className="flex items-start">
-                <svg className="w-4 h-4 mr-2 mt-0.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span>Access your program/subscription in your dashboard</span>
-              </li>
-              <li className="flex items-start">
-                <svg className="w-4 h-4 mr-2 mt-0.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                <span>Track your order status anytime in your dashboard</span>
-              </li>
-            </ul>
-          </div>
           
           {/* Action Buttons */}
           <div className="space-y-3 w-full">

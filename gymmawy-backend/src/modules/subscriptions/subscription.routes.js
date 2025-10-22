@@ -19,6 +19,9 @@ router.get("/admin/pending", requireAuth, requireAdmin, controller.getPendingSub
 router.patch("/admin/:id/approve", requireAuth, requireAdmin, controller.approveSubscription);
 router.patch("/admin/:id/reject", requireAuth, requireAdmin, controller.rejectSubscription);
 router.post("/admin/expire", requireAuth, requireAdmin, controller.expireSubscriptions);
+router.patch("/admin/:id/activate", requireAuth, requireAdmin, controller.activateSubscription);
+router.patch("/admin/:id/status", requireAuth, requireAdmin, controller.adminUpdateSubscriptionStatus);
+router.post("/admin/:subscriptionId/fix", requireAuth, requireAdmin, controller.fixSubscriptionStatus);
 
 export default router;
 

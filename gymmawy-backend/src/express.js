@@ -122,7 +122,7 @@ app.use("/uploads", (req, res, next) => {
   // Set CORS headers for uploaded files
   const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
     "http://localhost:3000", 
-    "http://localhost:3001", 
+    "http://localhost:3000", 
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:5175",
@@ -190,7 +190,7 @@ app.use("/static", (req, res, next) => {
   // Set CORS headers for static files
   const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
     "http://localhost:3000", 
-    "http://localhost:3001", 
+    "http://localhost:3000", 
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:5175",
