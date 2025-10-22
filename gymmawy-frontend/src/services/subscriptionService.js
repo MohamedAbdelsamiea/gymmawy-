@@ -3,8 +3,12 @@ import apiClient from './apiClient';
 class SubscriptionService {
   async getPlans(language = 'en') {
     try {
-      return await apiClient.get(`/subscriptions/plans?lang=${language}&t=${Date.now()}`);
+      console.log('🔍 SubscriptionService: Fetching plans for language:', language);
+      const response = await apiClient.get(`/subscriptions/plans?lang=${language}&t=${Date.now()}`);
+      console.log('🔍 SubscriptionService: Plans response:', response);
+      return response;
     } catch (error) {
+      console.error('❌ SubscriptionService: Error fetching plans:', error);
       throw new Error(`Subscription plans fetch error: ${error.message}`);
     }
   }

@@ -160,12 +160,15 @@ const HomePage = () => {
     
     const fetchSubscriptionPlans = async() => {
       try {
+        console.log('🔍 HomePage: Starting to fetch subscription plans for language:', i18n.language);
         setPlansLoading(true);
         setSubscriptionPlans([]); // Clear existing data first
         const response = await subscriptionService.getPlans(i18n.language);
-        setSubscriptionPlans(response.items || []);
+        console.log('🔍 HomePage: Received response:', response);
+        console.log('🔍 HomePage: Plans data:', response.plans || response.items || []);
+        setSubscriptionPlans(response.plans || response.items || []);
       } catch (error) {
-        console.error('Error fetching subscription plans:', error);
+        console.error('❌ HomePage: Error fetching subscription plans:', error);
       } finally {
         setPlansLoading(false);
       }
