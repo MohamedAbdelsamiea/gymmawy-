@@ -140,16 +140,22 @@ function getPurchasableInclude(purchasableType) {
  */
 export async function getSubscriptionPlanPrices(planId, currency) {
   try {
-    const prices = await prisma.price.findMany({
-      where: {
-        purchasableType: 'SUBSCRIPTION',
-        purchasableId: planId,
-        currency
-      },
-      orderBy: {
-        amount: 'asc'
-      }
+    const plan = await prisma.subscriptionPlan.findUnique({
+      where: { id: planId }
     });
+    
+    if (!plan) return [];
+    
+    const prices = [];
+    if (plan.priceEGP) prices.push({ amount: plan.priceEGP, currency: 'EGP' });
+    if (plan.priceSAR) prices.push({ amount: plan.priceSAR, currency: 'SAR' });
+    if (plan.priceAED) prices.push({ amount: plan.priceAED, currency: 'AED' });
+    if (plan.priceUSD) prices.push({ amount: plan.priceUSD, currency: 'USD' });
+    
+    // Filter by currency if specified
+    if (currency) {
+      return prices.filter(p => p.currency === currency);
+    }
     
     return prices;
   } catch (error) {
@@ -163,16 +169,22 @@ export async function getSubscriptionPlanPrices(planId, currency) {
  */
 export async function getProductPrices(productId, currency) {
   try {
-    const prices = await prisma.price.findMany({
-      where: {
-        purchasableType: 'PRODUCT',
-        purchasableId: productId,
-        currency
-      },
-      orderBy: {
-        amount: 'asc'
-      }
+    const product = await prisma.product.findUnique({
+      where: { id: productId }
     });
+    
+    if (!product) return [];
+    
+    const prices = [];
+    if (product.priceEGP) prices.push({ amount: product.priceEGP, currency: 'EGP' });
+    if (product.priceSAR) prices.push({ amount: product.priceSAR, currency: 'SAR' });
+    if (product.priceAED) prices.push({ amount: product.priceAED, currency: 'AED' });
+    if (product.priceUSD) prices.push({ amount: product.priceUSD, currency: 'USD' });
+    
+    // Filter by currency if specified
+    if (currency) {
+      return prices.filter(p => p.currency === currency);
+    }
     
     return prices;
   } catch (error) {
@@ -186,16 +198,22 @@ export async function getProductPrices(productId, currency) {
  */
 export async function getProgrammePrices(programmeId, currency) {
   try {
-    const prices = await prisma.price.findMany({
-      where: {
-        purchasableType: 'PROGRAMME',
-        purchasableId: programmeId,
-        currency
-      },
-      orderBy: {
-        amount: 'asc'
-      }
+    const programme = await prisma.programme.findUnique({
+      where: { id: programmeId }
     });
+    
+    if (!programme) return [];
+    
+    const prices = [];
+    if (programme.priceEGP) prices.push({ amount: programme.priceEGP, currency: 'EGP' });
+    if (programme.priceSAR) prices.push({ amount: programme.priceSAR, currency: 'SAR' });
+    if (programme.priceAED) prices.push({ amount: programme.priceAED, currency: 'AED' });
+    if (programme.priceUSD) prices.push({ amount: programme.priceUSD, currency: 'USD' });
+    
+    // Filter by currency if specified
+    if (currency) {
+      return prices.filter(p => p.currency === currency);
+    }
     
     return prices;
   } catch (error) {
@@ -209,18 +227,33 @@ export async function getProgrammePrices(programmeId, currency) {
  */
 export async function getAvailableCurrenciesForEntity(purchasableType, purchasableId) {
   try {
-    const currencies = await prisma.price.findMany({
-      where: {
-        purchasableType,
-        purchasableId
-      },
-      select: {
-        currency: true
-      },
-      distinct: ['currency']
-    });
+    let entity = null;
     
-    return currencies.map(c => c.currency);
+    // Get the entity based on type
+    switch (purchasableType) {
+      case 'PRODUCT':
+        entity = await prisma.product.findUnique({ where: { id: purchasableId } });
+        break;
+      case 'PROGRAMME':
+        entity = await prisma.programme.findUnique({ where: { id: purchasableId } });
+        break;
+      case 'SUBSCRIPTION':
+        entity = await prisma.subscriptionPlan.findUnique({ where: { id: purchasableId } });
+        break;
+      default:
+        return [];
+    }
+    
+    if (!entity) return [];
+    
+    // Check which currencies are available
+    const currencies = [];
+    if (entity.priceEGP) currencies.push('EGP');
+    if (entity.priceSAR) currencies.push('SAR');
+    if (entity.priceAED) currencies.push('AED');
+    if (entity.priceUSD) currencies.push('USD');
+    
+    return currencies;
   } catch (error) {
     console.error('Error fetching available currencies:', error);
     throw error;

@@ -241,16 +241,6 @@ const Header = () => {
     }
   };
 
-  // Emergency logout function for testing
-  const handleEmergencyLogout = () => {
-    console.log('Header: Emergency logout triggered');
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    window.dispatchEvent(new CustomEvent('userLoggedOut'));
-    navigate('/');
-    setProfileDropdownOpen(false);
-    setMobileProfileDropdownOpen(false);
-  };
 
   const handleDashboardNavigation = () => {
     if (user?.role === 'admin') {
@@ -449,15 +439,6 @@ const Header = () => {
                     >
                       <LogOut className="h-4 w-4 flex-shrink-0" />
                       <span className="whitespace-nowrap">{t('auth.signOut')}</span>
-                    </button>
-                    {/* Temporary test button */}
-                    <button
-                      onClick={handleEmergencyLogout}
-                      className="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 gap-2"
-                      style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
-                    >
-                      <LogOut className="h-4 w-4 flex-shrink-0" />
-                      <span className="whitespace-nowrap">Emergency Logout</span>
                     </button>
                   </div>
                 )}

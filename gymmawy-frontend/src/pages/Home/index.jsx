@@ -626,6 +626,15 @@ return '';
                 </div>
               ))}
             </div>
+            
+            {/* Join Us Button */}
+            <div className="flex justify-center mt-4">
+              <JoinUsButtonNew 
+                variant="razor" 
+                targetElementId="packages"
+                className="transform transition-transform duration-500 hover:scale-105 w-full max-w-md"
+              />
+            </div>
           </div>
         </div>
       </section>

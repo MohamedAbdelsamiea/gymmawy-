@@ -34,24 +34,22 @@ export async function getOrCreateCart(userId) {
     });
   }
 
-  // Fetch prices for each product in cart items
-  const itemsWithPrices = await Promise.all(
-    cart.items.map(async (item) => {
-      const prices = await prisma.price.findMany({
-        where: {
-          purchasableId: item.product.id,
-          purchasableType: 'PRODUCT'
-        }
-      });
-      return {
-        ...item,
-        product: {
-          ...item.product,
-          prices
-        }
-      };
-    })
-  );
+  // Add pricing information to each product in cart items
+  const itemsWithPrices = cart.items.map(item => {
+    const prices = [];
+    if (item.product.priceEGP) prices.push({ amount: item.product.priceEGP, currency: 'EGP' });
+    if (item.product.priceSAR) prices.push({ amount: item.product.priceSAR, currency: 'SAR' });
+    if (item.product.priceAED) prices.push({ amount: item.product.priceAED, currency: 'AED' });
+    if (item.product.priceUSD) prices.push({ amount: item.product.priceUSD, currency: 'USD' });
+    
+    return {
+      ...item,
+      product: {
+        ...item.product,
+        prices
+      }
+    };
+  });
 
   return {
     ...cart,

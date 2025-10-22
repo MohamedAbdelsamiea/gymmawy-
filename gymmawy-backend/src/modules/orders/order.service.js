@@ -25,14 +25,22 @@ export async function createSingleProductOrder(userId, orderData = {}) {
     throw e;
   }
 
-  // Calculate total price using Price model
-  const price = await prisma.price.findFirst({
-    where: {
-      purchasableId: product.id,
-      purchasableType: 'PRODUCT',
-      currency: currency
-    }
-  });
+  // Get price for the specific currency from product's direct pricing
+  let price = null;
+  switch (currency) {
+    case 'EGP':
+      price = product.priceEGP ? { amount: product.priceEGP, currency: 'EGP' } : null;
+      break;
+    case 'SAR':
+      price = product.priceSAR ? { amount: product.priceSAR, currency: 'SAR' } : null;
+      break;
+    case 'AED':
+      price = product.priceAED ? { amount: product.priceAED, currency: 'AED' } : null;
+      break;
+    case 'USD':
+      price = product.priceUSD ? { amount: product.priceUSD, currency: 'USD' } : null;
+      break;
+  }
   
   if (!price) {
     const e = new Error(`Price not found for product ${product.id} in currency ${currency}`);
@@ -194,14 +202,22 @@ export async function createOrderFromCart(userId, orderData = {}) {
   let originalTotalPrice = 0;
   
   for (const item of cart.items) {
-    // Get price for the specific currency
-    const price = await prisma.price.findFirst({
-      where: {
-        purchasableId: item.product.id,
-        purchasableType: 'PRODUCT',
-        currency: currency
-      }
-    });
+    // Get price for the specific currency from product's direct pricing
+    let price = null;
+    switch (currency) {
+      case 'EGP':
+        price = item.product.priceEGP ? { amount: item.product.priceEGP, currency: 'EGP' } : null;
+        break;
+      case 'SAR':
+        price = item.product.priceSAR ? { amount: item.product.priceSAR, currency: 'SAR' } : null;
+        break;
+      case 'AED':
+        price = item.product.priceAED ? { amount: item.product.priceAED, currency: 'AED' } : null;
+        break;
+      case 'USD':
+        price = item.product.priceUSD ? { amount: item.product.priceUSD, currency: 'USD' } : null;
+        break;
+    }
     
     if (!price) {
       const e = new Error(`Price not found for product ${item.product.id} in currency ${currency}`);

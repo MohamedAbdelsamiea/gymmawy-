@@ -117,6 +117,10 @@ model Product {
   length                Decimal?       @db.Decimal(10, 2)
   width                 Decimal?       @db.Decimal(10, 2)
   height                Decimal?       @db.Decimal(10, 2)
+  priceAED              Decimal?       @db.Decimal(10, 2)
+  priceEGP              Decimal?       @db.Decimal(10, 2)
+  priceSAR              Decimal?       @db.Decimal(10, 2)
+  priceUSD              Decimal?       @db.Decimal(10, 2)
   cartItems             CartItem[]
   orderItems            OrderItem[]
   images                ProductImage[] @relation("ProductImages")
@@ -500,19 +504,6 @@ model HomepagePopup {
 enum UserRole {
   ADMIN
   MEMBER
-}
-
-model Price {
-  id             String          @id @default(uuid())
-  amount         Decimal         @db.Decimal(10, 2)
-  currency       Currency
-  purchasableId  String
-  purchasableType PurchasableType
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-
-  @@index([purchasableId, purchasableType])
-  @@index([currency])
 }
 
 enum Currency {

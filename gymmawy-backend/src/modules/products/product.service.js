@@ -34,28 +34,25 @@ export async function listProducts({ skip, take, q, categoryId, currency, isActi
     prisma.product.count({ where }),
   ]);
 
-  // Fetch prices for each product
-  const productsWithPrices = await Promise.all(
-    items.map(async (product) => {
-      const prices = await prisma.price.findMany({
-        where: {
-          purchasableId: product.id,
-          purchasableType: 'PRODUCT'
-        }
-      });
-      
-      // Get price for specific currency if provided
-      const priceForCurrency = currency ? prices.find(p => p.currency === currency) : null;
-      const fallbackPrice = prices.find(p => p.currency === 'EGP') || prices[0];
-      const selectedPrice = priceForCurrency || fallbackPrice;
-      
-      return { 
-        ...product, 
-        prices,
-        price: selectedPrice ? { amount: selectedPrice.amount, currency: selectedPrice.currency } : null
-      };
-    })
-  );
+  // Add pricing information to each product
+  const productsWithPrices = items.map(product => {
+    const prices = [];
+    if (product.priceEGP) prices.push({ amount: product.priceEGP, currency: 'EGP' });
+    if (product.priceSAR) prices.push({ amount: product.priceSAR, currency: 'SAR' });
+    if (product.priceAED) prices.push({ amount: product.priceAED, currency: 'AED' });
+    if (product.priceUSD) prices.push({ amount: product.priceUSD, currency: 'USD' });
+    
+    // Get price for specific currency if provided
+    const priceForCurrency = currency ? prices.find(p => p.currency === currency) : null;
+    const fallbackPrice = prices.find(p => p.currency === 'EGP') || prices[0];
+    const selectedPrice = priceForCurrency || fallbackPrice;
+    
+    return { 
+      ...product, 
+      prices,
+      price: selectedPrice ? { amount: selectedPrice.amount, currency: selectedPrice.currency } : null
+    };
+  });
 
   return { items: productsWithPrices, total };
 }
@@ -75,13 +72,12 @@ export async function getProductById(id) {
 
   if (!product) return null;
 
-  // Fetch prices for the product
-  const prices = await prisma.price.findMany({
-    where: {
-      purchasableId: product.id,
-      purchasableType: 'PRODUCT'
-    }
-  });
+  // Add pricing information to the product
+  const prices = [];
+  if (product.priceEGP) prices.push({ amount: product.priceEGP, currency: 'EGP' });
+  if (product.priceSAR) prices.push({ amount: product.priceSAR, currency: 'SAR' });
+  if (product.priceAED) prices.push({ amount: product.priceAED, currency: 'AED' });
+  if (product.priceUSD) prices.push({ amount: product.priceUSD, currency: 'USD' });
 
   return { ...product, prices };
 }
@@ -106,25 +102,22 @@ export async function getRelatedProducts(productId, limit = 4) {
     }
   });
 
-  // Fetch prices for each related product
-  const relatedProductsWithPrices = await Promise.all(
-    relatedProducts.map(async (product) => {
-      const prices = await prisma.price.findMany({
-        where: {
-          purchasableId: product.id,
-          purchasableType: 'PRODUCT'
-        }
-      });
-      
-      const fallbackPrice = prices.find(p => p.currency === 'EGP') || prices[0];
-      
-      return { 
-        ...product, 
-        prices,
-        price: fallbackPrice ? { amount: fallbackPrice.amount, currency: fallbackPrice.currency } : null
-      };
-    })
-  );
+  // Add pricing information to each related product
+  const relatedProductsWithPrices = relatedProducts.map(product => {
+    const prices = [];
+    if (product.priceEGP) prices.push({ amount: product.priceEGP, currency: 'EGP' });
+    if (product.priceSAR) prices.push({ amount: product.priceSAR, currency: 'SAR' });
+    if (product.priceAED) prices.push({ amount: product.priceAED, currency: 'AED' });
+    if (product.priceUSD) prices.push({ amount: product.priceUSD, currency: 'USD' });
+    
+    const fallbackPrice = prices.find(p => p.currency === 'EGP') || prices[0];
+    
+    return { 
+      ...product, 
+      prices,
+      price: fallbackPrice ? { amount: fallbackPrice.amount, currency: fallbackPrice.currency } : null
+    };
+  });
 
   return relatedProductsWithPrices;
 }
@@ -197,28 +190,25 @@ export async function getNewArrivals({ limit = 8, currency }) {
     }
   });
 
-  // Fetch prices for each product
-  const productsWithPrices = await Promise.all(
-    items.map(async (product) => {
-      const prices = await prisma.price.findMany({
-        where: {
-          purchasableId: product.id,
-          purchasableType: 'PRODUCT'
-        }
-      });
-      
-      // Get price for specific currency if provided
-      const priceForCurrency = currency ? prices.find(p => p.currency === currency) : null;
-      const fallbackPrice = prices.find(p => p.currency === 'EGP') || prices[0];
-      const selectedPrice = priceForCurrency || fallbackPrice;
-      
-      return { 
-        ...product, 
-        prices,
-        price: selectedPrice ? { amount: selectedPrice.amount, currency: selectedPrice.currency } : null
-      };
-    })
-  );
+  // Add pricing information to each product
+  const productsWithPrices = items.map(product => {
+    const prices = [];
+    if (product.priceEGP) prices.push({ amount: product.priceEGP, currency: 'EGP' });
+    if (product.priceSAR) prices.push({ amount: product.priceSAR, currency: 'SAR' });
+    if (product.priceAED) prices.push({ amount: product.priceAED, currency: 'AED' });
+    if (product.priceUSD) prices.push({ amount: product.priceUSD, currency: 'USD' });
+    
+    // Get price for specific currency if provided
+    const priceForCurrency = currency ? prices.find(p => p.currency === currency) : null;
+    const fallbackPrice = prices.find(p => p.currency === 'EGP') || prices[0];
+    const selectedPrice = priceForCurrency || fallbackPrice;
+    
+    return { 
+      ...product, 
+      prices,
+      price: selectedPrice ? { amount: selectedPrice.amount, currency: selectedPrice.currency } : null
+    };
+  });
 
   return { items: productsWithPrices, total: productsWithPrices.length };
 }
@@ -254,30 +244,25 @@ export async function getAllProducts({ skip = 0, take = 20, categoryId, currency
     prisma.product.count({ where })
   ]);
 
-  // Fetch prices for each product
-  const productsWithPrices = await Promise.all(
-    items.map(async (product) => {
-      const prices = await prisma.price.findMany({
-        where: {
-          purchasableId: product.id,
-          purchasableType: 'PRODUCT'
-        }
-      });
-      
-      // Get price for specific currency if provided
-      const priceForCurrency = currency ? prices.find(p => p.currency === currency) : null;
-      const fallbackPrice = prices.find(p => p.currency === 'EGP') || prices[0];
-      const selectedPrice = priceForCurrency || fallbackPrice;
-      
-      return { 
-        ...product, 
-        prices,
-        price: selectedPrice ? { amount: selectedPrice.amount, currency: selectedPrice.currency } : null
-      };
-    })
-  );
+  // Add pricing information to each product
+  const productsWithPrices = items.map(product => {
+    const prices = [];
+    if (product.priceEGP) prices.push({ amount: product.priceEGP, currency: 'EGP' });
+    if (product.priceSAR) prices.push({ amount: product.priceSAR, currency: 'SAR' });
+    if (product.priceAED) prices.push({ amount: product.priceAED, currency: 'AED' });
+    if (product.priceUSD) prices.push({ amount: product.priceUSD, currency: 'USD' });
+    
+    // Get price for specific currency if provided
+    const priceForCurrency = currency ? prices.find(p => p.currency === currency) : null;
+    const fallbackPrice = prices.find(p => p.currency === 'EGP') || prices[0];
+    const selectedPrice = priceForCurrency || fallbackPrice;
+    
+    return { 
+      ...product, 
+      prices,
+      price: selectedPrice ? { amount: selectedPrice.amount, currency: selectedPrice.currency } : null
+    };
+  });
 
   return { items: productsWithPrices, total };
 }
-
-
