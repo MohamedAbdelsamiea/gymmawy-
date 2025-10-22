@@ -13,7 +13,6 @@ import { requestLogger, errorLogger } from "./utils/logger.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import userRoutes from "./modules/users/user.routes.js";
 import productRoutes from "./modules/products/product.routes.js";
-import categoryRoutes from "./modules/categories/category.routes.js";
 import cartRoutes from "./modules/cart/cart.routes.js";
 import orderRoutes from "./modules/orders/order.routes.js";
 import paymentRoutes from "./modules/payments/payment.routes.js";
@@ -26,21 +25,21 @@ import subscriptionRoutes from "./modules/subscriptions/subscription.routes.js";
 import programmeRoutes from "./modules/programmes/programme.routes.js";
 import cmsRoutes from "./modules/cms/cms.routes.js";
 import adminRoutes from "./modules/admin/admin.routes.js";
-import notificationRoutes from "./modules/notifications/notification.routes.js";
-import imageRoutes from "./modules/images/image.routes.js";
-import videoRoutes from "./modules/videos/video.routes.js";
-import uploadRoutes from "./modules/uploads/upload.routes.js";
-import loyaltyRoutes from "./modules/loyalty/loyalty.routes.js";
+import mediaRoutes from "./modules/media/media.routes.js";
 import rewardsRoutes from "./modules/rewards/rewards.routes.js";
 import currencyRoutes from "./modules/currency/currency.routes.js";
 import priceRoutes from "./modules/prices/price.routes.js";
 import fileRoutes from "./routes/fileRoutes.js";
 import { initializeTabbyCronService } from "./services/tabbyCronService.js";
+import { initializeLogRotation } from "./utils/logRotation.js";
 
 const app = express();
 
 // Initialize Tabby cron service for handling AUTHORIZED payments
 initializeTabbyCronService();
+
+// Initialize log rotation to prevent logs from taking too much space
+initializeLogRotation();
 
 app.set("trust proxy", 1);
 
@@ -89,7 +88,6 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/products", productRoutes);
-app.use("/api/categories", categoryRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
@@ -100,13 +98,9 @@ app.use("/api/coupons", couponRoutes);
 app.use("/api/leads", leadRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/notifications", notificationRoutes);
 app.use("/api/programmes", programmeRoutes);
 app.use("/api/cms", cmsRoutes);
-app.use("/api/images", imageRoutes);
-app.use("/api/videos", videoRoutes);
-app.use("/api/uploads", uploadRoutes);
-app.use("/api/loyalty", loyaltyRoutes);
+app.use("/api/media", mediaRoutes);
 app.use("/api/rewards", rewardsRoutes);
 app.use("/api/currency", currencyRoutes);
 app.use("/api/prices", priceRoutes);

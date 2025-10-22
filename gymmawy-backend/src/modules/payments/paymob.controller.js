@@ -355,52 +355,64 @@ export const handleWebhook = async (req, res) => {
       processedAt: updatedPayment.processedAt
     });
 
-    // Handle successful payment
-    const paymentMetadata = payment.metadata || {};
-    if (success && paymentMetadata.orderId) {
-      // Update order status
-      await prisma.order.update({
-        where: { id: paymentMetadata.orderId },
-        data: {
-          status: 'paid',
-          paymentMethod: 'paymob',
-          paymentReference: transactionId,
-          paidAt: new Date()
+    // Update the related entity status based on paymentableType for successful payments
+    if (status === 'SUCCESS' && payment.paymentableType && payment.paymentableId) {
+      try {
+        switch (payment.paymentableType) {
+          case 'SUBSCRIPTION':
+            await prisma.subscription.update({
+              where: { id: payment.paymentableId },
+              data: { status: 'PAID' }
+            });
+            console.log(`Subscription ${payment.paymentableId} status updated to PAID`);
+            break;
+            
+          case 'PROGRAMME':
+            await prisma.programmePurchase.update({
+              where: { id: payment.paymentableId },
+              data: { status: 'PAID' }
+            });
+            console.log(`Programme purchase ${payment.paymentableId} status updated to PAID`);
+            break;
+            
+          case 'ORDER':
+            await prisma.order.update({
+              where: { id: payment.paymentableId },
+              data: { 
+                status: 'PAID',
+                paymentMethod: 'PAYMOB',
+                paymentReference: transactionId,
+                updatedAt: new Date()
+              }
+            });
+            console.log(`Order ${payment.paymentableId} status updated to PAID`);
+            break;
+            
+          default:
+            console.log(`Unknown paymentableType: ${payment.paymentableType}`);
         }
-      });
+      } catch (error) {
+        console.error(`Failed to update ${payment.paymentableType} status to PAID:`, error);
+      }
     }
 
-    // Handle successful subscription payment
-    if (success && paymentMetadata.subscriptionPlanId && payment.userId) {
-      // Create or update user subscription
-      const subscription = await prisma.subscription.upsert({
-        where: {
-          userId_subscriptionPlanId: {
-            userId: payment.userId,
-            subscriptionPlanId: paymentMetadata.subscriptionPlanId
+    // Legacy support: Handle old metadata-based order updates
+    const paymentMetadata = payment.metadata || {};
+    if (status === 'SUCCESS' && paymentMetadata.orderId && !payment.paymentableType) {
+      try {
+        await prisma.order.update({
+          where: { id: paymentMetadata.orderId },
+          data: {
+            status: 'PAID',
+            paymentMethod: 'PAYMOB',
+            paymentReference: transactionId,
+            updatedAt: new Date()
           }
-        },
-        update: {
-          status: 'active',
-          paymentMethod: 'PAYMOB',
-          paymentReference: transactionId,
-          startDate: new Date(),
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-          lastPaymentDate: new Date()
-        },
-        create: {
-          userId: payment.userId,
-          subscriptionPlanId: paymentMetadata.subscriptionPlanId,
-          status: 'active',
-          paymentMethod: 'PAYMOB',
-          paymentReference: transactionId,
-          startDate: new Date(),
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-          lastPaymentDate: new Date()
-        }
-      });
-
-      console.log('Subscription created/updated:', subscription.id);
+        });
+        console.log(`Legacy order ${paymentMetadata.orderId} status updated to PAID`);
+      } catch (error) {
+        console.error(`Failed to update legacy order status:`, error);
+      }
     }
 
     console.log('Webhook processed successfully for payment:', {

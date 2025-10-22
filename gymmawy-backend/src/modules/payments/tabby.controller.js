@@ -6,7 +6,7 @@ import { getFrontendUrl } from '../../utils/urls.js';
 import paymentService from './payment.service.js';
 import * as subscriptionService from '../subscriptions/subscription.service.js';
 import * as programmeService from '../programmes/programme.service.js';
-import { approveSubscription } from '../subscriptions/subscription.service.js';
+import { activateSubscription } from '../subscriptions/subscription.service.js';
 import { approveProgrammePurchase } from '../programmes/programme.service.js';
 import { activateOrder } from '../orders/order.service.js';
 import { sendProgrammeDeliveryEmail } from '../programmes/programmeEmail.service.js';
@@ -543,6 +543,47 @@ async function handlePaymentAuthorized(webhookData) {
       }
     });
 
+    // Update the related entity status based on paymentableType for successful payments
+    if (payment.paymentableType && payment.paymentableId) {
+      try {
+        switch (payment.paymentableType) {
+          case 'SUBSCRIPTION':
+            await prisma.subscription.update({
+              where: { id: payment.paymentableId },
+              data: { status: 'PAID' }
+            });
+            console.log(`Subscription ${payment.paymentableId} status updated to PAID`);
+            break;
+            
+          case 'PROGRAMME':
+            await prisma.programmePurchase.update({
+              where: { id: payment.paymentableId },
+              data: { status: 'PAID' }
+            });
+            console.log(`Programme purchase ${payment.paymentableId} status updated to PAID`);
+            break;
+            
+          case 'ORDER':
+            await prisma.order.update({
+              where: { id: payment.paymentableId },
+              data: { 
+                status: 'PAID',
+                paymentMethod: 'TABBY',
+                paymentReference: payment.transactionId,
+                updatedAt: new Date()
+              }
+            });
+            console.log(`Order ${payment.paymentableId} status updated to PAID`);
+            break;
+            
+          default:
+            console.log(`Unknown paymentableType: ${payment.paymentableType}`);
+        }
+      } catch (error) {
+        console.error(`Failed to update ${payment.paymentableType} status to PAID:`, error);
+      }
+    }
+
     // Create the actual purchase record based on payment type
     try {
       await createPurchaseRecord(payment);
@@ -737,6 +778,47 @@ async function handlePaymentClosed(webhookData) {
       }
     });
 
+    // Update the related entity status based on paymentableType for successful payments
+    if (payment.paymentableType && payment.paymentableId) {
+      try {
+        switch (payment.paymentableType) {
+          case 'SUBSCRIPTION':
+            await prisma.subscription.update({
+              where: { id: payment.paymentableId },
+              data: { status: 'PAID' }
+            });
+            console.log(`Subscription ${payment.paymentableId} status updated to PAID`);
+            break;
+            
+          case 'PROGRAMME':
+            await prisma.programmePurchase.update({
+              where: { id: payment.paymentableId },
+              data: { status: 'PAID' }
+            });
+            console.log(`Programme purchase ${payment.paymentableId} status updated to PAID`);
+            break;
+            
+          case 'ORDER':
+            await prisma.order.update({
+              where: { id: payment.paymentableId },
+              data: { 
+                status: 'PAID',
+                paymentMethod: 'TABBY',
+                paymentReference: payment.transactionId,
+                updatedAt: new Date()
+              }
+            });
+            console.log(`Order ${payment.paymentableId} status updated to PAID`);
+            break;
+            
+          default:
+            console.log(`Unknown paymentableType: ${payment.paymentableType}`);
+        }
+      } catch (error) {
+        console.error(`Failed to update ${payment.paymentableType} status to PAID:`, error);
+      }
+    }
+
     // Create the actual purchase record based on payment type
     try {
       await createPurchaseRecord(payment);
@@ -780,7 +862,7 @@ async function createPurchaseRecord(payment) {
     // Auto-approve subscription and award loyalty points for successful payment
     try {
       console.log(`🎁 Auto-approving subscription ${subscription.id} and awarding loyalty points`);
-      await approveSubscription(subscription.id);
+      await activateSubscription(subscription.id);
       console.log(`✅ Subscription ${subscription.id} auto-approved and loyalty points awarded`);
     } catch (error) {
       console.error(`❌ Failed to auto-approve subscription ${subscription.id}:`, error.message);

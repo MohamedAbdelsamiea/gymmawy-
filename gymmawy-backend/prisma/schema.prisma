@@ -108,15 +108,15 @@ model Product {
   description           Json?
   deletedAt             DateTime?
   discountPercentage    Int            @default(0)
-  loyaltyPointsAwarded  Int            
-  loyaltyPointsRequired Int            
+  loyaltyPointsAwarded  Int
+  loyaltyPointsRequired Int
   stock                 Int            @default(0)
   isActive              Boolean        @default(true)
   order                 Int?           @default(0)
-  weight                Decimal?       @db.Decimal(10, 2) // Weight in kg
-  length                Decimal?       @db.Decimal(10, 2) // Length in cm
-  width                 Decimal?       @db.Decimal(10, 2) // Width in cm
-  height                Decimal?       @db.Decimal(10, 2) // Height in cm
+  weight                Decimal?       @db.Decimal(10, 2)
+  length                Decimal?       @db.Decimal(10, 2)
+  width                 Decimal?       @db.Decimal(10, 2)
+  height                Decimal?       @db.Decimal(10, 2)
   cartItems             CartItem[]
   orderItems            OrderItem[]
   images                ProductImage[] @relation("ProductImages")
@@ -156,7 +156,7 @@ model CartItem {
   cartId    String
   quantity  Int     @default(1)
   productId String
-  size      String? 
+  size      String?
   cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -201,17 +201,17 @@ model Order {
 }
 
 model OrderItem {
-  id                 String         @id @default(uuid())
+  id                 String   @id @default(uuid())
   orderId            String
-  quantity           Int            @default(1)
-  size               String?        
-  discountPercentage Int            @default(0)
+  quantity           Int      @default(1)
+  size               String?
+  discountPercentage Int      @default(0)
   productId          String?
   category           String?
   name               String?
-  price              Decimal?       @db.Decimal(10, 2)
-  order              Order          @relation(fields: [orderId], references: [id])
-  product            Product?       @relation(fields: [productId], references: [id])
+  price              Decimal? @db.Decimal(10, 2)
+  order              Order    @relation(fields: [orderId], references: [id])
+  product            Product? @relation(fields: [productId], references: [id])
 
   @@index([orderId])
   @@index([productId])
@@ -237,12 +237,10 @@ model SubscriptionPlan {
   isActive                     Boolean                   @default(true)
   crownColor                   String?
   order                        Int?                      @default(1)
-  // Regular subscription prices
   priceAED                     Decimal?                  @db.Decimal(10, 2)
   priceEGP                     Decimal?                  @db.Decimal(10, 2)
   priceSAR                     Decimal?                  @db.Decimal(10, 2)
   priceUSD                     Decimal?                  @db.Decimal(10, 2)
-  // Medical subscription prices
   medicalPriceAED              Decimal?                  @db.Decimal(10, 2)
   medicalPriceEGP              Decimal?                  @db.Decimal(10, 2)
   medicalPriceSAR              Decimal?                  @db.Decimal(10, 2)
@@ -279,28 +277,28 @@ model SubscriptionPlanBenefit {
 }
 
 model Subscription {
-  id                     String             @id @default(uuid())
-  userId                 String
-  subscriptionPlanId     String
-  startDate              DateTime?
-  endDate                DateTime?
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
-  cancelledAt            DateTime?
-  status                 SubscriptionStatus @default(PENDING)
-  discountPercentage     Int                @default(0)
-  paymentMethod          PaymentMethod?
-  price                  Decimal?           @db.Decimal(10, 2)
-  subscriptionNumber     String             @unique
-  couponDiscount         Int?
-  couponId               String?
-  isMedical              Boolean            @default(false)
-  currency               Currency?
-  totalPeriodDays        Int? // Store the total subscription period (subscription + gift days)
-  reason                 String?            // User's reason for subscribing
-  coupon                 Coupon?            @relation(fields: [couponId], references: [id])
-  subscriptionPlan       SubscriptionPlan   @relation(fields: [subscriptionPlanId], references: [id])
-  user                   User               @relation(fields: [userId], references: [id])
+  id                 String             @id @default(uuid())
+  userId             String
+  subscriptionPlanId String
+  startDate          DateTime?
+  endDate            DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  cancelledAt        DateTime?
+  status             SubscriptionStatus @default(PENDING)
+  discountPercentage Int                @default(0)
+  paymentMethod      PaymentMethod?
+  price              Decimal?           @db.Decimal(10, 2)
+  subscriptionNumber String             @unique
+  couponDiscount     Int?
+  couponId           String?
+  isMedical          Boolean            @default(false)
+  currency           Currency?
+  totalPeriodDays    Int?
+  reason             String?
+  coupon             Coupon?            @relation(fields: [couponId], references: [id])
+  subscriptionPlan   SubscriptionPlan   @relation(fields: [subscriptionPlanId], references: [id])
+  user               User               @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([status])
@@ -478,6 +476,19 @@ model ProgrammePurchase {
   @@index([couponId])
 }
 
+model HomepagePopup {
+  id         String   @id @default(uuid())
+  isActive   Boolean  @default(false)
+  header     Json
+  subheader  Json
+  imageUrl   String?
+  buttonText Json
+  buttonLink String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([isActive])
+}
 
 enum UserRole {
   ADMIN
@@ -529,6 +540,7 @@ enum TokenType {
 
 enum SubscriptionStatus {
   PENDING
+  PAID
   ACTIVE
   CANCELLED
   EXPIRED
@@ -543,18 +555,4 @@ enum ProgrammePurchaseStatus {
 enum LeadStatus {
   NEW
   CONTACTED
-}
-
-model HomepagePopup {
-  id          String    @id @default(uuid())
-  isActive    Boolean   @default(false)
-  header      Json      // Multilingual header text
-  subheader   Json      // Multilingual subheader text
-  imageUrl    String?   // Popup image URL
-  buttonText  Json      // Multilingual button text
-  buttonLink  String    // Link to redirect to when button is clicked
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([isActive])
 }

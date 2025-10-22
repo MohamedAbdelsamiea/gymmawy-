@@ -3,8 +3,15 @@ import { getPrismaClient } from '../config/db.js';
 const prisma = getPrismaClient();
 
 /**
- * Generate user-friendly payment reference in PAY-xxxx-xxxx format
- * This is the reference shown to users for support purposes
+ * Payment Reference Generator
+ * 
+ * This module handles payment-specific reference generation with unique requirements:
+ * - Database uniqueness checking (unlike entity IDs which use retry logic)
+ * - Timestamp-based format for support tracking
+ * - Validation and extraction utilities for customer service
+ * 
+ * Note: Entity IDs (orders, subscriptions, programmes) are handled by idGenerator.js
+ * which uses date-based format and retry-based uniqueness checking.
  */
 export async function generateUserFriendlyPaymentReference() {
   let attempts = 0;

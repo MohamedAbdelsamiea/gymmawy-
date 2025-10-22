@@ -3,6 +3,235 @@ import { generateOrderNumber, generateUniqueId } from "../../utils/idGenerator.j
 
 const prisma = getPrismaClient();
 
+// ============================================================================
+// LOYALTY POINTS TRACKING & HISTORY
+// ============================================================================
+
+/**
+ * Get recent loyalty transactions for a user (for dashboard preview)
+ * Fetches last 20 transactions OR all transactions from past 90 days (whichever is greater)
+ */
+export async function getRecentLoyaltyTransactions(userId) {
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+  // First, get all transactions from the past 90 days
+  const recentTransactions = await prisma.payment.findMany({
+    where: {
+      userId: userId,
+      currency: 'GYMMAWY_COINS',
+      createdAt: { gte: ninetyDaysAgo }
+    },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      amount: true,
+      method: true,
+      status: true,
+      paymentableType: true,
+      paymentableId: true,
+      metadata: true,
+      createdAt: true
+    }
+  });
+
+  // If we have less than 20 transactions from the past 90 days,
+  // get additional older transactions to reach 20 total
+  if (recentTransactions.length < 20) {
+    const olderTransactions = await prisma.payment.findMany({
+      where: {
+        userId: userId,
+        currency: 'GYMMAWY_COINS',
+        createdAt: { lt: ninetyDaysAgo }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20 - recentTransactions.length,
+      select: {
+        id: true,
+        amount: true,
+        method: true,
+        status: true,
+        paymentableType: true,
+        paymentableId: true,
+        metadata: true,
+        createdAt: true
+      }
+    });
+
+    return [...recentTransactions, ...olderTransactions];
+  }
+
+  return recentTransactions;
+}
+
+/**
+ * Get paginated loyalty transactions for full history page
+ */
+export async function getLoyaltyTransactions(userId, query = {}) {
+  const {
+    page = 1,
+    limit = 20,
+    type = 'all', // 'earned', 'spent', 'all'
+    source = 'all', // 'subscription', 'order', 'redemption', 'all'
+    startDate,
+    endDate
+  } = query;
+
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  // Build where clause
+  const where = {
+    userId: userId,
+    currency: 'GYMMAWY_COINS'
+  };
+
+  // Filter by type (earned/spent)
+  if (type === 'earned') {
+    where.amount = { gt: 0 };
+  } else if (type === 'spent') {
+    where.amount = { lt: 0 };
+  }
+
+  // Filter by source
+  if (source !== 'all') {
+    where.paymentableType = source.toUpperCase();
+  }
+
+  // Filter by date range
+  if (startDate || endDate) {
+    where.createdAt = {};
+    if (startDate) {
+      where.createdAt.gte = new Date(startDate);
+    }
+    if (endDate) {
+      where.createdAt.lte = new Date(endDate);
+    }
+  }
+
+  // Get transactions
+  const [transactions, totalCount] = await Promise.all([
+    prisma.payment.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: parseInt(limit),
+      select: {
+        id: true,
+        amount: true,
+        method: true,
+        status: true,
+        paymentableType: true,
+        paymentableId: true,
+        metadata: true,
+        createdAt: true
+      }
+    }),
+    prisma.payment.count({ where })
+  ]);
+
+  const totalPages = Math.ceil(totalCount / parseInt(limit));
+
+  return {
+    transactions,
+    pagination: {
+      currentPage: parseInt(page),
+      totalPages,
+      totalCount,
+      hasNextPage: parseInt(page) < totalPages,
+      hasPrevPage: parseInt(page) > 1
+    }
+  };
+}
+
+/**
+ * Get loyalty statistics for a user
+ */
+export async function getLoyaltyStats(userId) {
+  // Get current balance
+  const currentBalance = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { loyaltyPoints: true }
+  });
+
+  // Get earned points (positive amounts)
+  const earnedStats = await prisma.payment.aggregate({
+    where: {
+      userId: userId,
+      currency: 'GYMMAWY_COINS',
+      amount: { gt: 0 }
+    },
+    _sum: { amount: true },
+    _count: true
+  });
+
+  // Get spent points (negative amounts)
+  const spentStats = await prisma.payment.aggregate({
+    where: {
+      userId: userId,
+      currency: 'GYMMAWY_COINS',
+      amount: { lt: 0 }
+    },
+    _sum: { amount: true },
+    _count: true
+  });
+
+  // Get total transactions
+  const totalTransactions = await prisma.payment.count({
+    where: {
+      userId: userId,
+      currency: 'GYMMAWY_COINS'
+    }
+  });
+
+  return {
+    currentBalance: currentBalance?.loyaltyPoints || 0,
+    totalEarned: earnedStats._sum.amount || 0,
+    totalSpent: Math.abs(spentStats._sum.amount || 0),
+    earnedCount: earnedStats._count || 0,
+    spentCount: spentStats._count || 0,
+    totalTransactions
+  };
+}
+
+/**
+ * Get filter options for loyalty transactions
+ */
+export async function getFilterOptions(userId) {
+  // Get unique sources
+  const sources = await prisma.payment.findMany({
+    where: {
+      userId: userId,
+      currency: 'GYMMAWY_COINS',
+      paymentableType: { not: null }
+    },
+    select: { paymentableType: true },
+    distinct: ['paymentableType']
+  });
+
+  // Get date range
+  const dateRange = await prisma.payment.aggregate({
+    where: {
+      userId: userId,
+      currency: 'GYMMAWY_COINS'
+    },
+    _min: { createdAt: true },
+    _max: { createdAt: true }
+  });
+
+  return {
+    sources: sources.map(s => s.paymentableType).filter(Boolean),
+    dateRange: {
+      min: dateRange._min.createdAt,
+      max: dateRange._max.createdAt
+    },
+    types: ['earned', 'spent', 'all']
+  };
+}
+
+// ============================================================================
+// REWARD REDEMPTION & VALIDATION
+// ============================================================================
+
 /**
  * Validate if user has enough points for redemption
  */
@@ -49,6 +278,7 @@ export async function validateRedemption(userId, itemId, category, pointsRequire
             loyaltyPointsRequired: { gt: 0 }
           }
         });
+        console.log('🛍️ Found product:', reward ? { id: reward.id, loyaltyPointsRequired: reward.loyaltyPointsRequired } : null);
         break;
       case 'programmes':
         reward = await prisma.programme.findFirst({
@@ -57,6 +287,7 @@ export async function validateRedemption(userId, itemId, category, pointsRequire
             loyaltyPointsRequired: { gt: 0 }
           }
         });
+        console.log('📚 Found programme:', reward ? { id: reward.id, loyaltyPointsRequired: reward.loyaltyPointsRequired } : null);
         break;
       default:
         throw new Error('Invalid reward category');
@@ -66,16 +297,38 @@ export async function validateRedemption(userId, itemId, category, pointsRequire
       throw new Error('Reward not found or not available for redemption');
     }
 
+    // Verify the points required match
     if (reward.loyaltyPointsRequired !== pointsRequired) {
       throw new Error('Points required mismatch');
     }
 
+    // Check if reward is active
+    if (reward.isActive === false) {
+      throw new Error('Reward is not active');
+    }
+
+    // Check stock if applicable
+    if (reward.stock !== null && reward.stock <= 0) {
+      throw new Error('Reward is out of stock');
+    }
+
+    console.log('✅ Redemption validation successful');
+
     return {
       valid: true,
-      reward,
-      userPoints: user.loyaltyPoints
+      reward: {
+        id: reward.id,
+        name: reward.name,
+        category: category,
+        pointsRequired: reward.loyaltyPointsRequired,
+        stock: reward.stock
+      },
+      userPoints: user.loyaltyPoints,
+      remainingPoints: user.loyaltyPoints - pointsRequired
     };
+
   } catch (error) {
+    console.error('❌ Redemption validation failed:', error.message);
     return {
       valid: false,
       error: error.message
@@ -84,60 +337,15 @@ export async function validateRedemption(userId, itemId, category, pointsRequire
 }
 
 /**
- * Process loyalty points redemption
+ * Process reward redemption
  */
-export async function processRedemption(userId, itemId, category, shippingDetails) {
+export async function processRedemption(userId, itemId, category, pointsRequired) {
   try {
-    // Get user details for language preference
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { preferredLanguage: true }
-    });
-    
-    const language = user?.preferredLanguage || 'en';
-    
-    // Get reward details and validate
-    let reward = null;
-    let rewardName = '';
-    let rewardPrice = 0;
+    console.log('🎁 Processing redemption:', { userId, itemId, category, pointsRequired });
 
-    switch (category) {
-      case 'packages':
-        reward = await prisma.subscriptionPlan.findUnique({
-          where: { id: itemId }
-        });
-        rewardName = reward.name?.en || reward.name || 'Subscription Package';
-        // For packages, price is typically 0 since it's redeemed with points
-        rewardPrice = 0;
-        break;
-      case 'products':
-        reward = await prisma.product.findUnique({
-          where: { id: itemId }
-        });
-        rewardName = reward.name?.en || reward.name || 'Product';
-        // For products, price is typically 0 since it's redeemed with points
-        rewardPrice = 0;
-        break;
-      case 'programmes':
-        reward = await prisma.programme.findUnique({
-          where: { id: itemId }
-        });
-        rewardName = reward.name?.en || reward.name || 'Programme';
-        // For programmes, price is typically 0 since it's redeemed with points
-        rewardPrice = 0;
-        break;
-      default:
-        throw new Error('Invalid reward category');
-    }
-
-    if (!reward) {
-      throw new Error('Reward not found');
-    }
-
-    const pointsRequired = reward.loyaltyPointsRequired;
-
-    // Validate redemption
+    // First validate the redemption
     const validation = await validateRedemption(userId, itemId, category, pointsRequired);
+    
     if (!validation.valid) {
       throw new Error(validation.error);
     }
@@ -154,113 +362,58 @@ export async function processRedemption(userId, itemId, category, shippingDetail
         }
       });
 
-      // Create payment record for Gymmawy coins transaction
+      // Create payment record for the redemption
       const payment = await tx.payment.create({
         data: {
-          amount: pointsRequired,
+          userId: userId,
+          amount: -pointsRequired, // Negative amount for spending
           currency: 'GYMMAWY_COINS',
           method: 'GYMMAWY_COINS',
-          status: 'COMPLETED',
-          gatewayId: null,
-          transactionId: null,
-          paymentReference: `REWARD-${itemId}-${Date.now()}`,
-          userId: userId,
-          paymentableId: null,
-          paymentableType: null
-        }
-      });
-
-      // Generate unique order number
-      const orderNumber = await generateUniqueId(
-        generateOrderNumber,
-        async (number) => {
-          const existing = await tx.order.findUnique({ where: { orderNumber: number } });
-          return !existing;
-        }
-      );
-
-      // Create order
-      const order = await tx.order.create({
-        data: {
-          orderNumber: orderNumber,
-          userId: userId,
-          status: 'PAID', // Directly mark as paid since it's loyalty redemption
-          price: pointsRequired, // Use points as price for Gymmawy coins
-          currency: 'GYMMAWY_COINS', // Set currency to Gymmawy coins
-          paymentMethod: 'GYMMAWY_COINS',
-          paymentReference: payment.paymentReference, // Reference payment transaction
-          discountPercentage: 0, // No discounts for reward redemptions
-          couponDiscount: 0, // No coupon discounts for reward redemptions
-          shippingBuilding: shippingDetails?.building || null,
-          shippingStreet: shippingDetails?.street || null,
-          shippingCity: shippingDetails?.city || null,
-          shippingCountry: shippingDetails?.country || null,
-          shippingPostcode: shippingDetails?.postcode || null,
-          items: {
-            create: [{
-              productId: itemId,
-              category: category,
-              name: rewardName,
-              quantity: 1,
-              price: pointsRequired, // Price is the number of coins used
-              discountPercentage: 0 // No discounts for reward items
-            }]
+          status: 'SUCCESS',
+          paymentReference: await generateUniqueId(),
+          paymentableId: itemId,
+          paymentableType: category.toUpperCase(),
+          metadata: {
+            type: 'REDEMPTION',
+            category: category,
+            itemId: itemId,
+            pointsSpent: pointsRequired
           }
         }
       });
 
-      // Create specific records based on category
-      let specificRecord = null;
-
-      if (category === 'packages') {
-        // Create subscription
-        const subscription = await tx.subscription.create({
+      // Update stock if applicable
+      if (validation.reward.stock !== null) {
+        await tx[category === 'packages' ? 'subscriptionPlan' : category === 'products' ? 'product' : 'programme'].update({
+          where: { id: itemId },
           data: {
-            userId: userId,
-            subscriptionPlanId: itemId,
-            subscriptionNumber: `SUB-${orderNumber}`,
-            status: 'ACTIVE',
-            startDate: new Date(),
-            endDate: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 days from now
-            price: 0, // Free since redeemed with points
-            currency: 'EGP',
-            paymentMethod: 'GYMMAWY_COINS'
+            stock: {
+              decrement: 1
+            }
           }
         });
-        specificRecord = subscription;
-      } else if (category === 'programmes') {
-        // Create programme purchase
-        const programmePurchase = await tx.programmePurchase.create({
-          data: {
-            userId: userId,
-            programmeId: itemId,
-            price: 0, // Free since redeemed with points
-            purchaseNumber: `PROG-${orderNumber}`,
-            status: 'COMPLETE', // Auto-approve loyalty redemptions
-            currency: 'EGP'
-          }
-        });
-        specificRecord = programmePurchase;
       }
 
       return {
-        order,
-        loyaltyTransaction,
-        specificRecord,
-        remainingPoints: updatedUser.loyaltyPoints
+        payment,
+        updatedUser,
+        reward: validation.reward
       };
     });
 
+    console.log('✅ Redemption processed successfully:', result.payment.id);
+
     return {
       success: true,
-      data: result
+      redemptionId: result.payment.id,
+      pointsSpent: pointsRequired,
+      remainingPoints: result.updatedUser.loyaltyPoints,
+      reward: result.reward
     };
+
   } catch (error) {
-    console.error('Redemption processing error:', error);
-    return {
-      success: false,
-      error: error.message
-    };
+    console.error('❌ Redemption processing failed:', error.message);
+    throw error;
   }
 }
 
@@ -268,53 +421,124 @@ export async function processRedemption(userId, itemId, category, shippingDetail
  * Get redemption history for a user
  */
 export async function getRedemptionHistory(userId, query = {}) {
-  try {
-    const { page = 1, limit = 10, category } = query;
-    const skip = (page - 1) * limit;
+  const {
+    page = 1,
+    limit = 20,
+    startDate,
+    endDate
+  } = query;
 
-    const whereClause = {
-      userId: userId,
-      type: 'SPENT',
-      source: 'REWARD_REDEMPTION'
-    };
+  const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    if (category) {
-      whereClause.metadata = {
-        path: ['category'],
-        equals: category
-      };
+  const where = {
+    userId: userId,
+    currency: 'GYMMAWY_COINS',
+    amount: { lt: 0 } // Only spent points (redemptions)
+  };
+
+  // Filter by date range
+  if (startDate || endDate) {
+    where.createdAt = {};
+    if (startDate) {
+      where.createdAt.gte = new Date(startDate);
     }
-
-    const [transactions, total] = await Promise.all([
-      prisma.loyaltyTransaction.findMany({
-        where: whereClause,
-        orderBy: { createdAt: 'desc' },
-        skip: skip,
-        take: parseInt(limit),
-        select: {
-          id: true,
-          points: true,
-          reason: true,
-          metadata: true,
-          createdAt: true
-        }
-      }),
-      prisma.loyaltyTransaction.count({
-        where: whereClause
-      })
-    ]);
-
-    return {
-      transactions,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    };
-  } catch (error) {
-    console.error('Get redemption history error:', error);
-    throw error;
+    if (endDate) {
+      where.createdAt.lte = new Date(endDate);
+    }
   }
+
+  const [redemptions, totalCount] = await Promise.all([
+    prisma.payment.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: parseInt(limit),
+      select: {
+        id: true,
+        amount: true,
+        paymentableType: true,
+        paymentableId: true,
+        metadata: true,
+        createdAt: true
+      }
+    }),
+    prisma.payment.count({ where })
+  ]);
+
+  const totalPages = Math.ceil(totalCount / parseInt(limit));
+
+  return {
+    redemptions,
+    pagination: {
+      currentPage: parseInt(page),
+      totalPages,
+      totalCount,
+      hasNextPage: parseInt(page) < totalPages,
+      hasPrevPage: parseInt(page) > 1
+    }
+  };
+}
+
+// ============================================================================
+// AVAILABLE REWARDS
+// ============================================================================
+
+/**
+ * Get available rewards for redemption
+ */
+export async function getAvailableRewards(category = 'all') {
+  const rewards = [];
+
+  if (category === 'all' || category === 'packages') {
+    const packages = await prisma.subscriptionPlan.findMany({
+      where: {
+        loyaltyPointsRequired: { gt: 0 },
+        isActive: true
+      },
+      select: {
+        id: true,
+        name: true,
+        loyaltyPointsRequired: true,
+        stock: true,
+        imageUrl: true
+      }
+    });
+    rewards.push(...packages.map(p => ({ ...p, category: 'packages' })));
+  }
+
+  if (category === 'all' || category === 'products') {
+    const products = await prisma.product.findMany({
+      where: {
+        loyaltyPointsRequired: { gt: 0 },
+        isActive: true
+      },
+      select: {
+        id: true,
+        name: true,
+        loyaltyPointsRequired: true,
+        stock: true,
+        imageUrl: true
+      }
+    });
+    rewards.push(...products.map(p => ({ ...p, category: 'products' })));
+  }
+
+  if (category === 'all' || category === 'programmes') {
+    const programmes = await prisma.programme.findMany({
+      where: {
+        loyaltyPointsRequired: { gt: 0 },
+        isActive: true
+      },
+      select: {
+        id: true,
+        name: true,
+        loyaltyPointsRequired: true,
+        stock: true,
+        imageUrl: true
+      }
+    });
+    rewards.push(...programmes.map(p => ({ ...p, category: 'programmes' })));
+  }
+
+  return rewards.sort((a, b) => a.loyaltyPointsRequired - b.loyaltyPointsRequired);
 }

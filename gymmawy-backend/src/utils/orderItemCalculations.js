@@ -67,7 +67,7 @@ function calculateTotalPriceForOrderItems(items) {
   }, 0);
 }
 
-module.exports = {
+export {
   calculateOrderItemTotalPrice,
   getOrderItemWithCalculatedTotal,
   getOrderItemsWithCalculatedTotals,

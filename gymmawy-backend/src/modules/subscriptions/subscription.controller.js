@@ -72,7 +72,7 @@ export async function getPendingSubscriptions(req, res, next) {
 
 export async function approveSubscription(req, res, next) {
   try {
-    const subscription = await service.approveSubscription(req.params.id);
+    const subscription = await service.activateSubscription(req.params.id);
     res.json({ subscription });
   } catch (e) { next(e); }
 }

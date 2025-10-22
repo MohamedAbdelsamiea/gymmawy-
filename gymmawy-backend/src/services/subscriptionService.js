@@ -7,7 +7,6 @@
 
 import cron from 'node-cron';
 import { getPrismaClient } from '../config/db.js';
-import * as notificationService from '../modules/notifications/notification.service.js';
 
 const prisma = getPrismaClient();
 
@@ -27,8 +26,8 @@ export async function expireExpiredSubscriptions() {
       }
     });
 
-    // Only log in development
-    if (process.env.NODE_ENV === 'development') {
+    // Log the expiration
+    if (result.count > 0) {
       console.log(`[SUBSCRIPTION] Expired ${result.count} subscription(s)`);
     }
     return {
@@ -51,14 +50,9 @@ export async function checkExpiringSubscriptions() {
     // First expire any that are already past due
     await expireExpiredSubscriptions();
     
-    // Then check for expiring ones and send notifications
-    const notifications = await notificationService.checkExpiringSubscriptions();
+    // Then check for expiring ones (notification functionality removed)
     
-    if (notifications.length > 0 && process.env.NODE_ENV === 'development') {
-      console.log(`[SUBSCRIPTION] Created ${notifications.length} expiring subscription notifications`);
-    }
-    
-    return notifications;
+    return { success: true };
   } catch (error) {
     console.error('[SUBSCRIPTION] Error checking expiring subscriptions:', error);
     throw error;
@@ -119,8 +113,8 @@ export function initializeSubscriptionService() {
   // Run initial cleanup
   expireExpiredSubscriptions().catch(console.error);
   
-  // Schedule daily subscription checks at 9 AM
-  cron.schedule('0 9 * * *', async () => {
+  // Schedule daily subscription checks at midnight
+  cron.schedule('0 0 * * *', async () => {
     console.log('[SUBSCRIPTION] Running daily subscription expiration check...');
     try {
       await checkExpiringSubscriptions();
@@ -134,5 +128,5 @@ export function initializeSubscriptionService() {
   }
 }
 
-// Auto-initialize when imported
-initializeSubscriptionService();
+// Note: Service is initialized explicitly in server.js
+// This prevents double initialization

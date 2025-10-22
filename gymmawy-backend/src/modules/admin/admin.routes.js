@@ -40,6 +40,7 @@ router.get("/subscriptions/export", requireAuth, requireAdmin, controller.export
 router.get("/subscriptions/:id", requireAuth, requireAdmin, controller.getSubscriptionById);
 router.patch("/subscriptions/:id", requireAuth, requireAdmin, controller.updateSubscription);
 router.patch("/subscriptions/:id/status", requireAuth, requireAdmin, controller.updateSubscriptionStatus);
+router.patch("/subscriptions/:id/activate", requireAuth, requireAdmin, controller.activateSubscription);
 router.patch("/subscriptions/:id/cancel", requireAuth, requireAdmin, controller.cancelSubscription);
 router.delete("/subscriptions/:id", requireAuth, requireAdmin, controller.deleteSubscription);
 router.get("/programmes/stats", requireAuth, requireAdmin, controller.getProgrammeStats);

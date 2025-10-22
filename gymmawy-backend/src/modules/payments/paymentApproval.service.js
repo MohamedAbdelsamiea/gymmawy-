@@ -1,7 +1,7 @@
 import { getPrismaClient } from '../../config/db.js';
 import autoShipmentService from '../../services/autoShipmentService.js';
 import { activateOrder } from '../orders/order.service.js';
-import { approveSubscription } from '../subscriptions/subscription.service.js';
+import { activateSubscription } from '../subscriptions/subscription.service.js';
 import { approveProgrammePurchase } from '../programmes/programme.service.js';
 import { sendProgrammeDeliveryEmail } from '../programmes/programmeEmail.service.js';
 
@@ -116,13 +116,13 @@ export async function approvePayment(paymentId, adminId) {
 
       console.log(`✅ Order ${order.id} marked as PAID`);
     } else if (payment.paymentableType === 'SUBSCRIPTION') {
-      // Handle subscription activation
+      // Update subscription status to PAID (admin will need to activate separately)
       subscription = await tx.subscription.update({
         where: { id: payment.paymentableId },
-        data: { status: 'ACTIVE' }
+        data: { status: 'PAID' }
       });
 
-      console.log(`✅ Subscription ${subscription.id} activated`);
+      console.log(`✅ Subscription ${subscription.id} marked as PAID (requires admin activation)`);
     } else if (payment.paymentableType === 'PROGRAMME_PURCHASE') {
       // Handle programme purchase
       programmePurchase = await tx.programmePurchase.update({
@@ -143,9 +143,7 @@ export async function approvePayment(paymentId, adminId) {
       await activateOrder(result.order.id, adminId);
       console.log(`✅ Loyalty points awarded for order ${result.order.id}`);
     } else if (result.subscription) {
-      console.log(`🎁 Awarding loyalty points for subscription ${result.subscription.id}`);
-      await approveSubscription(result.subscription.id);
-      console.log(`✅ Loyalty points awarded for subscription ${result.subscription.id}`);
+      console.log(`ℹ️ Subscription ${result.subscription.id} marked as PAID - loyalty points will be awarded when admin activates it`);
     } else if (result.programmePurchase) {
       console.log(`🎁 Awarding loyalty points for programme purchase ${result.programmePurchase.id}`);
       await approveProgrammePurchase(result.programmePurchase.id);

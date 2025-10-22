@@ -3017,6 +3017,11 @@ export async function adminUpdateSubscriptionStatus(id, status) {
   return adminUpdateSubscriptionStatus(id, status);
 }
 
+export async function activateSubscription(id) {
+  const { activateSubscription } = await import('../subscriptions/subscription.service.js');
+  return activateSubscription(id);
+}
+
 export async function adminUpdateProgrammePurchaseStatus(id, status) {
   const { adminUpdateProgrammePurchaseStatus } = await import('../programmes/programme.service.js');
   return adminUpdateProgrammePurchaseStatus(id, status);
@@ -3024,17 +3029,17 @@ export async function adminUpdateProgrammePurchaseStatus(id, status) {
 
 // Coupon usage management
 export async function getCouponUsageStats(couponId) {
-  const { getCouponUsageStats } = await import('../coupons/couponUsage.service.js');
+  const { getCouponUsageStats } = await import('../coupons/coupon.service.js');
   return getCouponUsageStats(couponId);
 }
 
 export async function getAllCouponsWithUsageStats() {
-  const { getAllCouponsWithUsageStats } = await import('../coupons/couponUsage.service.js');
+  const { getAllCouponsWithUsageStats } = await import('../coupons/coupon.service.js');
   return getAllCouponsWithUsageStats();
 }
 
 export async function syncCouponUsageStats(couponId) {
-  const { syncCouponUsageStats } = await import('../coupons/couponUsage.service.js');
+  const { syncCouponUsageStats } = await import('../coupons/coupon.service.js');
   return syncCouponUsageStats(couponId);
 }
 

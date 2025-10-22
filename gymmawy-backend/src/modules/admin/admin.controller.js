@@ -573,6 +573,14 @@ export async function updateSubscriptionStatus(req, res, next) {
   } catch (e) { next(e); }
 }
 
+export async function activateSubscription(req, res, next) {
+  try {
+    const { id } = req.params;
+    const subscription = await service.activateSubscription(id);
+    res.json({ message: "Subscription activated successfully", subscription });
+  } catch (e) { next(e); }
+}
+
 export async function updateProgrammePurchaseStatus(req, res, next) {
   try {
     const { id } = req.params;

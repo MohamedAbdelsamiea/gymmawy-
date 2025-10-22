@@ -1,9 +1,7 @@
 import { getPrismaClient } from "../../config/db.js";
 import { generateSubscriptionNumber, generateUniqueId } from "../../utils/idGenerator.js";
 import { generateUserFriendlyPaymentReference } from "../../utils/paymentReference.js";
-import * as notificationService from "../notifications/notification.service.js";
 import * as couponService from "../coupons/coupon.service.js";
-import * as couponRedemptionService from "../coupons/couponRedemption.service.js";
 import { Decimal } from "decimal.js";
 
 const prisma = getPrismaClient();
@@ -308,6 +306,16 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
     totalDays
   });
 
+  // Determine initial subscription status based on payment method
+  let initialStatus = "PENDING";
+  if (paymentMethod && ['TABBY', 'TAMARA', 'PAYMOB'].includes(paymentMethod)) {
+    // Gateway payments will be updated to PAID when payment is successful
+    initialStatus = "PENDING";
+  } else if (paymentMethod && ['INSTAPAY', 'VODAFONECASH'].includes(paymentMethod)) {
+    // Manual payments stay PENDING until admin approval
+    initialStatus = "PENDING";
+  }
+
   // Create subscription and redeem coupon in a transaction to prevent race conditions
   const subscription = await prisma.$transaction(async (tx) => {
     // Create subscription
@@ -316,9 +324,9 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
         subscriptionNumber,
         userId,
         subscriptionPlanId: planId,
-        startDate: null, // Will be set when approved by admin
-        endDate: null, // Will be set when approved by admin
-        status: "PENDING", // Start as pending until payment is verified
+        startDate: null, // Will be set when activated by admin
+        endDate: null, // Will be set when activated by admin
+        status: initialStatus, // Set based on payment method
         isMedical: isMedical || false,
         price: new Decimal(finalPrice), // Use server-calculated price
         currency: currency || 'EGP',
@@ -402,13 +410,6 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
     });
   }
 
-  // Create notification for subscription creation
-  try {
-    await notificationService.notifySubscriptionCreated(subscription);
-  } catch (error) {
-    console.error('Failed to create subscription notification:', error);
-    // Don't fail the subscription creation if notification fails
-  }
 
   return subscription;
 }
@@ -461,7 +462,7 @@ export async function cancelSubscription(userId, id) {
   return prisma.subscription.update({ where: { id }, data: { status: "CANCELLED", cancelledAt: new Date() } });
 }
 
-export async function approveSubscription(id) {
+export async function activateSubscription(id) {
   const subscription = await prisma.subscription.findUnique({ 
     where: { id },
     include: {
@@ -476,21 +477,21 @@ export async function approveSubscription(id) {
     throw e;
   }
 
-  if (subscription.status !== "PENDING") {
-    const e = new Error("Subscription is not pending approval");
+  if (subscription.status !== "PAID") {
+    const e = new Error("Subscription must be in PAID status to be activated");
     e.status = 400;
     e.expose = true;
     throw e;
   }
 
-  // Calculate start and end dates when approved using stored subscription data or plan data
+  // Calculate start and end dates when activated using stored subscription data or plan data
   const startDate = new Date();
   
   // Use stored total period data if available, otherwise calculate from plan data
   const totalDays = subscription.totalPeriodDays !== null ? subscription.totalPeriodDays : (subscription.subscriptionPlan.subscriptionPeriodDays + subscription.subscriptionPlan.giftPeriodDays);
   const endDate = new Date(startDate.getTime() + totalDays * 24 * 60 * 60 * 1000);
   
-  console.log('Subscription approval period calculation:', {
+  console.log('Subscription activation period calculation:', {
     storedTotalDays: subscription.totalPeriodDays,
     planSubscriptionDays: subscription.subscriptionPlan.subscriptionPeriodDays,
     planGiftDays: subscription.subscriptionPlan.giftPeriodDays,
@@ -540,13 +541,6 @@ export async function approveSubscription(id) {
     console.log(`Awarded ${subscription.subscriptionPlan.loyaltyPointsAwarded} loyalty points for subscription ${subscription.id}`);
   }
 
-  // Create notification for subscription approval
-  try {
-    await notificationService.notifySubscriptionApproved(updatedSubscription);
-  } catch (error) {
-    console.error('Failed to create subscription approval notification:', error);
-    // Don't fail the approval if notification fails
-  }
 
   return updatedSubscription;
 }
@@ -703,7 +697,7 @@ export async function adminUpdateSubscriptionStatus(id, status) {
         // Remove coupon usage if subscription had a coupon
         if (currentSubscription.couponId) {
           try {
-            const { removeCouponUsage } = await import('../coupons/couponUsage.service.js');
+            const { removeCouponUsage } = couponService;
             await removeCouponUsage(currentSubscription.userId, currentSubscription.couponId, 'SUBSCRIPTION', currentSubscription.id);
             console.log('Coupon usage removed for subscription status change:', currentSubscription.id);
           } catch (error) {
@@ -748,7 +742,7 @@ export async function adminUpdateSubscriptionStatus(id, status) {
         // Apply coupon usage if subscription had a coupon
         if (currentSubscription.couponId) {
           try {
-            const { applyCouponUsage } = await import('../coupons/couponUsage.service.js');
+            const { applyCouponUsage } = couponService;
             await applyCouponUsage(currentSubscription.userId, currentSubscription.couponId, 'SUBSCRIPTION', currentSubscription.id);
             console.log('Coupon usage applied for subscription status change:', currentSubscription.id);
           } catch (error) {

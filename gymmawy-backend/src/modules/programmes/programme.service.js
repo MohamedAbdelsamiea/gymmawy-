@@ -2,7 +2,6 @@ import { getPrismaClient } from "../../config/db.js";
 import { generateProgrammePurchaseNumber } from "../../utils/idGenerator.js";
 import { generateUserFriendlyPaymentReference } from "../../utils/paymentReference.js";
 import { Decimal } from "@prisma/client/runtime/library";
-import * as notificationService from "../notifications/notification.service.js";
 
 const prisma = getPrismaClient();
 
@@ -628,13 +627,6 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
       });
     }
 
-    // Create notification for programme purchase
-    try {
-      await notificationService.notifyProgrammePurchased(purchase);
-    } catch (error) {
-      console.error('Failed to create programme purchase notification:', error);
-      // Don't fail the purchase if notification fails
-    }
 
     return purchase;
   });
@@ -706,7 +698,7 @@ export async function adminUpdateProgrammePurchaseStatus(id, status) {
         // Remove coupon usage if purchase had a coupon
         if (currentPurchase.couponId) {
           try {
-            const { removeCouponUsage } = await import('../coupons/couponUsage.service.js');
+            const { removeCouponUsage } = await import('../coupons/coupon.service.js');
             await removeCouponUsage(currentPurchase.userId, currentPurchase.couponId, 'PROGRAMME_PURCHASE', currentPurchase.id);
             console.log('Coupon usage removed for programme purchase status change:', currentPurchase.id);
           } catch (error) {
@@ -742,7 +734,7 @@ export async function adminUpdateProgrammePurchaseStatus(id, status) {
         // Apply coupon usage if purchase had a coupon
         if (currentPurchase.couponId) {
           try {
-            const { applyCouponUsage } = await import('../coupons/couponUsage.service.js');
+            const { applyCouponUsage } = await import('../coupons/coupon.service.js');
             await applyCouponUsage(currentPurchase.userId, currentPurchase.couponId, 'PROGRAMME_PURCHASE', currentPurchase.id);
             console.log('Coupon usage applied for programme purchase status change:', currentPurchase.id);
           } catch (error) {

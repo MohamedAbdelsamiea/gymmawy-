@@ -1,5 +1,4 @@
 import { getPrismaClient } from "../../config/db.js";
-import * as notificationService from "../notifications/notification.service.js";
 
 const prisma = getPrismaClient();
 
@@ -8,13 +7,6 @@ export async function submitLead({ name, email, mobileNumber, message }) {
     data: { name, email, mobileNumber, message },
   });
 
-  // Create notification for lead submission
-  try {
-    await notificationService.notifyLeadSubmitted(lead);
-  } catch (error) {
-    console.error('Failed to create lead notification:', error);
-    // Don't fail the lead creation if notification fails
-  }
 
   return lead;
 }

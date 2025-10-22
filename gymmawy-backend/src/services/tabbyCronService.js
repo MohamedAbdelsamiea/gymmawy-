@@ -406,5 +406,5 @@ export function initializeTabbyCronService() {
   }
 }
 
-// Auto-initialize when imported
-initializeTabbyCronService();
+// Note: Service is initialized explicitly in express.js
+// This prevents double initialization and multiple webhook registrations

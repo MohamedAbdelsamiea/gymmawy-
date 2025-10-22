@@ -610,7 +610,7 @@ export async function adminUpdateStatus(id, status) {
           // Remove coupon usage if order had a coupon
           if (currentOrder.couponId) {
             try {
-              const { removeCouponUsage } = await import('../coupons/couponUsage.service.js');
+              const { removeCouponUsage } = await import('../coupons/coupon.service.js');
               await removeCouponUsage(currentOrder.userId, currentOrder.couponId, 'ORDER', currentOrder.id);
               console.log('Coupon usage removed for order status change:', currentOrder.id);
             } catch (error) {
@@ -663,7 +663,7 @@ export async function adminUpdateStatus(id, status) {
         // Apply coupon usage if order had a coupon
         if (currentOrder.couponId) {
           try {
-            const { applyCouponUsage } = await import('../coupons/couponUsage.service.js');
+            const { applyCouponUsage } = await import('../coupons/coupon.service.js');
             await applyCouponUsage(currentOrder.userId, currentOrder.couponId, 'ORDER', currentOrder.id);
             console.log('Coupon usage applied for order status change:', currentOrder.id);
           } catch (error) {

@@ -1,5 +1,4 @@
 import * as service from "./coupon.service.js";
-import * as redemptionService from "./couponRedemption.service.js";
 import { z } from "zod";
 import { parseOrThrow } from "../../utils/validation.js";
 
@@ -29,7 +28,6 @@ export async function create(req, res, next) {
       discountType: z.enum(["PERCENTAGE"]),
       discountValue: z.coerce.number().positive(),
       expirationDate: z.coerce.date(),
-      maxRedemptionsPerUser: z.coerce.number().int().min(0).nullable().optional(),
       maxRedemptions: z.coerce.number().int().min(0).nullable().optional(),
       isActive: z.coerce.boolean(),
     });
@@ -41,7 +39,6 @@ export async function create(req, res, next) {
     console.log('Raw request body:', req.body);
     console.log('Parsed data:', data);
     console.log('maxRedemptions in data:', data.maxRedemptions, 'type:', typeof data.maxRedemptions);
-    console.log('maxRedemptionsPerUser in data:', data.maxRedemptionsPerUser, 'type:', typeof data.maxRedemptionsPerUser);
     console.log('maxRedemptions === 0:', data.maxRedemptions === 0);
     console.log('maxRedemptions === null:', data.maxRedemptions === null);
     console.log('maxRedemptions === undefined:', data.maxRedemptions === undefined);
@@ -54,13 +51,11 @@ export async function create(req, res, next) {
       isActive: data.isActive
     };
     
-    // Only set maxRedemptions if it's defined (same logic as update function)
+    // Only set maxRedemptions if it's defined
     if (data.maxRedemptions !== undefined) couponData.maxRedemptions = data.maxRedemptions === null || data.maxRedemptions === 0 ? null : data.maxRedemptions;
-    if (data.maxRedemptionsPerUser !== undefined) couponData.maxRedemptionsPerUser = data.maxRedemptionsPerUser === null || data.maxRedemptionsPerUser === 0 ? null : data.maxRedemptionsPerUser;
     
     console.log('Mapped couponData:', couponData);
     console.log('maxRedemptions in couponData:', couponData.maxRedemptions);
-    console.log('maxRedemptionsPerUser in couponData:', couponData.maxRedemptionsPerUser);
     console.log('===============================');
     
     const created = await service.createCoupon(couponData);
@@ -117,7 +112,6 @@ export async function update(req, res, next) {
       discountValue: z.coerce.number().positive().optional(),
       expirationDate: z.coerce.date().optional(),
       maxRedemptions: z.coerce.number().int().min(0).nullable().optional(),
-      maxRedemptionsPerUser: z.coerce.number().int().min(0).nullable().optional(),
       isActive: z.coerce.boolean().optional(),
     });
     
@@ -126,7 +120,6 @@ export async function update(req, res, next) {
     
     console.log('Parsed data:', data);
     console.log('maxRedemptions in data:', data.maxRedemptions);
-    console.log('maxRedemptionsPerUser in data:', data.maxRedemptionsPerUser);
     
     // Map the data to match the database schema
     const couponData = {};
@@ -134,12 +127,10 @@ export async function update(req, res, next) {
     if (data.discountValue !== undefined) couponData.discountPercentage = data.discountValue;
     if (data.expirationDate !== undefined) couponData.expirationDate = data.expirationDate;
     if (data.maxRedemptions !== undefined) couponData.maxRedemptions = data.maxRedemptions || null; // Convert 0 to null for unlimited
-    if (data.maxRedemptionsPerUser !== undefined) couponData.maxRedemptionsPerUser = data.maxRedemptionsPerUser || null; // Convert 0 to null for unlimited
     if (data.isActive !== undefined) couponData.isActive = data.isActive;
     
     console.log('Mapped couponData:', couponData);
     console.log('maxRedemptions in couponData:', couponData.maxRedemptions);
-    console.log('maxRedemptionsPerUser in couponData:', couponData.maxRedemptionsPerUser);
     
     const coupon = await service.updateCoupon(req.params.id, couponData);
     res.json({ coupon });
@@ -157,7 +148,7 @@ export async function getUsageStats(req, res, next) {
   try {
     const schema = z.object({ id: z.string().uuid() });
     const { id } = parseOrThrow(schema, req.params);
-    const stats = await redemptionService.getCouponUsageStats(id);
+    const stats = await service.getCouponUsageStats(id);
     res.json(stats);
   } catch (e) { next(e); }
 }

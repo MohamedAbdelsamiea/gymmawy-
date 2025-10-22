@@ -62,7 +62,7 @@ function getOrdersWithCalculatedTotals(orders) {
   return orders.map(order => getOrderWithCalculatedTotal(order));
 }
 
-module.exports = {
+export {
   calculateTotalAmount,
   calculateTotalAmountForOrders,
   getOrderWithCalculatedTotal,

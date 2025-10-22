@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { rotateLogFile } from './logRotation.js';
 
 // Create logs directory if it doesn't exist
 const logsDir = path.join(process.cwd(), 'logs');
@@ -31,6 +32,9 @@ export const requestLogger = (req, res, next) => {
   const logFile = path.join(logsDir, 'requests.log');
   fs.appendFileSync(logFile, JSON.stringify(logEntry) + '\n');
   
+  // Check if log rotation is needed
+  rotateLogFile(logFile);
+  
   next();
 };
 
@@ -61,6 +65,9 @@ export const errorLogger = (err, req, res, next) => {
   // Log to file
   const errorFile = path.join(logsDir, 'errors.log');
   fs.appendFileSync(errorFile, JSON.stringify(errorEntry) + '\n');
+  
+  // Check if log rotation is needed
+  rotateLogFile(errorFile);
   
   next(err);
 };

@@ -1,6 +1,13 @@
 /**
- * Utility functions for generating human-readable IDs
- * Consolidated from identifiers.js and idGenerator.js
+ * Entity ID Generator
+ * 
+ * This module generates human-readable IDs for business entities using:
+ * - Date-based format (YYYYMMDD) for easy sorting and identification
+ * - Retry-based uniqueness checking (no database queries)
+ * - 6-digit random suffixes for uniqueness
+ * 
+ * Note: Payment references are handled by paymentReference.js which uses
+ * timestamp-based format and database uniqueness checking.
  */
 
 /**
@@ -17,19 +24,9 @@ export function generateOrderNumber() {
   return `ORD-${year}${month}${day}-${random}`;
 }
 
-/**
- * Generate a human-readable payment number
- * Format: PAY-YYYYMMDD-XXXXXX (e.g., PAY-20240907-123456)
- */
-export function generatePaymentNumber() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-  
-  return `PAY-${year}${month}${day}-${random}`;
-}
+// Note: Payment number generation is handled by paymentReference.js
+// This module focuses on entity IDs (orders, subscriptions, programmes)
+// Payment references have different requirements (database uniqueness, timestamp extraction)
 
 /**
  * Generate a human-readable subscription number
