@@ -96,7 +96,7 @@ class RewardsService {
   async validateRedemption(rewardId, category, pointsRequired) {
     try {
       return await apiClient.post('/rewards/validate', {
-        rewardId,
+        itemId: rewardId,
         category,
         pointsRequired
       });
@@ -116,10 +116,12 @@ class RewardsService {
   async redeemReward(rewardId, category, shippingAddress, options = {}) {
     try {
       return await apiClient.post('/rewards/redeem', {
-        rewardId,
+        itemId: rewardId,
         category,
-        shippingAddress,
-        ...options
+        pointsRequired: options.pointsRequired,
+        quantity: options.quantity,
+        size: options.size,
+        shippingDetails: shippingAddress
       });
     } catch (error) {
       throw new Error(`Reward redemption error: ${error.message}`);

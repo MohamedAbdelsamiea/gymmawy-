@@ -149,11 +149,30 @@ export async function processRedemption(req, res) {
     const schema = z.object({
       itemId: z.string().uuid(),
       category: z.enum(['packages', 'products', 'programmes']),
-      pointsRequired: z.number().int().positive()
+      pointsRequired: z.number().int().positive(),
+      quantity: z.number().int().positive().optional().default(1),
+      size: z.string().optional(),
+      // Frontend may send shippingAddress; normalize to shippingDetails
+      shippingAddress: z.object({
+        shippingBuilding: z.string().optional(),
+        shippingStreet: z.string().optional(),
+        shippingCity: z.string().optional(),
+        shippingCountry: z.string().optional(),
+        shippingPostcode: z.string().optional()
+      }).optional(),
+      shippingDetails: z.object({
+        shippingBuilding: z.string().optional(),
+        shippingStreet: z.string().optional(),
+        shippingCity: z.string().optional(),
+        shippingCountry: z.string().optional(),
+        shippingPostcode: z.string().optional()
+      }).optional()
     });
     
-    const { itemId, category, pointsRequired } = parseOrThrow(schema, req.body);
+    const parsed = parseOrThrow(schema, req.body);
+    const { itemId, category, pointsRequired, quantity, size } = parsed;
     const userId = req.user.id;
+    const shippingDetails = parsed.shippingDetails || parsed.shippingAddress || undefined;
 
     console.log('🎁 Process redemption request:', {
       itemId,
@@ -162,7 +181,7 @@ export async function processRedemption(req, res) {
       userId
     });
 
-    const result = await service.processRedemption(userId, itemId, category, pointsRequired);
+    const result = await service.processRedemption(userId, itemId, category, pointsRequired, { quantity, size, shippingDetails });
     
     res.json({
       success: true,

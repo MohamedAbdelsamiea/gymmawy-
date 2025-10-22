@@ -12,7 +12,7 @@ import { getGymmawyCoinIcon } from "../../utils/currencyUtils";
 const Header = () => {
   const { t, i18n } = useTranslation("header"); // using "header" namespace
   const { isRTL } = useReactiveLanguage(); // Get reactive RTL state
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const { getCartTotals } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -20,11 +20,19 @@ const Header = () => {
   const [homeDropdownOpen, setHomeDropdownOpen] = useState(false);
   const [navItems, setNavItems] = useState([]);
   const [isHomeDropdownToggling, setIsHomeDropdownToggling] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(0); // Force re-render counter
   const location = useLocation();
   const navigate = useNavigate();
   const profileDropdownRef = useRef(null);
   const mobileProfileDropdownRef = useRef(null);
   const homeDropdownRef = useRef(null);
+
+  // Listen for authentication state changes
+  useEffect(() => {
+    console.log('Header: Auth state changed, isAuthenticated:', isAuthenticated, 'user:', user);
+    // Force re-render when auth state changes
+    setForceUpdate(prev => prev + 1);
+  }, [isAuthenticated, user]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -203,9 +211,18 @@ const Header = () => {
 
   const handleLogout = async() => {
     try {
+      console.log('Logout initiated...');
       await logout();
+      console.log('Logout completed, navigating to home...');
       navigate('/');
       setProfileDropdownOpen(false);
+      setMobileProfileDropdownOpen(false);
+      // Force a re-render to ensure UI updates
+      setForceUpdate(prev => prev + 1);
+      // Force a small delay to ensure state updates are processed
+      setTimeout(() => {
+        console.log('Logout cleanup completed');
+      }, 100);
     } catch (error) {
       console.error('Logout error:', error);
     }

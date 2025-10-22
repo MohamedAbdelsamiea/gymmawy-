@@ -67,6 +67,8 @@ class PaymentService {
           gatewayId: intentionResult.data.id,
           transactionId: null, // Will be updated when webhook is received
           paymentReference: paymentData.specialReference || `paymob_${Date.now()}`,
+          paymentableId: paymentData.orderId || paymentData.subscriptionId || paymentData.programmeId,
+          paymentableType: paymentData.orderId ? 'ORDER' : paymentData.subscriptionId ? 'SUBSCRIPTION' : paymentData.programmeId ? 'PROGRAMME' : 'ORDER',
           userId: paymentData.userId,
           customerInfo: paymentData.customer,
           metadata: {

@@ -72,14 +72,19 @@ const RewardsPage = () => {
         if (packagesResponse.status === 'fulfilled' && packagesResponse.value && packagesResponse.value.items) {
           fetchedRewards.packages = packagesResponse.value.items
             .filter(item => (item.loyaltyPointsRequired || item.pointsRequired || 0) > 0) // Only show items with Gymmawy Coins
-            .map(item => ({
-              id: item.id,
-              name: getBilingualText(item.name || item.title, 'Package'),
-              pointsRequired: item.loyaltyPointsRequired || item.pointsRequired || 0,
-              image: item.image || item.thumbnail ? getFullImageUrl(item.image || item.thumbnail) : null,
-              category: 'packages',
-              originalData: item
-            }));
+            .map(item => {
+              // Debug logging for packages
+              console.log('Package item:', item.name, 'ImageUrl:', item.imageUrl, 'Final URL:', item.imageUrl ? getFullImageUrl(item.imageUrl) : null);
+              
+              return {
+                id: item.id,
+                name: getBilingualText(item.name || item.title, 'Package'),
+                pointsRequired: item.loyaltyPointsRequired || item.pointsRequired || 0,
+                image: item.imageUrl ? getFullImageUrl(item.imageUrl) : null,
+                category: 'packages',
+                originalData: item
+              };
+            });
         }
 
         // Process products
@@ -109,14 +114,19 @@ const RewardsPage = () => {
         if (programmesResponse.status === 'fulfilled' && programmesResponse.value && programmesResponse.value.items) {
           fetchedRewards.programmes = programmesResponse.value.items
             .filter(item => (item.loyaltyPointsRequired || item.pointsRequired || 0) > 0) // Only show items with Gymmawy Coins
-            .map(item => ({
-            id: item.id,
-            name: getBilingualText(item.name || item.title, 'Programme'),
-            pointsRequired: item.loyaltyPointsRequired || item.pointsRequired || 0,
-            image: item.image || item.thumbnail ? getFullImageUrl(item.image || item.thumbnail) : null,
-            category: 'programmes',
-            originalData: item
-          }));
+            .map(item => {
+              // Debug logging for programmes
+              console.log('Programme item:', item.name, 'ImageUrl:', item.imageUrl, 'Final URL:', item.imageUrl ? getFullImageUrl(item.imageUrl) : null);
+              
+              return {
+                id: item.id,
+                name: getBilingualText(item.name || item.title, 'Programme'),
+                pointsRequired: item.loyaltyPointsRequired || item.pointsRequired || 0,
+                image: item.imageUrl ? getFullImageUrl(item.imageUrl) : null,
+                category: 'programmes',
+                originalData: item
+              };
+            });
         }
 
         setRewards(fetchedRewards);
@@ -198,21 +208,18 @@ const RewardsPage = () => {
         throw new Error(validation.error || 'Validation failed');
       }
 
-      // Redirect to loyalty checkout page with reward data
-      const checkoutData = {
-        rewardId: reward.id,
-        category: reward.category,
-        name: reward.name,
-        pointsRequired: reward.pointsRequired,
-        image: reward.image,
-        type: 'loyalty'
-      };
-
-      // Store the checkout data in sessionStorage for the checkout page
-      sessionStorage.setItem('loyaltyCheckoutData', JSON.stringify(checkoutData));
-      
-      // Navigate to checkout page
-      navigate('/checkout');
+      // Navigate to rewards checkout page with reward data
+      navigate('/rewards-checkout', {
+        state: {
+          itemId: reward.id,
+          category: reward.category,
+          name: reward.name,
+          pointsRequired: reward.pointsRequired,
+          image: reward.image,
+          quantity: 1,
+          size: 'M'
+        }
+      });
       
     } catch (error) {
       console.error('Redemption validation error:', error);

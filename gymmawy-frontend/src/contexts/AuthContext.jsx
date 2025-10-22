@@ -159,16 +159,26 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async() => {
     try {
+      console.log('AuthContext: Starting logout process...');
       await authService.logout();
+      console.log('AuthContext: Server logout completed');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('AuthContext: Logout error:', error);
     } finally {
       // Always clear all tokens and user state on logout
+      console.log('AuthContext: Clearing tokens and user state...');
       authService.removeToken();
       authService.removeRefreshToken();
       setUser(null);
       setError(null);
       tokenManager.stopTokenRefresh();
+      
+      // Force a re-render by updating loading state briefly
+      setLoading(true);
+      setTimeout(() => {
+        setLoading(false);
+        console.log('AuthContext: Logout cleanup completed');
+      }, 50);
     }
   };
 

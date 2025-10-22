@@ -339,7 +339,7 @@ export async function validateRedemption(userId, itemId, category, pointsRequire
 /**
  * Process reward redemption
  */
-export async function processRedemption(userId, itemId, category, pointsRequired) {
+export async function processRedemption(userId, itemId, category, pointsRequired, options = {}) {
   try {
     console.log('🎁 Processing redemption:', { userId, itemId, category, pointsRequired });
 
@@ -362,17 +362,57 @@ export async function processRedemption(userId, itemId, category, pointsRequired
         }
       });
 
-      // Create payment record for the redemption
+      // Create an order representing the redemption (normal order semantics)
+      const orderNumber = await generateUniqueId();
+
+      const createdOrder = await tx.order.create({
+        data: {
+          userId,
+          orderNumber,
+          paymentMethod: 'GYMMAWY_COINS',
+          price: pointsRequired, // points spent represented as amount
+          currency: 'GYMMAWY_COINS',
+          discountPercentage: 0,
+          shippingBuilding: options.shippingDetails?.shippingBuilding || null,
+          shippingStreet: options.shippingDetails?.shippingStreet || null,
+          shippingCity: options.shippingDetails?.shippingCity || null,
+          shippingCountry: options.shippingDetails?.shippingCountry || null,
+          shippingPostcode: options.shippingDetails?.shippingPostcode || null,
+          shippingCost: 0,
+          isCashOnDelivery: false,
+          metadata: {
+            redemption: true,
+            category,
+            itemId
+          }
+        }
+      });
+
+      // Create order item (for products we link productId; for others store name/category)
+      await tx.orderItem.create({
+        data: {
+          orderId: createdOrder.id,
+          productId: category === 'products' ? itemId : null,
+          quantity: options.quantity || 1,
+          size: options.size || null,
+          price: pointsRequired,
+          discountPercentage: 0,
+          category: category.toUpperCase(),
+          name: validation.reward?.name?.en || validation.reward?.name?.ar || undefined
+        }
+      });
+
+      // Create payment record linked to the order
       const payment = await tx.payment.create({
         data: {
           userId: userId,
-          amount: -pointsRequired, // Negative amount for spending
+          amount: pointsRequired,
           currency: 'GYMMAWY_COINS',
           method: 'GYMMAWY_COINS',
           status: 'SUCCESS',
           paymentReference: await generateUniqueId(),
-          paymentableId: itemId,
-          paymentableType: category.toUpperCase(),
+          paymentableId: createdOrder.id,
+          paymentableType: 'ORDER',
           metadata: {
             type: 'REDEMPTION',
             category: category,
@@ -395,6 +435,7 @@ export async function processRedemption(userId, itemId, category, pointsRequired
       }
 
       return {
+        order: createdOrder,
         payment,
         updatedUser,
         reward: validation.reward
@@ -406,6 +447,8 @@ export async function processRedemption(userId, itemId, category, pointsRequired
     return {
       success: true,
       redemptionId: result.payment.id,
+      orderId: result.order.id,
+      orderNumber: result.order.orderNumber,
       pointsSpent: pointsRequired,
       remainingPoints: result.updatedUser.loyaltyPoints,
       reward: result.reward

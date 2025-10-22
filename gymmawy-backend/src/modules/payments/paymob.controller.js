@@ -135,6 +135,8 @@ export const createIntention = async (req, res) => {
         gatewayId: intentionResult.data.id,
         transactionId: null, // Will be updated when webhook is received
         paymentReference: finalSpecialReference,
+        paymentableId: billingData.orderId || billingData.subscriptionId || billingData.programmeId,
+        paymentableType: billingData.orderId ? 'ORDER' : billingData.subscriptionId ? 'SUBSCRIPTION' : billingData.programmeId ? 'PROGRAMME' : 'ORDER',
         userId: req.user?.id || null,
         customerInfo: {
           firstName: customer.firstName,

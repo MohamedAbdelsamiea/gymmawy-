@@ -5,7 +5,7 @@ export async function createOrder(req, res, next) {
   try {
     const schema = z.object({
       couponId: z.string().nullable().optional(),
-      currency: z.enum(['EGP', 'SAR', 'AED', 'USD']).optional().default('EGP'),
+      currency: z.enum(['EGP', 'SAR', 'AED', 'USD', 'GYMMAWY_COINS']).optional().default('EGP'),
       // For single product orders
       productId: z.string().optional(),
       quantity: z.number().optional(),
@@ -62,7 +62,7 @@ export async function createOrderFromCart(req, res, next) {
   try {
     const schema = z.object({
       couponId: z.string().nullable().optional(),
-      currency: z.enum(['EGP', 'SAR', 'AED', 'USD']).optional().default('EGP'),
+      currency: z.enum(['EGP', 'SAR', 'AED', 'USD', 'GYMMAWY_COINS']).optional().default('EGP'),
       // Shipping details
       shippingDetails: z.object({
         shippingBuilding: z.string().optional(),

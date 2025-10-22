@@ -44,5 +44,18 @@
     "requiredPoints": "Required Gymmawy Coins", 
     "pointsNeeded": "Gymmawy Coins Needed"
   },
-  "locked": "Locked"
+  "locked": "Locked",
+  "rewardsCheckout": "Rewards Checkout",
+  "completeRedemption": "Complete your reward redemption",
+  "noRewardSelected": "No Reward Selected",
+  "pleaseSelectReward": "Please select a reward to redeem first.",
+  "backToRewards": "Back to Rewards",
+  "processing": "Processing...",
+  "redeemNow": "Redeem Now",
+  "paymentMethod": "Payment Method",
+  "gymmawyCoinsPayment": "Paid with Gymmawy Coins",
+  "secureRedemption": "Secure Redemption",
+  "secureRedemptionDesc": "Your redemption is processed securely and your reward will be delivered to the provided address.",
+  "redemption_failed": "Redemption failed. Please try again.",
+  "invalid_redemption": "Invalid redemption data. Please try again."
 }

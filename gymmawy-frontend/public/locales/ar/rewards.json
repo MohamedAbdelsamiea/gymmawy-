@@ -44,5 +44,18 @@
     "requiredPoints": "عملات جيماوي المطلوبة",
     "pointsNeeded": "عملات جيماوي المطلوبة"
   },
-  "locked": "مقفل"
+  "locked": "مقفل",
+  "rewardsCheckout": "دفع المكافآت",
+  "completeRedemption": "أكمل استبدال مكافأتك",
+  "noRewardSelected": "لم يتم اختيار مكافأة",
+  "pleaseSelectReward": "يرجى اختيار مكافأة للاستبدال أولاً.",
+  "backToRewards": "العودة للمكافآت",
+  "processing": "جاري المعالجة...",
+  "redeemNow": "استبدال الآن",
+  "paymentMethod": "طريقة الدفع",
+  "gymmawyCoinsPayment": "مدفوع بعملات جيماوي",
+  "secureRedemption": "استبدال آمن",
+  "secureRedemptionDesc": "يتم معالجة استبدالك بأمان وستتم إرسال مكافأتك إلى العنوان المقدم.",
+  "redemption_failed": "فشل الاستبدال. يرجى المحاولة مرة أخرى.",
+  "invalid_redemption": "بيانات الاستبدال غير صحيحة. يرجى المحاولة مرة أخرى."
 }

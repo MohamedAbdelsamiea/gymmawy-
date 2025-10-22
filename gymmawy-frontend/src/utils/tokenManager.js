@@ -136,10 +136,13 @@ return;
 
   // Stop periodic token checks
   stopPeriodicCheck() {
+    console.log('TokenManager: Stopping periodic checks...');
     if (this.periodicCheckTimer) {
       clearInterval(this.periodicCheckTimer);
       this.periodicCheckTimer = null;
     }
+    this.removeVisibilityListener();
+    console.log('TokenManager: Periodic checks stopped');
   }
 
   // Check if token is about to expire and refresh if needed
@@ -158,12 +161,15 @@ return false;
 
   // Stop automatic token refresh
   stopTokenRefresh() {
+    console.log('TokenManager: Stopping token refresh...');
     if (this.refreshTimer) {
       clearTimeout(this.refreshTimer);
       this.refreshTimer = null;
     }
     this.stopPeriodicCheck();
     this.removeVisibilityListener();
+    this.isRefreshing = false;
+    console.log('TokenManager: Token refresh stopped');
   }
 
   // Refresh token

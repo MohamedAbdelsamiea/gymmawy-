@@ -18,6 +18,7 @@ const Rewards = lazy(() => import('./pages/Rewards'));
 const Auth = lazy(() => import('./pages/Auth'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Checkout = lazy(() => import('./pages/Checkout'));
+const RewardsCheckout = lazy(() => import('./pages/RewardsCheckout'));
 const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess.jsx'));
 const PaymentFailure = lazy(() => import('./pages/PaymentFailure.jsx'));
 const PaymentCancel = lazy(() => import('./pages/PaymentCancel.jsx'));
@@ -50,6 +51,7 @@ export const publicRoutes = [
 export const protectedRoutes = [
   { path: '/dashboard/*', element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
   { path: '/checkout', element: <ProtectedRoute><Checkout /></ProtectedRoute> },
+  { path: '/rewards-checkout', element: <ProtectedRoute><RewardsCheckout /></ProtectedRoute> },
 ];
 
 // All routes combined
