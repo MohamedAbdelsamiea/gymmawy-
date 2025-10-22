@@ -61,6 +61,7 @@
     "orderItems": "عناصر الطلب",
     "benefits": "المميزات:",
     "subtotal": "المجموع الفرعي:",
+    "sarConversionMessage": "هذا المبلغ سيكون مساوياً تقريباً لـ {{sarAmount}} ريال سعودي",
     "planDiscount": "خصم الخطة",
     "couponDiscount": "خصم الكوبون",
     "totalDiscount": "إجمالي الخصم:",

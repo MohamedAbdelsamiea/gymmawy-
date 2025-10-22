@@ -61,6 +61,7 @@
     "orderItems": "Order Items",
     "benefits": "Benefits:",
     "subtotal": "Subtotal:",
+    "sarConversionMessage": "This amount will be approximately equal to {{sarAmount}} SAR",
     "planDiscount": "Plan Discount",
     "couponDiscount": "Coupon Discount",
     "totalDiscount": "Total Discount:",

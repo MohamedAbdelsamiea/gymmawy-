@@ -118,7 +118,18 @@ class CurrencyService {
       return amount * this.currencyRates[toCurrency];
     }
 
-    // Fallback to basic conversion (you might want to implement this)
+    // Fallback to basic conversion rates (same as backend)
+    const fallbackRates = {
+      'USD': { 'SAR': 3.75, 'AED': 3.68, 'EGP': 18.75 },
+      'AED': { 'SAR': 1.02, 'USD': 0.27, 'EGP': 5.10 },
+      'SAR': { 'USD': 0.27, 'AED': 0.98, 'EGP': 5.00 },
+      'EGP': { 'SAR': 0.20, 'USD': 0.053, 'AED': 0.196 }
+    };
+
+    if (fallbackRates[fromCurrency] && fallbackRates[fromCurrency][toCurrency]) {
+      return Math.round(amount * fallbackRates[fromCurrency][toCurrency] * 100) / 100;
+    }
+
     console.warn('Currency rates not available, using fallback conversion');
     return amount;
   }

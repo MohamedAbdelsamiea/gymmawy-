@@ -11,6 +11,7 @@ import checkoutService from '../../services/checkoutService';
 import imageUploadService from '../../services/imageUploadService';
 import tabbyService from '../../services/tabbyService';
 import rewardsService from '../../services/rewardsService';
+import currencyService from '../../services/currencyService';
 import useTabbyPromo from '../../hooks/useTabbyPromo';
 import countryDetectionService from '../../services/countryDetectionService';
 import { useSecureImage } from '../../hooks/useSecureImage';
@@ -1799,6 +1800,20 @@ return;
           <span className="font-medium">{formatPrice(subtotal)}</span>
         </div>
         
+        {/* SAR Conversion Message for USD/AED currencies */}
+        {(currentPrice?.currency === 'USD' || currentPrice?.currency === 'AED') && (
+          <div className="flex justify-between text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+            <span className="text-blue-600">
+              {t('checkout.sarConversionMessage', { 
+                sarAmount: currencyService.formatPrice(
+                  currencyService.convertPrice(subtotal, currentPrice.currency, 'SAR'), 
+                  'SAR'
+                )
+              })}
+            </span>
+          </div>
+        )}
+        
         {/* Shipping cost for cart and product orders */}
         {(type === 'cart' || type === 'product') && (
           <div className="flex justify-between text-sm">
@@ -1837,6 +1852,20 @@ return;
           <span>{t('checkout.total')}</span>
           <span>{formatPrice(total)}</span>
         </div>
+        
+        {/* SAR Conversion Message for Total (USD/AED currencies) */}
+        {(currentPrice?.currency === 'USD' || currentPrice?.currency === 'AED') && (
+          <div className="flex justify-between text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded mt-2">
+            <span className="text-blue-600">
+              {t('checkout.sarConversionMessage', { 
+                sarAmount: currencyService.formatPrice(
+                  currencyService.convertPrice(total, currentPrice.currency, 'SAR'), 
+                  'SAR'
+                )
+              })}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

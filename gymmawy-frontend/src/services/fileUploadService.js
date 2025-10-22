@@ -39,6 +39,11 @@ class FileUploadService {
         method: 'POST',
         headers,
         body: formData,
+      }).catch(error => {
+        console.error('FileUploadService - Fetch error:', error);
+        console.error('FileUploadService - Upload URL:', uploadUrl);
+        console.error('FileUploadService - Headers:', headers);
+        throw error;
       });
       
       if (!response.ok) {

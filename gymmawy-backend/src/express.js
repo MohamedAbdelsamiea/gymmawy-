@@ -107,15 +107,13 @@ app.use("/api/rewards", rewardsRoutes);
 app.use("/api/currency", currencyRoutes);
 app.use("/api/prices", priceRoutes);
 app.use("/api/shipping", shippingRoutes);
-app.use("/api/uploads", uploadRoutes);
-
 // Upload routes (for file uploads) - must come before static file serving
 app.use("/uploads", uploadRoutes);
 
 // Serve uploaded files statically with CORS headers (fallback for non-API requests)
 app.use("/uploads", (req, res, next) => {
-  // Skip if this is an API request (has specific upload endpoints) or DELETE request
-  if (req.path.match(/^\/(public|admin)\/(images|videos|pdfs)/) || req.path.match(/^\/payment-proof/) || req.method === 'DELETE') {
+  // Skip if this is an upload API request (has specific upload endpoints) or DELETE request
+  if (req.path.match(/^\/(public|admin)\/(images|videos|pdfs)/) || req.path.match(/^\/payment-proof/) || req.method === 'DELETE' || req.method === 'POST') {
     return next();
   }
   
