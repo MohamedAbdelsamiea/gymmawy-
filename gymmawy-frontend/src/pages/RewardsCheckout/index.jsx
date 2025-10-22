@@ -11,16 +11,13 @@ import CityAutocomplete from '../../components/common/CityAutocomplete';
 import { 
   ArrowLeft,
   MapPin,
-  Phone,
-  Mail,
-  User,
   Package,
-  Truck,
   Gift,
   Coins,
   Shield,
   CheckCircle,
   XCircle,
+  Calendar,
 } from 'lucide-react';
 import * as Accordion from "@radix-ui/react-accordion";
 
@@ -64,12 +61,6 @@ const RewardsCheckout = () => {
 
   // Form state
   const [formData, setFormData] = useState({
-    // Personal Information
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    email: user?.email || '',
-    mobileNumber: user?.mobileNumber || '',
-    
     // Shipping Address
     shippingBuilding: user?.building || '',
     shippingStreet: user?.street || '',
@@ -81,6 +72,62 @@ const RewardsCheckout = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
   const [isValid, setIsValid] = useState(false);
+  const [selectedDuration, setSelectedDuration] = useState('normal');
+
+  // Helper function to format subscription period
+  const formatSubscriptionPeriod = (days) => {
+    const numDays = parseInt(days) || 0;
+    
+    if (numDays === 0) {
+      return '';
+    }
+    
+    if (numDays >= 7) {
+      const weeks = Math.floor(numDays / 7);
+      return t('common.weeks', { count: weeks });
+    } else if (numDays >= 30) {
+      const months = Math.floor(numDays / 30);
+      return t('common.months', { count: months });
+    } else {
+      return t('common.days', { count: numDays });
+    }
+  };
+
+  // Helper function to format gift period
+  const formatGiftPeriod = (days) => {
+    if (days === 0) {
+      return '';
+    }
+    return ` + ${formatSubscriptionPeriod(days)}`;
+  };
+
+  // Get duration data from the reward item
+  const getDurationData = () => {
+    if (!rewardData) {
+      return { subscriptionDays: 0, giftDays: 0 };
+    }
+    
+    // Check for API data format
+    if (rewardData.subscriptionPeriodDays !== undefined) {
+      return {
+        subscriptionDays: rewardData.subscriptionPeriodDays || 0,
+        giftDays: rewardData.giftPeriodDays || 0,
+      };
+    } else if (rewardData.subscriptionPeriod !== undefined) {
+      return {
+        subscriptionDays: rewardData.subscriptionPeriod || 0,
+        giftDays: rewardData.giftPeriod || 0,
+      };
+    }
+    
+    return { subscriptionDays: 0, giftDays: 0 };
+  };
+
+  const durationData = getDurationData();
+
+  // Calculate point requirements
+  const normalPointsRequired = rewardData?.loyaltyPointsRequired || pointsRequired || 0;
+  const medicalPointsRequired = rewardData?.medicalLoyaltyPointsRequired || rewardData?.loyaltyPointsRequired || pointsRequired || 0;
 
   // Load saved form data
   useEffect(() => {
@@ -88,6 +135,9 @@ const RewardsCheckout = () => {
       const savedData = loadData();
       if (savedData) {
         setFormData(prev => ({ ...prev, ...savedData }));
+        if (savedData.selectedDuration) {
+          setSelectedDuration(savedData.selectedDuration);
+        }
       }
     }
   }, [hasStoredData, isPersistenceLoading, loadData]);
@@ -96,36 +146,30 @@ const RewardsCheckout = () => {
   useEffect(() => {
     const errors = {};
     
-    // Required fields validation
-    if (!formData.firstName.trim()) errors.firstName = t('checkout:validation.firstNameRequired');
-    if (!formData.lastName.trim()) errors.lastName = t('checkout:validation.lastNameRequired');
-    if (!formData.email.trim()) errors.email = t('checkout:validation.emailRequired');
-    if (!formData.mobileNumber.trim()) errors.mobileNumber = t('checkout:validation.mobileRequired');
-    if (!formData.shippingBuilding.trim()) errors.shippingBuilding = t('checkout:validation.buildingRequired');
-    if (!formData.shippingStreet.trim()) errors.shippingStreet = t('checkout:validation.streetRequired');
-    if (!formData.shippingCity.trim()) errors.shippingCity = t('checkout:validation.cityRequired');
-    if (!formData.shippingCountry.trim()) errors.shippingCountry = t('checkout:validation.countryRequired');
-
-    // Email validation
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = t('checkout:validation.emailInvalid');
-    }
-
-    // Mobile validation (basic)
-    if (formData.mobileNumber && !/^[0-9+\-\s()]+$/.test(formData.mobileNumber)) {
-      errors.mobileNumber = t('checkout:validation.mobileInvalid');
+    // Only require shipping address for products
+    if (category === 'products') {
+      if (!formData.shippingBuilding.trim()) errors.shippingBuilding = t('checkout:validation.buildingRequired');
+      if (!formData.shippingStreet.trim()) errors.shippingStreet = t('checkout:validation.streetRequired');
+      if (!formData.shippingCity.trim()) errors.shippingCity = t('checkout:validation.cityRequired');
+      if (!formData.shippingCountry.trim()) errors.shippingCountry = t('checkout:validation.countryRequired');
     }
 
     setValidationErrors(errors);
-    setIsValid(Object.keys(errors).length === 0 && itemId && category && pointsRequired > 0);
-  }, [formData, itemId, category, pointsRequired, t]);
+    
+    // Use the correct points based on selected duration for packages
+    const currentPointsRequired = category === 'packages' 
+      ? (selectedDuration === 'medical' ? medicalPointsRequired : normalPointsRequired)
+      : pointsRequired;
+    
+    setIsValid(Object.keys(errors).length === 0 && itemId && category && currentPointsRequired > 0);
+  }, [formData, itemId, category, pointsRequired, selectedDuration, normalPointsRequired, medicalPointsRequired, t]);
 
   // Auto-save form data
   useEffect(() => {
     if (isValid && !isPersistenceLoading) {
-      debouncedSave(formData);
+      debouncedSave({ ...formData, selectedDuration });
     }
-  }, [formData, isValid, debouncedSave, isPersistenceLoading]);
+  }, [formData, selectedDuration, isValid, debouncedSave, isPersistenceLoading]);
 
   // Handle input changes
   const handleInputChange = (e) => {
@@ -140,7 +184,12 @@ const RewardsCheckout = () => {
 
   // Calculate totals
   const totals = useMemo(() => {
-    const subtotal = pointsRequired * quantity;
+    // Use the correct points based on selected duration for packages
+    const currentPointsRequired = category === 'packages' 
+      ? (selectedDuration === 'medical' ? medicalPointsRequired : normalPointsRequired)
+      : pointsRequired;
+    
+    const subtotal = currentPointsRequired * quantity;
     const shipping = 0; // Free shipping for rewards
     const total = subtotal + shipping;
 
@@ -150,7 +199,7 @@ const RewardsCheckout = () => {
       total,
       currency: 'GYMMAWY_COINS'
     };
-  }, [pointsRequired, quantity]);
+  }, [pointsRequired, category, selectedDuration, normalPointsRequired, medicalPointsRequired, quantity]);
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -169,24 +218,31 @@ const RewardsCheckout = () => {
     try {
       setIsSubmitting(true);
 
+      // Calculate the correct points based on selected duration
+      const currentPointsRequired = category === 'packages' 
+        ? (selectedDuration === 'medical' ? medicalPointsRequired : normalPointsRequired)
+        : pointsRequired;
+
       // Validate redemption first
-      await rewardsService.validateRedemption(itemId, category, pointsRequired);
+      await rewardsService.validateRedemption(itemId, category, currentPointsRequired);
 
       // Process redemption
       const result = await rewardsService.redeemReward(
         itemId,
         category,
-        {
+        // Only send shipping details for products
+        category === 'products' ? {
           shippingBuilding: formData.shippingBuilding,
           shippingStreet: formData.shippingStreet,
           shippingCity: formData.shippingCity,
           shippingCountry: formData.shippingCountry,
           shippingPostcode: formData.shippingPostcode,
-        },
+        } : {},
         { 
-          pointsRequired, 
+          pointsRequired: currentPointsRequired, 
           quantity, 
-          size 
+          size,
+          isMedical: selectedDuration === 'medical'
         }
       );
 
@@ -265,195 +321,182 @@ const RewardsCheckout = () => {
           {/* Main Form */}
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Personal Information */}
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <div className="flex items-center mb-6">
-                  <User className="h-6 w-6 text-[#190143] mr-3" />
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    {t('checkout:personalInformation')}
-                  </h2>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('checkout:firstName')} *
-                    </label>
-                    <input
-                      type="text"
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#190143] focus:border-transparent ${
-                        validationErrors.firstName ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder={t('checkout:enterFirstName')}
-                    />
-                    {validationErrors.firstName && (
-                      <p className="mt-1 text-sm text-red-600">{validationErrors.firstName}</p>
-                    )}
+              {/* Shipping Address - Only for products */}
+              {category === 'products' && (
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <div className="flex items-center mb-6">
+                    <MapPin className="h-6 w-6 text-[#190143] mr-3" />
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      {t('checkout:shippingAddress')}
+                    </h2>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('checkout:lastName')} *
-                    </label>
-                    <input
-                      type="text"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#190143] focus:border-transparent ${
-                        validationErrors.lastName ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder={t('checkout:enterLastName')}
-                    />
-                    {validationErrors.lastName && (
-                      <p className="mt-1 text-sm text-red-600">{validationErrors.lastName}</p>
-                    )}
-                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {t('checkout:building')} *
+                      </label>
+                      <input
+                        type="text"
+                        name="shippingBuilding"
+                        value={formData.shippingBuilding}
+                        onChange={handleInputChange}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#190143] focus:border-transparent ${
+                          validationErrors.shippingBuilding ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder={t('checkout:enterBuilding')}
+                      />
+                      {validationErrors.shippingBuilding && (
+                        <p className="mt-1 text-sm text-red-600">{validationErrors.shippingBuilding}</p>
+                      )}
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('checkout:email')} *
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#190143] focus:border-transparent ${
-                        validationErrors.email ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder={t('checkout:enterEmail')}
-                    />
-                    {validationErrors.email && (
-                      <p className="mt-1 text-sm text-red-600">{validationErrors.email}</p>
-                    )}
-                  </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {t('checkout:street')} *
+                      </label>
+                      <input
+                        type="text"
+                        name="shippingStreet"
+                        value={formData.shippingStreet}
+                        onChange={handleInputChange}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#190143] focus:border-transparent ${
+                          validationErrors.shippingStreet ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder={t('checkout:enterStreet')}
+                      />
+                      {validationErrors.shippingStreet && (
+                        <p className="mt-1 text-sm text-red-600">{validationErrors.shippingStreet}</p>
+                      )}
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('checkout:mobileNumber')} *
-                    </label>
-                    <input
-                      type="tel"
-                      name="mobileNumber"
-                      value={formData.mobileNumber}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#190143] focus:border-transparent ${
-                        validationErrors.mobileNumber ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder={t('checkout:enterMobile')}
-                    />
-                    {validationErrors.mobileNumber && (
-                      <p className="mt-1 text-sm text-red-600">{validationErrors.mobileNumber}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {t('checkout:city')} *
+                      </label>
+                      <CityAutocomplete
+                        value={formData.shippingCity}
+                        onSelect={handleCitySelect}
+                        onChange={(value) => setFormData(prev => ({ ...prev, shippingCity: value }))}
+                        error={validationErrors.shippingCity}
+                        placeholder={t('checkout:enterCity')}
+                      />
+                      {validationErrors.shippingCity && (
+                        <p className="mt-1 text-sm text-red-600">{validationErrors.shippingCity}</p>
+                      )}
+                    </div>
 
-              {/* Shipping Address */}
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <div className="flex items-center mb-6">
-                  <MapPin className="h-6 w-6 text-[#190143] mr-3" />
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    {t('checkout:shippingAddress')}
-                  </h2>
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {t('checkout:country')} *
+                      </label>
+                      <select
+                        name="shippingCountry"
+                        value={formData.shippingCountry}
+                        onChange={handleInputChange}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#190143] focus:border-transparent ${
+                          validationErrors.shippingCountry ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                      >
+                        <option value="Egypt">Egypt</option>
+                        <option value="Saudi Arabia">Saudi Arabia</option>
+                        <option value="UAE">UAE</option>
+                        <option value="Other">Other</option>
+                      </select>
+                      {validationErrors.shippingCountry && (
+                        <p className="mt-1 text-sm text-red-600">{validationErrors.shippingCountry}</p>
+                      )}
+                    </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('checkout:building')} *
-                    </label>
-                    <input
-                      type="text"
-                      name="shippingBuilding"
-                      value={formData.shippingBuilding}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#190143] focus:border-transparent ${
-                        validationErrors.shippingBuilding ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder={t('checkout:enterBuilding')}
-                    />
-                    {validationErrors.shippingBuilding && (
-                      <p className="mt-1 text-sm text-red-600">{validationErrors.shippingBuilding}</p>
-                    )}
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('checkout:street')} *
-                    </label>
-                    <input
-                      type="text"
-                      name="shippingStreet"
-                      value={formData.shippingStreet}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#190143] focus:border-transparent ${
-                        validationErrors.shippingStreet ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder={t('checkout:enterStreet')}
-                    />
-                    {validationErrors.shippingStreet && (
-                      <p className="mt-1 text-sm text-red-600">{validationErrors.shippingStreet}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('checkout:city')} *
-                    </label>
-                    <CityAutocomplete
-                      value={formData.shippingCity}
-                      onSelect={handleCitySelect}
-                      onChange={(value) => setFormData(prev => ({ ...prev, shippingCity: value }))}
-                      error={validationErrors.shippingCity}
-                      placeholder={t('checkout:enterCity')}
-                    />
-                    {validationErrors.shippingCity && (
-                      <p className="mt-1 text-sm text-red-600">{validationErrors.shippingCity}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('checkout:country')} *
-                    </label>
-                    <select
-                      name="shippingCountry"
-                      value={formData.shippingCountry}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#190143] focus:border-transparent ${
-                        validationErrors.shippingCountry ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                    >
-                      <option value="Egypt">Egypt</option>
-                      <option value="Saudi Arabia">Saudi Arabia</option>
-                      <option value="UAE">UAE</option>
-                      <option value="Other">Other</option>
-                    </select>
-                    {validationErrors.shippingCountry && (
-                      <p className="mt-1 text-sm text-red-600">{validationErrors.shippingCountry}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('checkout:postcode')}
-                    </label>
-                    <input
-                      type="text"
-                      name="shippingPostcode"
-                      value={formData.shippingPostcode}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#190143] focus:border-transparent"
-                      placeholder={t('checkout:enterPostcode')}
-                    />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {t('checkout:postcode')}
+                      </label>
+                      <input
+                        type="text"
+                        name="shippingPostcode"
+                        value={formData.shippingPostcode}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#190143] focus:border-transparent"
+                        placeholder={t('checkout:enterPostcode')}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* Duration Selection (for packages) */}
+              {category === 'packages' && (
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <div className="flex items-center mb-6">
+                    <Calendar className="h-6 w-6 text-[#190143] mr-3" />
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      {t('checkout:chooseDuration')}
+                    </h2>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                      <input
+                        type="radio"
+                        name="duration"
+                        value="normal"
+                        checked={selectedDuration === 'normal'}
+                        onChange={(e) => setSelectedDuration(e.target.value)}
+                        className="h-4 w-4 text-[#190143] focus:ring-[#190143] border-gray-300"
+                      />
+                      <div className="ml-3 flex-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-900">
+                            {durationData.subscriptionDays > 0 ? (
+                              <>
+                                {formatSubscriptionPeriod(durationData.subscriptionDays)}
+                                {formatGiftPeriod(durationData.giftDays)}
+                              </>
+                            ) : (
+                              <span className="text-gray-500">{t('checkout:durationNotSpecified')}</span>
+                            )}
+                          </span>
+                          <div className="flex items-center text-sm font-medium text-[#190143]">
+                            <Coins className="h-4 w-4 mr-1" />
+                            {normalPointsRequired} {t('rewards:points')}
+                          </div>
+                        </div>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                      <input
+                        type="radio"
+                        name="duration"
+                        value="medical"
+                        checked={selectedDuration === 'medical'}
+                        onChange={(e) => setSelectedDuration(e.target.value)}
+                        className="h-4 w-4 text-[#190143] focus:ring-[#190143] border-gray-300"
+                      />
+                      <div className="ml-3 flex-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-900">
+                            {durationData.subscriptionDays > 0 ? (
+                              <>
+                                {formatSubscriptionPeriod(durationData.subscriptionDays)}
+                                {formatGiftPeriod(durationData.giftDays)} - {t('checkout:medicalPackage')}
+                              </>
+                            ) : (
+                              <span className="text-gray-500">{t('checkout:durationNotSpecified')} - {t('checkout:medicalPackage')}</span>
+                            )}
+                          </span>
+                          <div className="flex items-center text-sm font-medium text-[#190143]">
+                            <Coins className="h-4 w-4 mr-1" />
+                            {medicalPointsRequired} {t('rewards:points')}
+                          </div>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               {/* Submit Button */}
               <div className="bg-white rounded-xl shadow-sm p-6">

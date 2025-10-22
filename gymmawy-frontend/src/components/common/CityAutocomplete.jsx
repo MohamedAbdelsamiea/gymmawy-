@@ -31,10 +31,14 @@ const CityAutocomplete = ({
       setIsLoading(true);
       const response = await apiClient.get(`/api/shipping/search-cities?q=${encodeURIComponent(query)}&limit=10`);
       
-      if (response.data.success) {
-        setSuggestions(response.data.cities || []);
+      console.log('🔍 City search response:', response);
+      
+      if (response.success) {
+        setSuggestions(response.cities || []);
         setError(null);
+        console.log('🔍 Cities found:', response.cities);
       } else {
+        console.error('City search failed:', response);
         setError('Failed to search cities');
         setSuggestions([]);
       }
@@ -58,16 +62,18 @@ const CityAutocomplete = ({
       setIsValidating(true);
       const response = await apiClient.get(`/api/shipping/validate-city?city=${encodeURIComponent(cityName)}`);
       
-      if (response.data.success) {
-        if (response.data.isValid) {
+      console.log('🔍 City validation response:', response);
+      
+      if (response.success) {
+        if (response.isValid) {
           setError(null);
           onError && onError(null);
         } else {
-          const errorMessage = response.data.message;
+          const errorMessage = response.message;
           setError(errorMessage);
           onError && onError({
             message: errorMessage,
-            suggestions: response.data.suggestions || []
+            suggestions: response.suggestions || []
           });
         }
       }

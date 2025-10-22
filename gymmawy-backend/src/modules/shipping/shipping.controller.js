@@ -318,17 +318,36 @@ export async function validateCity(req, res, next) {
       });
     }
 
-    // Get available cities from OTO
-    const availableCitiesResult = await otoService.getAvailableCities({ limit: 1000 });
-    
-    if (!availableCitiesResult.success) {
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to fetch available cities from OTO'
-      });
-    }
+    // Fallback cities list for Egypt
+    const fallbackCities = [
+      'Cairo', 'Alexandria', 'Giza', 'Shubra El Kheima', 'Port Said', 'Suez', 'Luxor', 'Mansoura',
+      'El Mahalla El Kubra', 'Tanta', 'Asyut', 'Ismailia', 'Faiyum', 'Zagazig', 'Aswan', 'Damietta',
+      'Damanhur', 'Minya', 'Beni Suef', 'Hurghada', 'Qena', 'Sohag', '6th of October City', 'Shibin El Kom',
+      'Banha', 'Kafr el-Sheikh', 'Mallawi', 'Bilbeis', 'Marsa Matruh', 'Kafr el-Dawwar', 'Qalyub', 'Desouk',
+      'Abu Kabir', 'Girga', 'Akhmim', 'Matareya', 'Edko', 'Bani Mazar', 'Samalut', 'Manfalut',
+      'Senbellawein', 'Tala', 'Ashmun', 'El Ghanayem', 'Sidi Salem', 'Sirs al-Layyan', 'Ibsheway', 'Abu Tig',
+      'El Fashn', 'New Akhmim', 'New Nubariya', 'New Salhia', 'New Minya', 'New Assiut', 'New Sohag',
+      'New Qena', 'New Luxor', 'New Aswan', 'New Hurghada', 'New Sharm El Sheikh', 'New Damanhur',
+      'New Tanta', 'New Mansoura', 'New Zagazig', 'New Ismailia', 'New Port Said', 'New Suez'
+    ];
 
-    const availableCities = availableCitiesResult.data?.cities || [];
+    let availableCities = [];
+
+    // Try to get cities from OTO service first
+    try {
+      const availableCitiesResult = await otoService.getAvailableCities({ limit: 1000 });
+      
+      if (availableCitiesResult.success && availableCitiesResult.data?.cities?.length > 0) {
+        availableCities = availableCitiesResult.data.cities;
+      } else {
+        // Use fallback if OTO service fails or returns empty
+        availableCities = fallbackCities.map(city => ({ name: city }));
+      }
+    } catch (otoError) {
+      console.warn('OTO service failed, using fallback cities:', otoError.message);
+      // Use fallback if OTO service throws error
+      availableCities = fallbackCities.map(city => ({ name: city }));
+    }
     
     // Normalize city names for comparison
     const normalizeCity = (cityName) => {
@@ -391,6 +410,8 @@ export async function searchCities(req, res, next) {
   try {
     const { q, limit = 10 } = req.query;
     
+    console.log('🔍 City search request:', { q, limit });
+    
     if (!q || q.length < 2) {
       return res.json({
         success: true,
@@ -398,17 +419,36 @@ export async function searchCities(req, res, next) {
       });
     }
 
-    // Get available cities from OTO
-    const availableCitiesResult = await otoService.getAvailableCities({ limit: 1000 });
-    
-    if (!availableCitiesResult.success) {
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to fetch available cities from OTO'
-      });
-    }
+    // Fallback cities list for Egypt
+    const fallbackCities = [
+      'Cairo', 'Alexandria', 'Giza', 'Shubra El Kheima', 'Port Said', 'Suez', 'Luxor', 'Mansoura',
+      'El Mahalla El Kubra', 'Tanta', 'Asyut', 'Ismailia', 'Faiyum', 'Zagazig', 'Aswan', 'Damietta',
+      'Damanhur', 'Minya', 'Beni Suef', 'Hurghada', 'Qena', 'Sohag', '6th of October City', 'Shibin El Kom',
+      'Banha', 'Kafr el-Sheikh', 'Mallawi', 'Bilbeis', 'Marsa Matruh', 'Kafr el-Dawwar', 'Qalyub', 'Desouk',
+      'Abu Kabir', 'Girga', 'Akhmim', 'Matareya', 'Edko', 'Bani Mazar', 'Samalut', 'Manfalut',
+      'Senbellawein', 'Tala', 'Ashmun', 'El Ghanayem', 'Sidi Salem', 'Sirs al-Layyan', 'Ibsheway', 'Abu Tig',
+      'El Fashn', 'New Akhmim', 'New Nubariya', 'New Salhia', 'New Minya', 'New Assiut', 'New Sohag',
+      'New Qena', 'New Luxor', 'New Aswan', 'New Hurghada', 'New Sharm El Sheikh', 'New Damanhur',
+      'New Tanta', 'New Mansoura', 'New Zagazig', 'New Ismailia', 'New Port Said', 'New Suez'
+    ];
 
-    const availableCities = availableCitiesResult.data?.cities || [];
+    let availableCities = [];
+
+    // Try to get cities from OTO service first
+    try {
+      const availableCitiesResult = await otoService.getAvailableCities({ limit: 1000 });
+      
+      if (availableCitiesResult.success && availableCitiesResult.data?.cities?.length > 0) {
+        availableCities = availableCitiesResult.data.cities;
+      } else {
+        // Use fallback if OTO service fails or returns empty
+        availableCities = fallbackCities.map(city => ({ name: city }));
+      }
+    } catch (otoError) {
+      console.warn('OTO service failed, using fallback cities:', otoError.message);
+      // Use fallback if OTO service throws error
+      availableCities = fallbackCities.map(city => ({ name: city }));
+    }
     
     // Filter cities based on search query
     const normalizedQuery = q.toLowerCase();
@@ -423,12 +463,20 @@ export async function searchCities(req, res, next) {
         value: c.name || c
       }));
 
+    console.log('🔍 City search results:', {
+      query: q,
+      availableCitiesCount: availableCities.length,
+      matchingCitiesCount: matchingCities.length,
+      matchingCities: matchingCities
+    });
+
     res.json({
       success: true,
       cities: matchingCities
     });
 
   } catch (error) {
+    console.error('City search error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to search cities',

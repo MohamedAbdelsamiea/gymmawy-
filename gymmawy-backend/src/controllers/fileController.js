@@ -21,6 +21,14 @@ router.get('/payment-proofs/:filename', requireAuth, async (req, res) => {
     const userId = req.user.id;
     const userRole = req.user.role;
 
+    console.log('🔍 Payment proof request:', {
+      filename,
+      userId,
+      userRole,
+      userAgent: req.headers['user-agent'],
+      origin: req.headers.origin
+    });
+
     // Security: Validate filename to prevent path traversal
     if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
       return res.status(400).json({ 
@@ -44,12 +52,21 @@ router.get('/payment-proofs/:filename', requireAuth, async (req, res) => {
         }
       },
       select: {
-        userId: true
+        userId: true,
+        paymentProofUrl: true
       }
+    });
+
+    console.log('🔍 Payment lookup result:', {
+      found: !!payment,
+      paymentUserId: payment?.userId,
+      paymentProofUrl: payment?.paymentProofUrl,
+      requestedFilename: filename
     });
 
     // If no payment is found, return 404
     if (!payment) {
+      console.log('❌ Payment not found for filename:', filename);
       return res.status(404).json({ 
         error: { message: "File not found" } 
       });

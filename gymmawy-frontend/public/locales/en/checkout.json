@@ -116,6 +116,13 @@
     "size": "Size",
     "quantity": "Qty"
   },
+  "validation": {
+    "buildingRequired": "Building is required",
+    "streetRequired": "Street is required", 
+    "cityRequired": "City is required",
+    "countryRequired": "Country is required",
+    "pleaseFillAllFields": "Please fill in all required fields"
+  },
   "common": {
     "weeks": "{{count}} week",
     "weeks_other": "{{count}} weeks",

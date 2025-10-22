@@ -7,8 +7,20 @@
     <title>Gymmawy - Fitness & Community Platform</title>
     <style>
       /* Prevent FOUC by hiding content until styles are loaded */
-      body { visibility: hidden; }
-      body.loaded { visibility: visible; }
+      body { 
+        visibility: hidden; 
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+      }
+      body.loaded { 
+        visibility: visible; 
+        opacity: 1;
+      }
+      
+      /* Prevent layout shift during loading */
+      #root {
+        min-height: 100vh;
+      }
     </style>
   </head>
   <body>

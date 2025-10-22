@@ -32,7 +32,17 @@ export const useSecureImage = (imagePath) => {
         // Check if it's a payment proof path - use secure endpoint
         if (imagePath.includes('/payment-proofs/')) {
           const filename = imagePath.split('/').pop();
-          const secureUrl = `${config.API_BASE_URL}/files/payment-proofs/${filename}`;
+          // Use the base URL without /api for file serving
+          const baseUrl = config.API_BASE_URL.replace('/api', '');
+          const secureUrl = `${baseUrl}/files/payment-proofs/${filename}`;
+          
+          console.log('🔍 Loading payment proof:', {
+            originalPath: imagePath,
+            filename: filename,
+            secureUrl: secureUrl,
+            apiBaseUrl: config.API_BASE_URL,
+            baseUrl: baseUrl
+          });
           
           // Fetch the image through the secure endpoint
           const response = await fetch(secureUrl, {
@@ -42,7 +52,12 @@ export const useSecureImage = (imagePath) => {
           });
 
           if (!response.ok) {
-            throw new Error(`Failed to load payment proof: ${response.status}`);
+            console.error('❌ Failed to load payment proof:', {
+              status: response.status,
+              statusText: response.statusText,
+              url: secureUrl
+            });
+            throw new Error(`Failed to load payment proof: ${response.status} ${response.statusText}`);
           }
 
           // Convert to blob and then to data URL

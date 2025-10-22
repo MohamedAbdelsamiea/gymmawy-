@@ -116,6 +116,13 @@
     "size": "المقاس",
     "quantity": "الكمية"
   },
+  "validation": {
+    "buildingRequired": "المبنى مطلوب",
+    "streetRequired": "الشارع مطلوب",
+    "cityRequired": "المدينة مطلوبة",
+    "countryRequired": "البلد مطلوب",
+    "pleaseFillAllFields": "يرجى ملء جميع الحقول المطلوبة"
+  },
   "common": {
     "weeks": "{{count}} أسبوع",
     "weeks_other": "{{count}} أسابيع",

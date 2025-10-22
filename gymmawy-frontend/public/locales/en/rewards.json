@@ -57,5 +57,9 @@
   "secureRedemption": "Secure Redemption",
   "secureRedemptionDesc": "Your redemption is processed securely and your reward will be delivered to the provided address.",
   "redemption_failed": "Redemption failed. Please try again.",
-  "invalid_redemption": "Invalid redemption data. Please try again."
+  "invalid_redemption": "Invalid redemption data. Please try again.",
+  "digitalPackage": "Digital Package",
+  "digitalPackageDesc": "This is a digital package that will be activated immediately. No shipping address is required.",
+  "digitalProgramme": "Digital Programme", 
+  "digitalProgrammeDesc": "This is a digital programme that will be activated immediately. No shipping address is required."
 }

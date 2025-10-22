@@ -553,14 +553,36 @@ async function handlePaymentAuthorized(webhookData) {
               data: { status: 'PAID' }
             });
             console.log(`Subscription ${payment.paymentableId} status updated to PAID`);
+            
+            // Award loyalty points for subscription
+            try {
+              const { awardLoyaltyPointsForSubscription } = await import('../../utils/loyaltyPoints.js');
+              const loyaltyResult = await awardLoyaltyPointsForSubscription(payment.paymentableId);
+              if (loyaltyResult.success) {
+                console.log(`✅ Loyalty points awarded for subscription ${payment.paymentableId}: ${loyaltyResult.loyaltyPoints} points`);
+              }
+            } catch (loyaltyError) {
+              console.error(`❌ Failed to award loyalty points for subscription ${payment.paymentableId}:`, loyaltyError);
+            }
             break;
             
           case 'PROGRAMME':
             await prisma.programmePurchase.update({
               where: { id: payment.paymentableId },
-              data: { status: 'PAID' }
+              data: { status: 'COMPLETE' }
             });
-            console.log(`Programme purchase ${payment.paymentableId} status updated to PAID`);
+            console.log(`Programme purchase ${payment.paymentableId} status updated to COMPLETE`);
+            
+            // Award loyalty points for programme purchase
+            try {
+              const { awardLoyaltyPointsForProgramme } = await import('../../utils/loyaltyPoints.js');
+              const loyaltyResult = await awardLoyaltyPointsForProgramme(payment.paymentableId);
+              if (loyaltyResult.success) {
+                console.log(`✅ Loyalty points awarded for programme purchase ${payment.paymentableId}: ${loyaltyResult.loyaltyPoints} points`);
+              }
+            } catch (loyaltyError) {
+              console.error(`❌ Failed to award loyalty points for programme purchase ${payment.paymentableId}:`, loyaltyError);
+            }
             break;
             
           case 'ORDER':
@@ -574,6 +596,17 @@ async function handlePaymentAuthorized(webhookData) {
               }
             });
             console.log(`Order ${payment.paymentableId} status updated to PAID`);
+            
+            // Award loyalty points for order
+            try {
+              const { awardLoyaltyPointsForOrder } = await import('../../utils/loyaltyPoints.js');
+              const loyaltyResult = await awardLoyaltyPointsForOrder(payment.paymentableId);
+              if (loyaltyResult.success) {
+                console.log(`✅ Loyalty points awarded for order ${payment.paymentableId}: ${loyaltyResult.loyaltyPoints} points`);
+              }
+            } catch (loyaltyError) {
+              console.error(`❌ Failed to award loyalty points for order ${payment.paymentableId}:`, loyaltyError);
+            }
             
             // Create OTO shipment for paid orders
             try {
@@ -889,14 +922,36 @@ async function handlePaymentClosed(webhookData) {
               data: { status: 'PAID' }
             });
             console.log(`Subscription ${payment.paymentableId} status updated to PAID`);
+            
+            // Award loyalty points for subscription
+            try {
+              const { awardLoyaltyPointsForSubscription } = await import('../../utils/loyaltyPoints.js');
+              const loyaltyResult = await awardLoyaltyPointsForSubscription(payment.paymentableId);
+              if (loyaltyResult.success) {
+                console.log(`✅ Loyalty points awarded for subscription ${payment.paymentableId}: ${loyaltyResult.loyaltyPoints} points`);
+              }
+            } catch (loyaltyError) {
+              console.error(`❌ Failed to award loyalty points for subscription ${payment.paymentableId}:`, loyaltyError);
+            }
             break;
             
           case 'PROGRAMME':
             await prisma.programmePurchase.update({
               where: { id: payment.paymentableId },
-              data: { status: 'PAID' }
+              data: { status: 'COMPLETE' }
             });
-            console.log(`Programme purchase ${payment.paymentableId} status updated to PAID`);
+            console.log(`Programme purchase ${payment.paymentableId} status updated to COMPLETE`);
+            
+            // Award loyalty points for programme purchase
+            try {
+              const { awardLoyaltyPointsForProgramme } = await import('../../utils/loyaltyPoints.js');
+              const loyaltyResult = await awardLoyaltyPointsForProgramme(payment.paymentableId);
+              if (loyaltyResult.success) {
+                console.log(`✅ Loyalty points awarded for programme purchase ${payment.paymentableId}: ${loyaltyResult.loyaltyPoints} points`);
+              }
+            } catch (loyaltyError) {
+              console.error(`❌ Failed to award loyalty points for programme purchase ${payment.paymentableId}:`, loyaltyError);
+            }
             break;
             
           case 'ORDER':
@@ -910,6 +965,17 @@ async function handlePaymentClosed(webhookData) {
               }
             });
             console.log(`Order ${payment.paymentableId} status updated to PAID`);
+            
+            // Award loyalty points for order
+            try {
+              const { awardLoyaltyPointsForOrder } = await import('../../utils/loyaltyPoints.js');
+              const loyaltyResult = await awardLoyaltyPointsForOrder(payment.paymentableId);
+              if (loyaltyResult.success) {
+                console.log(`✅ Loyalty points awarded for order ${payment.paymentableId}: ${loyaltyResult.loyaltyPoints} points`);
+              }
+            } catch (loyaltyError) {
+              console.error(`❌ Failed to award loyalty points for order ${payment.paymentableId}:`, loyaltyError);
+            }
             
             // Create OTO shipment for paid orders
             try {
