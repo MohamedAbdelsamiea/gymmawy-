@@ -632,7 +632,7 @@ return '';
               <JoinUsButtonNew 
                 variant="razor" 
                 targetElementId="packages"
-                className="transform transition-transform duration-500 hover:scale-105 w-full max-w-md"
+                className="transform transition-transform duration-500 hover:scale-105 w-full max-w-xs sm:max-w-md"
               />
             </div>
           </div>

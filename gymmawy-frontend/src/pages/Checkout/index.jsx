@@ -1886,6 +1886,33 @@ return;
         type
       });
 
+      // Create subscription first if this is a subscription type
+      let subscriptionResult = null;
+      if (type === 'subscription') {
+        console.log('🔍 Creating subscription before Paymob payment...');
+        
+        const isMedical = selectedDuration === 'medical';
+        
+        // Send only essential data - let backend calculate all prices
+        const subscriptionData = {
+          planId: plan.id,
+          paymentMethod: 'PAYMOB',
+          isMedical: isMedical,
+          currency: currency, // Current selected currency
+          // Coupon information - backend will validate and calculate discount
+          couponId: couponValid && couponData ? couponData.id : null,
+          // User's reason for subscribing
+          reason: subscriptionReason || null,
+        };
+
+        // Debug: Log subscription data being sent
+        console.log('🔍 Subscription data being sent to backend:', subscriptionData);
+        console.log('✅ Backend will calculate and validate all prices');
+
+        subscriptionResult = await checkoutService.createSubscription(subscriptionData);
+        console.log('✅ Subscription created successfully:', subscriptionResult);
+      }
+
       // Prepare payment data
       const paymentData = {
         amount: total,
@@ -1904,7 +1931,9 @@ return;
           city: type === 'cart' || type === 'product' ? (shippingDetails?.shippingCity || 'Riyadh') : 'Riyadh',
           state: type === 'cart' || type === 'product' ? (shippingDetails?.shippingState || 'Riyadh') : 'Riyadh',
           country: 'KSA', // Always use KSA for Paymob
-          postalCode: type === 'cart' || type === 'product' ? (shippingDetails?.shippingPostalCode || '') : ''
+          postalCode: type === 'cart' || type === 'product' ? (shippingDetails?.shippingPostalCode || '') : '',
+          // Include subscription ID if this is a subscription
+          ...(type === 'subscription' && subscriptionResult?.subscription?.id ? { subscriptionId: subscriptionResult.subscription.id } : {})
         },
         customer: {
           firstName: user?.firstName || 'User',
