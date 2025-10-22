@@ -158,28 +158,34 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async() => {
+    console.log('AuthContext: Starting logout process...');
+    
+    // Immediately clear user state and tokens for instant UI update
+    setUser(null);
+    setError(null);
+    authService.removeToken();
+    authService.removeRefreshToken();
+    tokenManager.stopTokenRefresh();
+    
+    // Dispatch custom event to notify components
+    window.dispatchEvent(new CustomEvent('userLoggedOut'));
+    
+    // Try to call the server logout endpoint (but don't wait for it)
     try {
-      console.log('AuthContext: Starting logout process...');
+      console.log('AuthContext: Attempting server logout...');
       await authService.logout();
       console.log('AuthContext: Server logout completed');
     } catch (error) {
-      console.error('AuthContext: Logout error:', error);
-    } finally {
-      // Always clear all tokens and user state on logout
-      console.log('AuthContext: Clearing tokens and user state...');
-      authService.removeToken();
-      authService.removeRefreshToken();
-      setUser(null);
-      setError(null);
-      tokenManager.stopTokenRefresh();
-      
-      // Force a re-render by updating loading state briefly
-      setLoading(true);
-      setTimeout(() => {
-        setLoading(false);
-        console.log('AuthContext: Logout cleanup completed');
-      }, 50);
+      console.error('AuthContext: Server logout failed (but continuing with local logout):', error);
+      // Don't throw error - we've already cleared local state
     }
+    
+    // Force a re-render by updating loading state briefly
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      console.log('AuthContext: Logout cleanup completed');
+    }, 50);
   };
 
   const updateProfile = async(profileData) => {

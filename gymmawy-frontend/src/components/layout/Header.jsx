@@ -34,6 +34,21 @@ const Header = () => {
     setForceUpdate(prev => prev + 1);
   }, [isAuthenticated, user]);
 
+  // Listen for custom logout events
+  useEffect(() => {
+    const handleLogoutEvent = () => {
+      console.log('Header: Logout event received');
+      setForceUpdate(prev => prev + 1);
+      setProfileDropdownOpen(false);
+      setMobileProfileDropdownOpen(false);
+    };
+
+    window.addEventListener('userLoggedOut', handleLogoutEvent);
+    return () => {
+      window.removeEventListener('userLoggedOut', handleLogoutEvent);
+    };
+  }, []);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -211,21 +226,30 @@ const Header = () => {
 
   const handleLogout = async() => {
     try {
-      console.log('Logout initiated...');
+      console.log('Header: Logout button clicked');
       await logout();
-      console.log('Logout completed, navigating to home...');
+      console.log('Header: Logout completed, navigating to home...');
       navigate('/');
       setProfileDropdownOpen(false);
       setMobileProfileDropdownOpen(false);
-      // Force a re-render to ensure UI updates
-      setForceUpdate(prev => prev + 1);
-      // Force a small delay to ensure state updates are processed
-      setTimeout(() => {
-        console.log('Logout cleanup completed');
-      }, 100);
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Header: Logout error:', error);
+      // Even if logout fails, try to navigate and close dropdowns
+      navigate('/');
+      setProfileDropdownOpen(false);
+      setMobileProfileDropdownOpen(false);
     }
+  };
+
+  // Emergency logout function for testing
+  const handleEmergencyLogout = () => {
+    console.log('Header: Emergency logout triggered');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    window.dispatchEvent(new CustomEvent('userLoggedOut'));
+    navigate('/');
+    setProfileDropdownOpen(false);
+    setMobileProfileDropdownOpen(false);
   };
 
   const handleDashboardNavigation = () => {
@@ -251,7 +275,7 @@ const Header = () => {
   const isInDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/checkout');
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#190143] text-[#ebebeb] shadow-lg">
+    <header key={`header-${isAuthenticated ? 'authenticated' : 'guest'}-${forceUpdate}`} className="fixed top-0 left-0 right-0 z-50 bg-[#190143] text-[#ebebeb] shadow-lg">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between xlg:justify-between">
         {/* Left Navigation */}
         <nav className="hidden xlg:flex items-center justify-end" style={{ width: 'calc(50% - 100px)' }}>
@@ -425,6 +449,15 @@ const Header = () => {
                     >
                       <LogOut className="h-4 w-4 flex-shrink-0" />
                       <span className="whitespace-nowrap">{t('auth.signOut')}</span>
+                    </button>
+                    {/* Temporary test button */}
+                    <button
+                      onClick={handleEmergencyLogout}
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 gap-2"
+                      style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
+                    >
+                      <LogOut className="h-4 w-4 flex-shrink-0" />
+                      <span className="whitespace-nowrap">Emergency Logout</span>
                     </button>
                   </div>
                 )}
