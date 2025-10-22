@@ -23,7 +23,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import adminApiService from '../../../services/adminApiService';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useAuth } from '../../../hooks/useAuth';
 import { useToast } from '../../../contexts/ToastContext';
 import { config } from '../../../config';
 
@@ -1910,7 +1910,7 @@ return 'None';
                             {enDescription}
                           </div>
                           <div className="text-sm text-gray-600" dir="rtl">
-                            {arDescription}
+                            {description?.ar || description}
                           </div>
                         </div>
                       );

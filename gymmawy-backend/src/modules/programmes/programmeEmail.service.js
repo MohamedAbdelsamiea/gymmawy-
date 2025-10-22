@@ -67,59 +67,115 @@ function cleanupTempFile(filePath) {
 
 /**
  * Send programme delivery email when payment is approved
- * @param {string} programmePurchaseId - The programme purchase ID
+ * @param {string|Object} programmePurchaseIdOrObject - The programme purchase ID or the full purchase object
  * @returns {Promise<Object>} Email sending result
  */
-export async function sendProgrammeDeliveryEmail(programmePurchaseId) {
+export async function sendProgrammeDeliveryEmail(programmePurchaseIdOrObject) {
   try {
-    console.log(`📧 Sending programme delivery email for purchase ${programmePurchaseId}`);
+    console.log(`📧 [EMAIL SERVICE] Starting programme delivery email for purchase ${typeof programmePurchaseIdOrObject === 'string' ? programmePurchaseIdOrObject : programmePurchaseIdOrObject.id}`);
 
-    // Get programme purchase with all related data
-    const programmePurchase = await prisma.programmePurchase.findUnique({
-      where: { id: programmePurchaseId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            language: true
-          }
-        },
-        programme: {
-          select: {
-            id: true,
-            name: true,
-            pdfUrl: true
-          }
-        },
-        payment: {
-          select: {
-            id: true,
-            amount: true,
-            currency: true,
-            method: true,
-            createdAt: true
+    let programmePurchase;
+
+    // Handle both string ID and full object
+    if (typeof programmePurchaseIdOrObject === 'string') {
+      // Get programme purchase with all related data
+      programmePurchase = await prisma.programmePurchase.findUnique({
+        where: { id: programmePurchaseIdOrObject },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            }
+          },
+          programme: {
+            select: {
+              id: true,
+              name: true,
+              pdfUrl: true
+            }
           }
         }
+      });
+    } else {
+      // Use the provided object, but ensure we have all required relations
+      programmePurchase = programmePurchaseIdOrObject;
+      
+      // If the object doesn't have all required relations, fetch them
+      if (!programmePurchase.user || !programmePurchase.programme || !programmePurchase.payment) {
+        programmePurchase = await prisma.programmePurchase.findUnique({
+          where: { id: programmePurchase.id },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+              }
+            },
+            programme: {
+              select: {
+                id: true,
+                name: true,
+                pdfUrl: true
+              }
+            },
+            payment: {
+              select: {
+                id: true,
+                amount: true,
+                currency: true,
+                method: true,
+                createdAt: true
+              }
+            }
+          }
+        });
       }
-    });
-
-    if (!programmePurchase) {
-      throw new Error(`Programme purchase not found: ${programmePurchaseId}`);
     }
 
+    if (!programmePurchase) {
+      const purchaseId = typeof programmePurchaseIdOrObject === 'string' ? programmePurchaseIdOrObject : programmePurchaseIdOrObject.id;
+      console.error(`❌ [EMAIL SERVICE] Programme purchase not found: ${purchaseId}`);
+      throw new Error(`Programme purchase not found: ${purchaseId}`);
+    }
+    
+    console.log(`📧 [EMAIL SERVICE] Programme purchase found:`, {
+      id: programmePurchase.id,
+      status: programmePurchase.status,
+      userEmail: programmePurchase.user?.email,
+      programmeName: programmePurchase.programme?.name,
+      hasPdfUrl: !!programmePurchase.programme?.pdfUrl
+    });
+
     if (!programmePurchase.user) {
-      throw new Error(`User not found for programme purchase: ${programmePurchaseId}`);
+      throw new Error(`User not found for programme purchase: ${programmePurchase.id}`);
     }
 
     if (!programmePurchase.programme) {
-      throw new Error(`Programme not found for purchase: ${programmePurchaseId}`);
+      throw new Error(`Programme not found for purchase: ${programmePurchase.id}`);
     }
 
-    if (!programmePurchase.payment) {
-      throw new Error(`Payment not found for programme purchase: ${programmePurchaseId}`);
+    // Fetch payment data separately since there's no direct relationship
+    const payment = await prisma.payment.findFirst({
+      where: {
+        paymentableType: 'PROGRAMME',
+        paymentableId: programmePurchase.id
+      },
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        method: true,
+        createdAt: true
+      }
+    });
+
+    if (!payment) {
+      throw new Error(`Payment not found for programme purchase: ${programmePurchase.id}`);
     }
 
     // Check if programme has PDF
@@ -129,14 +185,14 @@ export async function sendProgrammeDeliveryEmail(programmePurchaseId) {
     }
 
     // Format dates
-    const purchaseDate = new Date(programmePurchase.payment.createdAt).toLocaleDateString('en-US', {
+    const purchaseDate = new Date(payment.createdAt).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
 
     // Format payment amount
-    const paymentAmount = parseFloat(programmePurchase.payment.amount).toFixed(2);
+    const paymentAmount = parseFloat(payment.amount).toFixed(2);
 
     // Get programme name (handle multilingual)
     let programmeName = 'Programme';
@@ -164,34 +220,64 @@ export async function sendProgrammeDeliveryEmail(programmePurchaseId) {
       purchaseDate: purchaseDate,
       purchaseNumber: programmePurchase.purchaseNumber || programmePurchase.id,
       paymentAmount: paymentAmount,
-      currency: programmePurchase.payment.currency,
-      paymentMethod: programmePurchase.payment.method,
+      currency: payment.currency,
+      paymentMethod: payment.method,
       frontendUrl: frontendUrl,
       supportEmail: process.env.SUPPORT_EMAIL || 'support@gymmawy.com'
     };
 
-    // Determine user language
-    const userLanguage = programmePurchase.user.language || 'en';
+    // Determine user language (default to English since language field doesn't exist)
+    const userLanguage = 'en';
 
     // Download PDF file for attachment
     let pdfFilePath = null;
     let attachments = [];
     
     try {
-      console.log(`📥 Downloading PDF file: ${programmePurchase.programme.pdfUrl}`);
-      const filename = `${programmeName.replace(/[^a-zA-Z0-9]/g, '_')}_${programmePurchase.id}.pdf`;
-      pdfFilePath = await downloadPDF(programmePurchase.programme.pdfUrl, filename);
+      let pdfUrl = programmePurchase.programme.pdfUrl;
+      let localFilePath = null;
       
-      // Add PDF as attachment
-      attachments.push({
-        filename: filename,
-        path: pdfFilePath,
-        contentType: 'application/pdf'
-      });
-      
-      console.log(`✅ PDF downloaded successfully: ${filename}`);
+      // Check if it's a localhost URL and try to access the local file directly
+      if (pdfUrl.startsWith('http://localhost:3000/')) {
+        // Extract the path from the URL and remove the leading slash
+        const urlPath = pdfUrl.replace('http://localhost:3000/', '');
+        localFilePath = path.join(process.cwd(), urlPath);
+        
+        // Check if the local file exists
+        if (fs.existsSync(localFilePath)) {
+          console.log(`📁 Using local PDF file: ${localFilePath}`);
+          
+          // Add PDF as attachment directly from local file
+          const filename = `${programmeName.replace(/[^a-zA-Z0-9]/g, '_')}_${programmePurchase.id}.pdf`;
+          attachments.push({
+            filename: filename,
+            path: localFilePath,
+            contentType: 'application/pdf'
+          });
+          
+          console.log(`✅ PDF attached successfully: ${filename}`);
+        } else {
+          console.warn(`⚠️ Local PDF file not found: ${localFilePath}`);
+          // Try to download from URL as fallback
+          throw new Error('Local file not found, trying download...');
+        }
+      } else {
+        // For non-localhost URLs, download the file
+        console.log(`📥 Downloading PDF file: ${pdfUrl}`);
+        const filename = `${programmeName.replace(/[^a-zA-Z0-9]/g, '_')}_${programmePurchase.id}.pdf`;
+        pdfFilePath = await downloadPDF(pdfUrl, filename);
+        
+        // Add PDF as attachment
+        attachments.push({
+          filename: filename,
+          path: pdfFilePath,
+          contentType: 'application/pdf'
+        });
+        
+        console.log(`✅ PDF downloaded successfully: ${filename}`);
+      }
     } catch (downloadError) {
-      console.error(`❌ Failed to download PDF: ${downloadError.message}`);
+      console.error(`❌ Failed to attach PDF: ${downloadError.message}`);
       // Continue without attachment - email will still be sent
     }
 
@@ -218,22 +304,7 @@ export async function sendProgrammeDeliveryEmail(programmePurchaseId) {
       console.log(`🗑️ Cleaned up temporary PDF file`);
     }
     
-    // Log email sending in database (optional)
-    try {
-      await prisma.programmePurchase.update({
-        where: { id: programmePurchaseId },
-        data: {
-          metadata: {
-            ...programmePurchase.metadata,
-            deliveryEmailSent: true,
-            deliveryEmailSentAt: new Date().toISOString(),
-            pdfAttached: attachments.length > 0
-          }
-        }
-      });
-    } catch (logError) {
-      console.warn('Failed to log email sending in database:', logError.message);
-    }
+    // Note: Email sending logged in console above
 
     return {
       success: true,
@@ -245,11 +316,6 @@ export async function sendProgrammeDeliveryEmail(programmePurchaseId) {
 
   } catch (error) {
     console.error('❌ Failed to send programme delivery email:', error);
-    
-    // Clean up temporary PDF file if it exists
-    if (pdfFilePath) {
-      cleanupTempFile(pdfFilePath);
-    }
     
     return {
       success: false,

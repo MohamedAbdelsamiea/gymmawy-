@@ -34,39 +34,30 @@ export async function listProducts({ skip, take, q, categoryId, currency, isActi
     prisma.product.count({ where }),
   ]);
 
-  // Fetch prices for all products if currency is specified
-  if (currency) {
-    const productIds = items.map(item => item.id);
-    const prices = await prisma.price.findMany({
-      where: {
-        purchasableType: 'PRODUCT',
-        purchasableId: { in: productIds },
-        currency: currency
-      },
-      select: {
-        id: true,
-        amount: true,
-        currency: true,
-        purchasableId: true
-      }
-    });
+  // Fetch prices for each product
+  const productsWithPrices = await Promise.all(
+    items.map(async (product) => {
+      const prices = await prisma.price.findMany({
+        where: {
+          purchasableId: product.id,
+          purchasableType: 'PRODUCT'
+        }
+      });
+      
+      // Get price for specific currency if provided
+      const priceForCurrency = currency ? prices.find(p => p.currency === currency) : null;
+      const fallbackPrice = prices.find(p => p.currency === 'EGP') || prices[0];
+      const selectedPrice = priceForCurrency || fallbackPrice;
+      
+      return { 
+        ...product, 
+        prices,
+        price: selectedPrice ? { amount: selectedPrice.amount, currency: selectedPrice.currency } : null
+      };
+    })
+  );
 
-    // Create a map of productId to price
-    const priceMap = new Map();
-    prices.forEach(price => {
-      priceMap.set(price.purchasableId, price);
-    });
-
-    // Add prices to products
-    const itemsWithPrices = items.map(item => ({
-      ...item,
-      price: priceMap.get(item.id) || null
-    }));
-
-    return { items: itemsWithPrices, total };
-  }
-
-  return { items, total };
+  return { items: productsWithPrices, total };
 }
 
 export async function getProductById(id) {
@@ -87,7 +78,7 @@ export async function getProductById(id) {
   // Fetch prices for the product
   const prices = await prisma.price.findMany({
     where: {
-      purchasableId: id,
+      purchasableId: product.id,
       purchasableType: 'PRODUCT'
     }
   });
@@ -124,7 +115,14 @@ export async function getRelatedProducts(productId, limit = 4) {
           purchasableType: 'PRODUCT'
         }
       });
-      return { ...product, prices };
+      
+      const fallbackPrice = prices.find(p => p.currency === 'EGP') || prices[0];
+      
+      return { 
+        ...product, 
+        prices,
+        price: fallbackPrice ? { amount: fallbackPrice.amount, currency: fallbackPrice.currency } : null
+      };
     })
   );
 
@@ -199,39 +197,30 @@ export async function getNewArrivals({ limit = 8, currency }) {
     }
   });
 
-  // Fetch prices for all products if currency is specified
-  if (currency) {
-    const productIds = items.map(item => item.id);
-    const prices = await prisma.price.findMany({
-      where: {
-        purchasableType: 'PRODUCT',
-        purchasableId: { in: productIds },
-        currency: currency
-      },
-      select: {
-        id: true,
-        amount: true,
-        currency: true,
-        purchasableId: true
-      }
-    });
+  // Fetch prices for each product
+  const productsWithPrices = await Promise.all(
+    items.map(async (product) => {
+      const prices = await prisma.price.findMany({
+        where: {
+          purchasableId: product.id,
+          purchasableType: 'PRODUCT'
+        }
+      });
+      
+      // Get price for specific currency if provided
+      const priceForCurrency = currency ? prices.find(p => p.currency === currency) : null;
+      const fallbackPrice = prices.find(p => p.currency === 'EGP') || prices[0];
+      const selectedPrice = priceForCurrency || fallbackPrice;
+      
+      return { 
+        ...product, 
+        prices,
+        price: selectedPrice ? { amount: selectedPrice.amount, currency: selectedPrice.currency } : null
+      };
+    })
+  );
 
-    // Create a map of productId to price
-    const priceMap = new Map();
-    prices.forEach(price => {
-      priceMap.set(price.purchasableId, price);
-    });
-
-    // Add prices to products
-    const itemsWithPrices = items.map(item => ({
-      ...item,
-      price: priceMap.get(item.id) || null
-    }));
-
-    return { items: itemsWithPrices, total: items.length };
-  }
-
-  return { items, total: items.length };
+  return { items: productsWithPrices, total: productsWithPrices.length };
 }
 
 // Get all active products for shop-all page
@@ -265,39 +254,30 @@ export async function getAllProducts({ skip = 0, take = 20, categoryId, currency
     prisma.product.count({ where })
   ]);
 
-  // Fetch prices for all products if currency is specified
-  if (currency) {
-    const productIds = items.map(item => item.id);
-    const prices = await prisma.price.findMany({
-      where: {
-        purchasableType: 'PRODUCT',
-        purchasableId: { in: productIds },
-        currency: currency
-      },
-      select: {
-        id: true,
-        amount: true,
-        currency: true,
-        purchasableId: true
-      }
-    });
+  // Fetch prices for each product
+  const productsWithPrices = await Promise.all(
+    items.map(async (product) => {
+      const prices = await prisma.price.findMany({
+        where: {
+          purchasableId: product.id,
+          purchasableType: 'PRODUCT'
+        }
+      });
+      
+      // Get price for specific currency if provided
+      const priceForCurrency = currency ? prices.find(p => p.currency === currency) : null;
+      const fallbackPrice = prices.find(p => p.currency === 'EGP') || prices[0];
+      const selectedPrice = priceForCurrency || fallbackPrice;
+      
+      return { 
+        ...product, 
+        prices,
+        price: selectedPrice ? { amount: selectedPrice.amount, currency: selectedPrice.currency } : null
+      };
+    })
+  );
 
-    // Create a map of productId to price
-    const priceMap = new Map();
-    prices.forEach(price => {
-      priceMap.set(price.purchasableId, price);
-    });
-
-    // Add prices to products
-    const itemsWithPrices = items.map(item => ({
-      ...item,
-      price: priceMap.get(item.id) || null
-    }));
-
-    return { items: itemsWithPrices, total };
-  }
-
-  return { items, total };
+  return { items: productsWithPrices, total };
 }
 
 

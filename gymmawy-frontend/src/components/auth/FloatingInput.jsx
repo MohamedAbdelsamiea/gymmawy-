@@ -14,7 +14,7 @@ const FloatingInput = ({
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { t } = useTranslation("auth");
+  // const { t } = useTranslation("auth");
 
   const hasValue = value && value.length > 0;
   const isFloating = isFocused || hasValue;

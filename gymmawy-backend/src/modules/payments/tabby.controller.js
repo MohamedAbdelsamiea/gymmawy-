@@ -75,7 +75,7 @@ export async function createTabbyCheckout(req, res, next) {
       currency: z.enum(['EGP', 'SAR', 'AED', 'USD']),
       description: z.string().optional(),
       paymentableId: z.string().uuid(),
-      paymentableType: z.enum(['PRODUCT', 'PLAN', 'PROGRAMME', 'MEDICAL', 'SUBSCRIPTION', 'ORDER']),
+      paymentableType: z.enum(['PROGRAMME', 'SUBSCRIPTION', 'ORDER']),
       lang: z.enum(['ar', 'en']).default('en'),
       buyer: z.object({
         phone: z.string(),
@@ -752,6 +752,90 @@ export async function getTabbyPaymentStatus(req, res, next) {
 }
 
 /**
+ * Public payment verification endpoint (no authentication required)
+ * This is used when users are redirected from payment gateways
+ */
+export async function verifyPaymentPublic(req, res, next) {
+  try {
+    const { paymentId } = req.params;
+    const { reference } = req.query;
+
+    // Find the payment in our database
+    // Search by either payment ID (transactionId) OR session ID (in metadata) OR payment reference
+    const payment = await prisma.payment.findFirst({
+      where: {
+        method: 'TABBY',
+        OR: [
+          { transactionId: paymentId }, // Search by payment ID
+          { 
+            metadata: {
+              path: ['tabby_session_id'],
+              equals: paymentId
+            }
+          }, // Search by session ID
+          ...(reference ? [{ paymentReference: reference }] : []) // Search by payment reference
+        ]
+      }
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Payment not found',
+        message: `No Tabby payment found with ID: ${paymentId}`
+      });
+    }
+
+    // Get status from Tabby API using the actual payment ID (transactionId)
+    const tabbyPaymentId = payment.transactionId;
+    let tabbyStatus = null;
+    
+    try {
+      tabbyStatus = await tabbyService.getPayment(tabbyPaymentId);
+    } catch (error) {
+      console.error('Failed to fetch Tabby payment status:', error);
+      // Return local status if Tabby API is unavailable
+      return res.json({
+        success: true,
+        payment: {
+          payment_id: payment.transactionId,
+          session_id: payment.metadata?.tabby_session_id,
+          status: payment.status.toLowerCase(),
+          amount: payment.amount,
+          currency: payment.currency,
+          created_at: payment.createdAt,
+          updated_at: payment.processedAt || payment.updatedAt,
+          captures: []
+        },
+        local_status: payment.status,
+        local_metadata: payment.metadata,
+        api_unavailable: true
+      });
+    }
+
+    res.json({
+      success: true,
+      payment: {
+        payment_id: tabbyStatus.id,
+        session_id: payment.metadata?.tabby_session_id,
+        status: tabbyStatus.status,
+        amount: tabbyStatus.amount,
+        currency: tabbyStatus.currency,
+        created_at: tabbyStatus.created_at,
+        updated_at: tabbyStatus.updated_at,
+        captures: tabbyStatus.captures || []
+      },
+      local_status: payment.status,
+      local_metadata: payment.metadata
+    });
+
+  } catch (error) {
+    console.error('Public payment verification error:', error);
+    next(error);
+  }
+}
+
+/**
  * Handle payment closed webhook
  */
 async function handlePaymentClosed(webhookData) {
@@ -859,11 +943,11 @@ async function createPurchaseRecord(payment) {
     const subscription = await subscriptionService.createSubscriptionWithPayment(userId, subscriptionData);
     console.log(`Subscription created (PENDING approval): ${subscription.id}`);
     
-    // Auto-approve subscription and award loyalty points for successful payment
+    // Auto-approve subscription and award Gymmawy Coins for successful payment
     try {
-      console.log(`🎁 Auto-approving subscription ${subscription.id} and awarding loyalty points`);
+      console.log(`🎁 Auto-approving subscription ${subscription.id} and awarding Gymmawy Coins`);
       await activateSubscription(subscription.id);
-      console.log(`✅ Subscription ${subscription.id} auto-approved and loyalty points awarded`);
+      console.log(`✅ Subscription ${subscription.id} auto-approved and Gymmawy Coins awarded`);
     } catch (error) {
       console.error(`❌ Failed to auto-approve subscription ${subscription.id}:`, error.message);
       // Don't fail the webhook if auto-approval fails - admin can approve manually
@@ -897,11 +981,11 @@ async function createPurchaseRecord(payment) {
       }
     });
     
-    // Auto-approve programme purchase and award loyalty points for successful payment
+    // Auto-approve programme purchase and award Gymmawy Coins for successful payment
     try {
-      console.log(`🎁 Auto-approving programme purchase ${programmePurchase.id} and awarding loyalty points`);
+      console.log(`🎁 Auto-approving programme purchase ${programmePurchase.id} and awarding Gymmawy Coins`);
       await approveProgrammePurchase(programmePurchase.id);
-      console.log(`✅ Programme purchase ${programmePurchase.id} auto-approved and loyalty points awarded`);
+      console.log(`✅ Programme purchase ${programmePurchase.id} auto-approved and Gymmawy Coins awarded`);
       
       // Send programme delivery email
       try {
@@ -924,11 +1008,11 @@ async function createPurchaseRecord(payment) {
     console.log(`Programme purchase ${programmePurchase.id} set to PENDING status - awaiting admin approval`);
     
   } else if (paymentableType === 'ORDER') {
-    // For orders, we need to activate them and award loyalty points
+    // For orders, we need to activate them and award Gymmawy Coins
     try {
-      console.log(`🎁 Auto-activating order ${paymentableId} and awarding loyalty points`);
+      console.log(`🎁 Auto-activating order ${paymentableId} and awarding Gymmawy Coins`);
       await activateOrder(paymentableId, 'system'); // Use 'system' as adminId for automated approval
-      console.log(`✅ Order ${paymentableId} auto-activated and loyalty points awarded`);
+      console.log(`✅ Order ${paymentableId} auto-activated and Gymmawy Coins awarded`);
     } catch (error) {
       console.error(`❌ Failed to auto-activate order ${paymentableId}:`, error.message);
       // Don't fail the webhook if auto-activation fails - admin can approve manually

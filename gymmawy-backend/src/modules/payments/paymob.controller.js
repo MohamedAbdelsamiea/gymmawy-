@@ -602,3 +602,58 @@ export const getPaymentHistory = async (req, res) => {
     });
   }
 };
+
+/**
+ * Public payment verification endpoint (no authentication required)
+ * This is used when users are redirected from PayMob payment gateway
+ */
+export const verifyPaymentPublic = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    const { reference } = req.query;
+
+    // Find the payment in our database
+    // Search by either payment ID (transactionId) OR payment reference
+    const payment = await prisma.payment.findFirst({
+      where: {
+        method: 'PAYMOB',
+        OR: [
+          { transactionId: paymentId }, // Search by payment ID
+          ...(reference ? [{ paymentReference: reference }] : []) // Search by payment reference
+        ]
+      }
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Payment not found',
+        message: `No PayMob payment found with ID: ${paymentId}`
+      });
+    }
+
+    // Return the payment status
+    res.json({
+      success: true,
+      payment: {
+        payment_id: payment.transactionId || payment.paymentReference,
+        status: payment.status.toLowerCase(),
+        amount: payment.amount,
+        currency: payment.currency,
+        created_at: payment.createdAt,
+        updated_at: payment.processedAt || payment.updatedAt,
+        provider: 'PayMob'
+      },
+      local_status: payment.status,
+      local_metadata: payment.metadata
+    });
+
+  } catch (error) {
+    console.error('Public PayMob payment verification error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to verify payment'
+    });
+  }
+};

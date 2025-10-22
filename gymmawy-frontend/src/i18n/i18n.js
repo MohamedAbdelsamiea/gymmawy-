@@ -9,7 +9,7 @@ i18n
   .use(HttpBackend)
   .init({
     fallbackLng: 'en',
-    debug: process.env.NODE_ENV === 'development',
+    debug: import.meta.env.DEV,
     
     interpolation: {
       escapeValue: false,
@@ -20,7 +20,7 @@ i18n
       caches: ['cookie'],
       lookupCookie: 'i18next',
       cookieMinutes: 10080, // 7 days
-      cookieDomain: process.env.NODE_ENV === 'production' ? 'gym.omarelnemr.xyz' : 'localhost',
+      cookieDomain: import.meta.env.PROD ? 'gym.omarelnemr.xyz' : 'localhost',
     },
     backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',

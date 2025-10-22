@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import UnauthorizedAccess from './UnauthorizedAccess';
 
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
-  const { user, isAuthenticated, loading, refreshAuth } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
   // Refresh auth when route changes to ensure we have the latest user data

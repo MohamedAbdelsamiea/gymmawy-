@@ -6,7 +6,7 @@ import Slider from "react-slick";
 import * as Accordion from "@radix-ui/react-accordion";
 import { useAsset } from "../../hooks/useAsset";
 import { useLanguage } from "../../hooks/useLanguage";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { useCurrencyContext } from "../../contexts/CurrencyContext";
 import { getFullImageUrl } from "../../utils/imageUtils";
 import JoinUsButtonNew from "../../components/common/JoinUsButtonNew";

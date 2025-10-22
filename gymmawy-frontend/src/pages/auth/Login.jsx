@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { AuthCard, FloatingInput, AuthButton, AuthLink } from '../../components/auth';
 import { isValidEmail } from '../../utils/validators';
 import authService from '../../services/authService';

@@ -458,7 +458,6 @@ export async function createCoupon(req, res, next) {
       code: req.body.code,
       discountPercentage: req.body.discountValue,
       expirationDate: req.body.expirationDate,
-      maxRedemptionsPerUser: req.body.maxRedemptionsPerUser,
       maxRedemptions: req.body.maxRedemptions,
       isActive: req.body.isActive
     };
@@ -475,9 +474,6 @@ export async function updateCoupon(req, res, next) {
     if (couponData.discountValue !== undefined) {
       couponData.discountPercentage = couponData.discountValue;
       delete couponData.discountValue;
-    }
-    if (couponData.maxRedemptionsPerUser !== undefined) {
-      couponData.maxRedemptionsPerUser = couponData.maxRedemptionsPerUser;
     }
     if (couponData.maxRedemptions !== undefined) {
       couponData.maxRedemptions = couponData.maxRedemptions;

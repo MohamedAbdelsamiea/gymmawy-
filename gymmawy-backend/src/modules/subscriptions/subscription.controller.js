@@ -30,7 +30,7 @@ export async function createSubscriptionWithPayment(req, res, next) {
     
     const schema = z.object({
       planId: z.string().uuid(),
-      paymentMethod: z.enum(["INSTA_PAY", "VODAFONE_CASH", "TABBY", "TAMARA", "CARD", "CASH", "PAYMOB"]).optional(),
+      paymentMethod: z.enum(["INSTAPAY", "VODAFONECASH", "TABBY", "TAMARA", "CARD", "CASH", "PAYMOB"]).optional(),
       paymentProof: z.string().min(1).optional(),
       isMedical: z.boolean().optional(),
       currency: z.string().default("EGP"),

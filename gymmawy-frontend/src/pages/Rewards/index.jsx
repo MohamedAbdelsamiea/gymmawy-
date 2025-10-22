@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Gift, Package, ShoppingBag, BookOpen, Star, X, FileText } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';

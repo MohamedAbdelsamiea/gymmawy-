@@ -28,26 +28,36 @@ function getTransporter() {
 }
 
 export async function sendEmail({ to, subject, html, text, attachments = [] }) {
-  const mailer = getTransporter();
-  const from = process.env.EMAIL_FROM;
-  
-  // Add logo attachment for email verification emails
-  const logoPath = path.join(__dirname, '../templates/gymmawy.png');
-  if (fs.existsSync(logoPath)) {
-    attachments.push({
-      filename: 'gymmawy-logo.png',
-      path: logoPath,
-      cid: 'gymmawy-logo'
+  try {
+    console.log('📧 Email sending attempt:', { to, subject, attachmentsCount: attachments.length });
+    
+    const mailer = getTransporter();
+    const from = process.env.EMAIL_FROM;
+    
+    // Add logo attachment for email verification emails
+    const logoPath = path.join(__dirname, '../templates/gymmawy.png');
+    if (fs.existsSync(logoPath)) {
+      attachments.push({
+        filename: 'gymmawy-logo.png',
+        path: logoPath,
+        cid: 'gymmawy-logo'
+      });
+    }
+    
+    const result = await mailer.sendMail({ 
+      from, 
+      to, 
+      subject, 
+      html, 
+      text,
+      attachments 
     });
+    
+    console.log('✅ Email sent successfully:', { messageId: result.messageId, to });
+    return result;
+  } catch (error) {
+    console.error('❌ Email sending failed:', error);
+    throw error;
   }
-  
-  await mailer.sendMail({ 
-    from, 
-    to, 
-    subject, 
-    html, 
-    text,
-    attachments 
-  });
 }
 

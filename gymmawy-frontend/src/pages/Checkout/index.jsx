@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../contexts/ToastContext';
 import { useCurrencyContext } from '../../contexts/CurrencyContext';
 import { useCart } from '../../contexts/CartContext';
@@ -2524,7 +2524,7 @@ return;
     loyaltyCheckoutData: !!loyaltyCheckoutData,
     hasLoyaltyData,
     cart: !!cart,
-    cartItems: cart?.items?.length || 0
+    cartItemsCount: cart?.items?.length || 0
   });
 
   // Show error state if no checkout data is available

@@ -81,7 +81,7 @@ const PaymentFailure = () => {
   const verifyPaymobPayment = async (paymentReference) => {
     try {
       // Fetch payment status from backend
-      const response = await apiClient.get(`/paymob/payments?reference=${paymentReference}`);
+      const response = await fetch(`/api/paymob/payments?reference=${paymentReference}`);
       
       if (response.success && response.data.payments.length > 0) {
         const payment = response.data.payments[0];

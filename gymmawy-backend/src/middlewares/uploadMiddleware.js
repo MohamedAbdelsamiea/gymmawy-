@@ -9,7 +9,6 @@ const createUploadDirs = () => {
   const dirs = [
     'uploads/content/plans',
     'uploads/content/products',
-    'uploads/content/programmes',
     'uploads/content/transformations',
     'uploads/content/videos',
     'uploads/payment-proofs',

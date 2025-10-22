@@ -7,11 +7,9 @@ import { AppRoutes } from './routes';
 import { ToastContainer } from './components/common/Toast';
 import SlimCurrencySelector from './components/SlimCurrencySelector';
 import ScrollToTop from './components/common/ScrollToTop';
-import i18n from './i18n/i18n';
 import { useTranslation } from 'react-i18next';
 import { useEffect, Suspense } from 'react';
 import { useLanguageInit } from './hooks/useLanguageInit';
-import Cookies from 'js-cookie';
 
 // Component to handle RTL logic
 const RTLHandler = () => {
@@ -36,7 +34,7 @@ const RTLHandler = () => {
     };
     
     updateDirection();
-  }, [i18n.language, location.pathname]);
+  }, [i18n, location.pathname]);
   
   // Load currency namespace
   useEffect(() => {
@@ -65,7 +63,7 @@ const LoadingFallback = () => (
 );
 
 function App() {
-  const { t, ready } = useTranslation();
+  const { ready } = useTranslation();
   const isLanguageInitialized = useLanguageInit();
 
   // Don't render until i18n is ready and language is initialized

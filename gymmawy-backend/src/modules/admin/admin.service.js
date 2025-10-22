@@ -1,9 +1,15 @@
-import { getPrismaClient } from "../../config/db.js";
+import { getPrismaClient, isPrismaInitialized } from "../../config/db.js";
 import { Decimal } from "@prisma/client/runtime/library";
 import { getOrderWithCalculatedTotal } from "../../utils/orderCalculations.js";
 import { getOrderItemsWithCalculatedTotals } from "../../utils/orderItemCalculations.js";
 
 const prisma = getPrismaClient();
+
+// Ensure Prisma client is properly initialized
+if (!prisma || !prisma.subscriptionPlanBenefit) {
+  console.error('Prisma client not properly initialized');
+  throw new Error('Database connection not available');
+}
 
 
 export async function dashboardStats() {
@@ -31,7 +37,7 @@ export async function dashboardStats() {
     // All successful payments - USD
     totalRevenueUSD,
     revenueThisWeekUSD,
-    // Loyalty points
+    // Gymmawy Coins
     totalLoyaltyPointsRewarded,
     loyaltyPointsRewardedThisWeek,
     totalLoyaltyPointsRedeemed,
@@ -124,36 +130,44 @@ export async function dashboardStats() {
       }
     }),
     
-    // Loyalty points rewarded (from loyalty transactions)
-    prisma.loyaltyTransaction.aggregate({
-      _sum: { points: true },
+    // Gymmawy Coins rewarded (from payments with GYMMAWY_COINS)
+    prisma.payment.aggregate({
+      _sum: { amount: true },
       where: { 
-        type: 'EARNED',
-        points: { gt: 0 }
+        status: 'SUCCESS',
+        currency: 'GYMMAWY_COINS',
+        method: 'GYMMAWY_COINS',
+        amount: { gt: 0 }
       }
     }),
-    prisma.loyaltyTransaction.aggregate({
-      _sum: { points: true },
+    prisma.payment.aggregate({
+      _sum: { amount: true },
       where: { 
-        type: 'EARNED',
-        points: { gt: 0 },
+        status: 'SUCCESS',
+        currency: 'GYMMAWY_COINS',
+        method: 'GYMMAWY_COINS',
+        amount: { gt: 0 },
         createdAt: { gte: startOfWeek }
       }
     }),
     
-    // Loyalty points redeemed (from loyalty transactions)
-    prisma.loyaltyTransaction.aggregate({
-      _sum: { points: true },
+    // Gymmawy Coins redeemed (from payments with GYMMAWY_COINS - negative amounts)
+    prisma.payment.aggregate({
+      _sum: { amount: true },
       where: { 
-        type: 'REDEEMED',
-        points: { lt: 0 }
+        status: 'SUCCESS',
+        currency: 'GYMMAWY_COINS',
+        method: 'GYMMAWY_COINS',
+        amount: { lt: 0 }
       }
     }),
-    prisma.loyaltyTransaction.aggregate({
-      _sum: { points: true },
+    prisma.payment.aggregate({
+      _sum: { amount: true },
       where: { 
-        type: 'REDEEMED',
-        points: { lt: 0 },
+        status: 'SUCCESS',
+        currency: 'GYMMAWY_COINS',
+        method: 'GYMMAWY_COINS',
+        amount: { lt: 0 },
         createdAt: { gte: startOfWeek }
       }
     })
@@ -203,12 +217,12 @@ export async function dashboardStats() {
       week: programPurchasesThisWeek
     },
     loyaltyPointsRewarded: {
-      total: Number(totalLoyaltyPointsRewarded._sum.points || 0),
-      week: Number(loyaltyPointsRewardedThisWeek._sum.points || 0)
+      total: Number(totalLoyaltyPointsRewarded._sum.amount || 0),
+      week: Number(loyaltyPointsRewardedThisWeek._sum.amount || 0)
     },
     loyaltyPointsRedeemed: {
-      total: Math.abs(Number(totalLoyaltyPointsRedeemed._sum.points || 0)),
-      week: Math.abs(Number(loyaltyPointsRedeemedThisWeek._sum.points || 0))
+      total: Math.abs(Number(totalLoyaltyPointsRedeemed._sum.amount || 0)),
+      week: Math.abs(Number(loyaltyPointsRedeemedThisWeek._sum.amount || 0))
     }
   };
 }
@@ -629,7 +643,6 @@ export async function getProducts(query = {}) {
 
 export async function createProduct(data) {
   console.log('Backend - Received product data:', JSON.stringify(data, null, 2));
-  console.log('Backend - Prices data:', data.prices);
   console.log('Backend - Image URL:', data.imageUrl);
   console.log('Backend - Loyalty points:', {
     awarded: data.loyaltyPointsAwarded,
@@ -647,27 +660,6 @@ export async function createProduct(data) {
       isActive: data.isActive !== undefined ? data.isActive : true
     }
   });
-
-  // Handle prices if provided
-  if (data.prices && Array.isArray(data.prices) && data.prices.length > 0) {
-    console.log('Backend - Creating prices:', data.prices);
-    const priceData = data.prices.map(price => ({
-      id: `${product.id}-${price.currency}`,
-      amount: price.amount,
-      currency: price.currency,
-      purchasableId: product.id,
-      purchasableType: 'PRODUCT',
-      updatedAt: new Date()
-    }));
-    console.log('Backend - Price data to insert:', priceData);
-    
-    await prisma.price.createMany({
-      data: priceData
-    });
-    console.log('Backend - Prices created successfully');
-  } else {
-    console.log('Backend - No prices to create');
-  }
 
   // Handle main image if provided
   if (data.imageUrl && data.imageUrl.trim() !== '') {
@@ -699,22 +691,15 @@ export async function createProduct(data) {
     console.log('Backend - No carousel images provided');
   }
 
-  const productWithPrices = await prisma.product.findUnique({
+  const productWithImages = await prisma.product.findUnique({
     where: { id: product.id },
     include: {
       images: true
     }
   });
 
-  const prices = await prisma.price.findMany({
-    where: {
-      purchasableId: product.id,
-      purchasableType: 'PRODUCT'
-    }
-  });
-
-  console.log('Backend - Final product with prices:', { ...productWithPrices, prices });
-  return { ...productWithPrices, prices };
+  console.log('Backend - Final product:', productWithImages);
+  return productWithImages;
 }
 
 export async function getProductById(id) {
@@ -1051,67 +1036,68 @@ export async function getSubscriptionStats() {
 }
 
 export async function getSubscriptionPlans(query = {}) {
-  const { page = 1, pageSize = 10 } = query;
-  const skip = (page - 1) * pageSize;
-  
-  const [allPlans, total] = await Promise.all([
-    prisma.subscriptionPlan.findMany({
-      where: {
-        deletedAt: null
-      },
-      include: {
-        benefits: {
-          where: {
-            benefit: {
-              deletedAt: null
+  try {
+    // Ensure Prisma client is available and initialized
+    if (!isPrismaInitialized() || !prisma.subscriptionPlan) {
+      console.error('Prisma client not available or not initialized in getSubscriptionPlans');
+      throw new Error('Database connection not available');
+    }
+
+    const { page = 1, pageSize = 10 } = query;
+    const skip = (page - 1) * pageSize;
+    
+    const [allPlans, total] = await Promise.all([
+      prisma.subscriptionPlan.findMany({
+        where: {
+          deletedAt: null
+        },
+        include: {
+          benefits: {
+            where: {
+              benefit: {
+                deletedAt: null
+              }
+            },
+            include: {
+              benefit: true
+            },
+            orderBy: {
+              order: 'asc'
             }
           },
-          include: {
-            benefit: true
-          },
-          orderBy: {
-            order: 'asc'
-          }
-        },
-        _count: {
-          select: {
-            subscriptions: {
-              where: {
-                status: 'ACTIVE'
+          _count: {
+            select: {
+              subscriptions: {
+                where: {
+                  status: 'ACTIVE'
+                }
               }
             }
           }
         }
-      }
-    }),
-    prisma.subscriptionPlan.count({
-      where: {
-        deletedAt: null
-      }
-    })
-  ]);
+      }),
+      prisma.subscriptionPlan.count({
+        where: {
+          deletedAt: null
+        }
+      })
+    ]);
 
   // Process plans with price data
   const processedPlans = await Promise.all(allPlans.map(async (plan) => {
-    // Get prices for this plan
-    const prices = await prisma.price.findMany({
-      where: {
-        purchasableId: plan.id,
-        purchasableType: 'SUBSCRIPTION'
-      }
-    });
-    
-    // Separate regular and medical prices
+    // Extract regular prices from direct fields
     const regularPrices = {};
-    const medicalPrices = {};
+    if (plan.priceAED) regularPrices.AED = parseFloat(plan.priceAED);
+    if (plan.priceEGP) regularPrices.EGP = parseFloat(plan.priceEGP);
+    if (plan.priceSAR) regularPrices.SAR = parseFloat(plan.priceSAR);
+    if (plan.priceUSD) regularPrices.USD = parseFloat(plan.priceUSD);
     
-    prices.forEach(price => {
-      if (price.id.endsWith('-NORMAL')) {
-        regularPrices[price.currency] = parseFloat(price.amount);
-      } else if (price.id.endsWith('-MEDICAL')) {
-        medicalPrices[price.currency] = parseFloat(price.amount);
-      }
-    });
+    // Extract medical prices from direct fields
+    const medicalPrices = {};
+    if (plan.medicalPriceAED) medicalPrices.AED = parseFloat(plan.medicalPriceAED);
+    if (plan.medicalPriceEGP) medicalPrices.EGP = parseFloat(plan.medicalPriceEGP);
+    if (plan.medicalPriceSAR) medicalPrices.SAR = parseFloat(plan.medicalPriceSAR);
+    if (plan.medicalPriceUSD) medicalPrices.USD = parseFloat(plan.medicalPriceUSD);
     
     // Process benefits
     const processedBenefits = (plan.benefits || []).map(benefitRelation => {
@@ -1143,55 +1129,60 @@ export async function getSubscriptionPlans(query = {}) {
     return a.order - b.order;
   });
 
-  // Apply pagination after sorting
-  const plans = sortedPlans.slice(skip, skip + pageSize);
-  
-  return { items: plans, total, page, pageSize };
+    // Apply pagination after sorting
+    const plans = sortedPlans.slice(skip, skip + pageSize);
+    
+    return { items: plans, total, page, pageSize };
+  } catch (error) {
+    console.error('Error in getSubscriptionPlans:', error);
+    throw error;
+  }
 }
 
 export async function getSubscriptionPlanById(id) {
-  const plan = await prisma.subscriptionPlan.findUnique({ 
-    where: { id },
-    include: {
-      benefits: {
-        where: {
-          benefit: {
-            deletedAt: null
-          }
-        },
-        include: {
-          benefit: true
-        },
-        orderBy: {
-          benefit: {
-            createdAt: 'asc'
+  try {
+    // Ensure Prisma client is available and initialized
+    if (!isPrismaInitialized() || !prisma.subscriptionPlan) {
+      console.error('Prisma client not available or not initialized in getSubscriptionPlanById');
+      throw new Error('Database connection not available');
+    }
+
+    const plan = await prisma.subscriptionPlan.findUnique({ 
+      where: { id },
+      include: {
+        benefits: {
+          where: {
+            benefit: {
+              deletedAt: null
+            }
+          },
+          include: {
+            benefit: true
+          },
+          orderBy: {
+            benefit: {
+              createdAt: 'asc'
+            }
           }
         }
       }
-    }
-  });
+    });
 
   if (!plan) return null;
   
-  // Get prices for this plan
-  const prices = await prisma.price.findMany({
-    where: {
-      purchasableId: plan.id,
-      purchasableType: 'SUBSCRIPTION'
-    }
-  });
-  
-  // Separate regular and medical prices
+  // Extract regular prices from direct fields
   const regularPrices = {};
-  const medicalPrices = {};
+  if (plan.priceAED) regularPrices.AED = parseFloat(plan.priceAED);
+  if (plan.priceEGP) regularPrices.EGP = parseFloat(plan.priceEGP);
+  if (plan.priceSAR) regularPrices.SAR = parseFloat(plan.priceSAR);
+  if (plan.priceUSD) regularPrices.USD = parseFloat(plan.priceUSD);
   
-  prices.forEach(price => {
-    if (price.id.endsWith('-NORMAL')) {
-      regularPrices[price.currency] = parseFloat(price.amount);
-    } else if (price.id.endsWith('-MEDICAL')) {
-      medicalPrices[price.currency] = parseFloat(price.amount);
-    }
-  });
+  // Extract medical prices from direct fields
+  const medicalPrices = {};
+  if (plan.medicalPriceAED) medicalPrices.AED = parseFloat(plan.medicalPriceAED);
+  if (plan.medicalPriceEGP) medicalPrices.EGP = parseFloat(plan.medicalPriceEGP);
+  if (plan.medicalPriceSAR) medicalPrices.SAR = parseFloat(plan.medicalPriceSAR);
+  if (plan.medicalPriceUSD) medicalPrices.USD = parseFloat(plan.medicalPriceUSD);
   
   // Process benefits
   const processedBenefits = plan.benefits.map(benefitRelation => {
@@ -1214,6 +1205,10 @@ export async function getSubscriptionPlanById(id) {
       medical: medicalPrices
     }
   };
+  } catch (error) {
+    console.error('Error in getSubscriptionPlanById:', error);
+    throw error;
+  }
 }
 
 export async function createSubscriptionPlan(data) {
@@ -1266,7 +1261,14 @@ export async function createSubscriptionPlan(data) {
 }
 
 export async function updateSubscriptionPlan(id, data) {
-  const { benefits, prices, ...planData } = data;
+  try {
+    // Ensure Prisma client is available and initialized
+    if (!isPrismaInitialized() || !prisma.subscriptionPlanBenefit) {
+      console.error('Prisma client not available or not initialized in updateSubscriptionPlan');
+      throw new Error('Database connection not available');
+    }
+
+    const { benefits, prices, ...planData } = data;
   
   // Remove any fields that shouldn't be passed to Prisma
   const { priceEGP, priceSAR, priceAED, priceUSD, medicalEGP, medicalSAR, medicalAED, medicalUSD, medicalPrices, ...cleanPlanData } = planData;
@@ -1334,6 +1336,10 @@ export async function updateSubscriptionPlan(id, data) {
     if (JSON.stringify(currentBenefitData) !== JSON.stringify(newBenefitData)) {
       console.log('🔄 Backend - Updating benefits...');
       // First, remove all existing benefit relationships
+      if (!prisma.subscriptionPlanBenefit || typeof prisma.subscriptionPlanBenefit.deleteMany !== 'function') {
+        console.error('Prisma subscriptionPlanBenefit model not available');
+        throw new Error('Database model not available');
+      }
       await prisma.subscriptionPlanBenefit.deleteMany({
         where: { subscriptionPlanId: id }
       });
@@ -1352,35 +1358,46 @@ export async function updateSubscriptionPlan(id, data) {
     await handlePlanPrices(id, prices);
   }
   
-  // Return the plan with benefits and prices
-  return prisma.subscriptionPlan.findUnique({ 
-    where: { id },
-    include: {
-      benefits: {
-        where: {
-          benefit: {
-            deletedAt: null
+    // Return the plan with benefits and prices
+    return prisma.subscriptionPlan.findUnique({ 
+      where: { id },
+      include: {
+        benefits: {
+          where: {
+            benefit: {
+              deletedAt: null
+            }
+          },
+          include: {
+            benefit: true
+          },
+          orderBy: {
+            benefit: {
+              createdAt: 'asc'
+            }
           }
         },
-        include: {
-          benefit: true
-        },
-        orderBy: {
-          benefit: {
-            createdAt: 'asc'
-          }
-        }
-      },
-    }
-  });
+      }
+    });
+  } catch (error) {
+    console.error('Error in updateSubscriptionPlan:', error);
+    throw error;
+  }
 }
 
 export async function deleteSubscriptionPlan(id) {
-  // First, get the plan to access its image URL
-  const plan = await prisma.subscriptionPlan.findUnique({
-    where: { id },
-    select: { imageUrl: true }
-  });
+  try {
+    // Ensure Prisma client is available and initialized
+    if (!isPrismaInitialized() || !prisma.subscriptionPlan) {
+      console.error('Prisma client not available or not initialized in deleteSubscriptionPlan');
+      throw new Error('Database connection not available');
+    }
+
+    // First, get the plan to access its image URL
+    const plan = await prisma.subscriptionPlan.findUnique({
+      where: { id },
+      select: { imageUrl: true }
+    });
 
   if (!plan) {
     throw new Error('Subscription plan not found');
@@ -1397,11 +1414,15 @@ export async function deleteSubscriptionPlan(id) {
     }
   }
 
-  // Soft delete the subscription plan
-  return prisma.subscriptionPlan.update({ 
-    where: { id }, 
-    data: { deletedAt: new Date() } 
-  });
+    // Soft delete the subscription plan
+    return prisma.subscriptionPlan.update({ 
+      where: { id }, 
+      data: { deletedAt: new Date() } 
+    });
+  } catch (error) {
+    console.error('Error in deleteSubscriptionPlan:', error);
+    throw error;
+  }
 }
 
 export async function updateSubscriptionPlanBenefitOrder(planId, benefits) {
@@ -1594,7 +1615,7 @@ export async function getPayments(query = {}) {
             status: true
           }
         });
-      } else if (payment.paymentableType === 'PROGRAMME_PURCHASE' && payment.paymentableId) {
+      } else if (payment.paymentableType === 'PROGRAMME' && payment.paymentableId) {
         relatedEntity = await prisma.programmePurchase.findUnique({
           where: { id: payment.paymentableId },
           select: {
@@ -1615,7 +1636,7 @@ export async function getPayments(query = {}) {
         // Add the related entity based on its type
         ...(payment.paymentableType === 'SUBSCRIPTION' && relatedEntity && { subscription: relatedEntity }),
         ...(payment.paymentableType === 'ORDER' && relatedEntity && { order: relatedEntity }),
-        ...(payment.paymentableType === 'PROGRAMME_PURCHASE' && relatedEntity && { programmePurchase: relatedEntity })
+        ...(payment.paymentableType === 'PROGRAMME' && relatedEntity && { programmePurchase: relatedEntity })
       };
     })
   );
@@ -1712,9 +1733,9 @@ export async function getProgrammeById(id) {
 }
 
 export async function createProgramme(data) {
-  // Validate loyalty points required
+  // Validate Gymmawy Coins required
   if (data.loyaltyPointsRequired !== undefined && data.loyaltyPointsRequired !== null && data.loyaltyPointsRequired <= 0) {
-    const error = new Error("Loyalty points required must be greater than 0");
+    const error = new Error("Gymmawy Coins required must be greater than 0");
     error.status = 400;
     error.expose = true;
     throw error;
@@ -1747,9 +1768,9 @@ export async function createProgramme(data) {
 }
 
 export async function updateProgramme(id, data) {
-  // Validate loyalty points required
+  // Validate Gymmawy Coins required
   if (data.loyaltyPointsRequired !== undefined && data.loyaltyPointsRequired !== null && data.loyaltyPointsRequired <= 0) {
-    const error = new Error("Loyalty points required must be greater than 0");
+    const error = new Error("Gymmawy Coins required must be greater than 0");
     error.status = 400;
     error.expose = true;
     throw error;
@@ -1963,26 +1984,38 @@ export async function getProgrammePurchaseById(id) {
 }
 
 export async function updateProgrammePurchase(id, data) {
-  return prisma.programmePurchase.update({
-    where: { id },
-    data,
-    include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true
-        }
-      },
-      programme: {
-        select: {
-          id: true,
-          name: true
-        }
-      }
+  // If status is being changed to COMPLETE, handle it specially
+  if (data.status === 'COMPLETE') {
+    // First check if the purchase is already COMPLETE
+    const existingPurchase = await prisma.programmePurchase.findUnique({
+      where: { id },
+      select: { status: true }
+    });
+    
+    if (!existingPurchase) {
+      throw new Error('Programme purchase not found');
     }
-  });
+    
+    // If already COMPLETE, just send the email without changing status
+    if (existingPurchase.status === 'COMPLETE') {
+      const { sendProgrammeDeliveryEmail } = await import('../programmes/programmeEmail.service.js');
+      try {
+        await sendProgrammeDeliveryEmail(id);
+        console.log(`✅ Programme delivery email sent for already completed purchase ${id}`);
+      } catch (emailError) {
+        console.error(`❌ Failed to send email for completed purchase ${id}:`, emailError);
+      }
+      return existingPurchase;
+    }
+    
+    // If not COMPLETE, use the programme service approval function
+    const { approveProgrammePurchase } = await import('../programmes/programme.service.js');
+    return await approveProgrammePurchase(id);
+  }
+  
+  // For other updates, use the programme service's general update function
+  const { adminUpdateProgrammePurchaseStatus } = await import('../programmes/programme.service.js');
+  return await adminUpdateProgrammePurchaseStatus(id, data.status);
 }
 
 
@@ -2018,7 +2051,6 @@ export async function getCoupons(query = {}) {
   const transformedCoupons = coupons.map(coupon => ({
     ...coupon,
     discountValue: coupon.discountPercentage,
-    maxRedemptionsPerUser: coupon.maxRedemptionsPerUser,
     maxRedemptions: coupon.maxRedemptions,
     totalRedemptions: coupon.totalRedemptions
   }));
@@ -2034,7 +2066,6 @@ export async function getCouponById(id) {
   return {
     ...coupon,
     discountValue: coupon.discountPercentage,
-    maxRedemptionsPerUser: coupon.maxRedemptionsPerUser,
     totalRedemptions: coupon.totalRedemptions
   };
 }
@@ -2265,7 +2296,7 @@ export async function getMonthlyTrends(query = {}) {
         where: {
           status: 'SUCCESS',
           currency: 'EGP',
-          paymentableType: 'PRODUCT',
+          paymentableType: 'ORDER',
           createdAt: { gte: monthStart, lte: monthEnd }
         }
       }),
@@ -2275,7 +2306,7 @@ export async function getMonthlyTrends(query = {}) {
         where: {
           status: 'SUCCESS',
           currency: 'SAR',
-          paymentableType: 'PRODUCT',
+          paymentableType: 'ORDER',
           createdAt: { gte: monthStart, lte: monthEnd }
         }
       }),
@@ -2285,7 +2316,7 @@ export async function getMonthlyTrends(query = {}) {
         where: {
           status: 'SUCCESS',
           currency: 'AED',
-          paymentableType: 'PRODUCT',
+          paymentableType: 'ORDER',
           createdAt: { gte: monthStart, lte: monthEnd }
         }
       }),
@@ -2295,7 +2326,7 @@ export async function getMonthlyTrends(query = {}) {
         where: {
           status: 'SUCCESS',
           currency: 'USD',
-          paymentableType: 'PRODUCT',
+          paymentableType: 'ORDER',
           createdAt: { gte: monthStart, lte: monthEnd }
         }
       }),
@@ -2530,12 +2561,12 @@ async function getTopSellingProducts(limit = 10) {
         },
         select: {
           quantity: true,
-          totalPrice: true
+          price: true
         }
       });
 
       const sales = orderItems.reduce((sum, item) => sum + item.quantity, 0);
-      const revenue = orderItems.reduce((sum, item) => sum + Number(item.totalPrice), 0);
+      const revenue = orderItems.reduce((sum, item) => sum + (Number(item.price || 0) * item.quantity), 0);
 
       return {
         id: product.id,
@@ -2655,9 +2686,13 @@ export async function getRecentActivity(query = {}) {
         }
       }),
       
-      // Recent loyalty transactions
-      prisma.loyaltyTransaction.findMany({
+      // Recent loyalty transactions (from payments with GYMMAWY_COINS)
+      prisma.payment.findMany({
         take: Math.ceil(limit / 4),
+        where: {
+          currency: 'GYMMAWY_COINS',
+          method: 'GYMMAWY_COINS'
+        },
         orderBy: { createdAt: 'desc' },
         include: {
           user: {
@@ -2770,21 +2805,21 @@ export async function getRecentActivity(query = {}) {
 
     // Add loyalty transactions
     recentLoyaltyTransactions.forEach(transaction => {
-      const isEarned = transaction.points > 0;
+      const isEarned = transaction.amount > 0;
       activities.push({
         id: `loyalty-${transaction.id}`,
         type: 'loyalty',
         title: isEarned ? 'Loyalty Points Earned' : 'Loyalty Points Redeemed',
-        description: `${transaction.user.firstName} ${transaction.user.lastName} ${isEarned ? 'earned' : 'redeemed'} ${Math.abs(transaction.points)} points`,
+        description: `${transaction.user.firstName} ${transaction.user.lastName} ${isEarned ? 'earned' : 'redeemed'} ${Math.abs(transaction.amount)} points`,
         user: transaction.user,
-        points: transaction.points,
-        reason: transaction.reason,
-        source: transaction.source,
+        points: transaction.amount,
+        reason: transaction.metadata?.reason || 'Loyalty transaction',
+        source: transaction.metadata?.source || 'PAYMENT',
         timestamp: transaction.createdAt,
         metadata: {
           transactionId: transaction.id,
-          type: transaction.type,
-          source: transaction.source
+          type: isEarned ? 'EARNED' : 'REDEEMED',
+          source: transaction.metadata?.source || 'PAYMENT'
         }
       });
     });
@@ -2943,6 +2978,12 @@ export async function createAdmin(data) {
 
 // Helper function to handle plan-benefit relationships
 async function handlePlanBenefits(planId, benefits) {
+  // Ensure Prisma client is available
+  if (!prisma.subscriptionPlanBenefit || typeof prisma.subscriptionPlanBenefit.createMany !== 'function') {
+    console.error('Prisma subscriptionPlanBenefit model not available in handlePlanBenefits');
+    throw new Error('Database model not available');
+  }
+  
   // Handle both simple benefit IDs and benefit objects
   const benefitRelations = benefits.map((benefit, index) => {
     if (typeof benefit === 'string') {
@@ -2979,35 +3020,61 @@ async function handlePlanBenefits(planId, benefits) {
 
 // Helper function to handle plan pricing
 async function handlePlanPrices(planId, prices) {
-  // Delete existing prices for this plan
-  await prisma.price.deleteMany({
-    where: {
-      purchasableId: planId,
-      purchasableType: 'SUBSCRIPTION'
-    }
-  });
+  // Ensure Prisma client is available
+  if (!prisma || !prisma.subscriptionPlan) {
+    console.error('Prisma client not available in handlePlanPrices');
+    throw new Error('Database connection not available');
+  }
+
+  // Prepare price data for direct fields
+  const priceData = {};
   
-  // Create new prices one by one
+  // Process prices and map them to direct fields
   for (const price of prices) {
-    try {
-      await prisma.price.create({
-        data: {
-          id: `${planId}-${price.currency}-${price.type || 'NORMAL'}`,
-          amount: price.amount,
-          currency: price.currency,
-          purchasableId: planId,
-          purchasableType: 'SUBSCRIPTION',
-          updatedAt: new Date()
-        }
-      });
-    } catch (error) {
-      console.log('Price creation error:', error.message);
-      // Skip if price already exists or foreign key constraint fails
-      if (error.code === 'P2002' || error.message.includes('Foreign key constraint')) {
-        continue;
+    const currency = price.currency;
+    const amount = price.amount;
+    
+    if (price.type === 'MEDICAL') {
+      // Medical prices
+      switch (currency) {
+        case 'AED':
+          priceData.medicalPriceAED = amount;
+          break;
+        case 'EGP':
+          priceData.medicalPriceEGP = amount;
+          break;
+        case 'SAR':
+          priceData.medicalPriceSAR = amount;
+          break;
+        case 'USD':
+          priceData.medicalPriceUSD = amount;
+          break;
       }
-      throw error;
+    } else {
+      // Regular prices
+      switch (currency) {
+        case 'AED':
+          priceData.priceAED = amount;
+          break;
+        case 'EGP':
+          priceData.priceEGP = amount;
+          break;
+        case 'SAR':
+          priceData.priceSAR = amount;
+          break;
+        case 'USD':
+          priceData.priceUSD = amount;
+          break;
+      }
     }
+  }
+  
+  // Update the subscription plan with the new prices
+  if (Object.keys(priceData).length > 0) {
+    await prisma.subscriptionPlan.update({
+      where: { id: planId },
+      data: priceData
+    });
   }
 }
 

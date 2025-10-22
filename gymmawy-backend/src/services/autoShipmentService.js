@@ -203,7 +203,7 @@ class AutoShipmentService {
       items: order.items.map((item, index) => ({
         name: item.product?.name?.en || `Product ${index + 1}`,
         quantity: item.quantity,
-        price: parseFloat(item.totalPrice),
+        price: parseFloat(item.price) * item.quantity,
         sku: item.product?.id || `SKU-${index + 1}`,
         weight: item.product?.weight ? parseFloat(item.product.weight) : 0.5
       })),

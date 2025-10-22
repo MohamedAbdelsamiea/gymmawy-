@@ -30,6 +30,7 @@ import rewardsRoutes from "./modules/rewards/rewards.routes.js";
 import currencyRoutes from "./modules/currency/currency.routes.js";
 import priceRoutes from "./modules/prices/price.routes.js";
 import fileRoutes from "./routes/fileRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
 import { initializeTabbyCronService } from "./services/tabbyCronService.js";
 import { initializeLogRotation } from "./utils/logRotation.js";
 
@@ -104,17 +105,93 @@ app.use("/api/media", mediaRoutes);
 app.use("/api/rewards", rewardsRoutes);
 app.use("/api/currency", currencyRoutes);
 app.use("/api/prices", priceRoutes);
+app.use("/api/uploads", uploadRoutes);
+
+// Upload routes (for file uploads) - must come before static file serving
+app.use("/uploads", uploadRoutes);
+
+// Serve uploaded files statically with CORS headers (fallback for non-API requests)
+app.use("/uploads", (req, res, next) => {
+  // Skip if this is an API request (has specific upload endpoints) or DELETE request
+  if (req.path.match(/^\/(public|admin)\/(images|videos|pdfs)/) || req.path.match(/^\/payment-proof/) || req.method === 'DELETE') {
+    return next();
+  }
+  
+  // Set CORS headers for uploaded files
+  const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
+    "http://localhost:3000", 
+    "http://localhost:3001", 
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "https://gym.omarelnemr.xyz",
+    "https://www.gym.omarelnemr.xyz"
+  ];
+  const origin = req.headers.origin;
+  
+  // Check for exact match or subdomain match
+  const isAllowed = allowedOrigins.some(allowedOrigin => {
+    if (allowedOrigin === "*") return true;
+    if (allowedOrigin === origin) return true;
+    // Allow subdomains for production domain
+    if (allowedOrigin === "https://gym.omarelnemr.xyz" && origin && origin.startsWith("https://")) {
+      return origin.includes("gym.omarelnemr.xyz");
+    }
+    return false;
+  });
+  
+  if (isAllowed && origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else if (allowedOrigins.includes("*")) {
+    res.header('Access-Control-Allow-Origin', "*");
+  }
+  
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.header('Cross-Origin-Embedder-Policy', 'unsafe-none');
+  res.header('Cross-Origin-Opener-Policy', 'same-origin');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  next();
+}, express.static("uploads", {
+  setHeaders: (res, path) => {
+    // Set additional headers for static files
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    
+    // Set proper content type for images
+    if (path.endsWith('.webp')) {
+      res.setHeader('Content-Type', 'image/webp');
+    } else if (path.endsWith('.jpg') || path.endsWith('.jpeg')) {
+      res.setHeader('Content-Type', 'image/jpeg');
+    } else if (path.endsWith('.png')) {
+      res.setHeader('Content-Type', 'image/png');
+    } else if (path.endsWith('.gif')) {
+      res.setHeader('Content-Type', 'image/gif');
+    }
+  }
+}));
 
 // Secure file serving routes
 app.use("/files", fileRoutes);
 
 // Serve static files from uploads directory with CORS headers and access control
-app.use("/uploads", (req, res, next) => {
+app.use("/static", (req, res, next) => {
   // Set CORS headers for static files
   const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
     "http://localhost:3000", 
     "http://localhost:3001", 
     "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
     "https://gym.omarelnemr.xyz",
     "https://www.gym.omarelnemr.xyz"
   ];

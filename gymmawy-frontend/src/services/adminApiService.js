@@ -294,38 +294,6 @@ class AdminApiService {
     return this.apiCall('/admin/leads/stats');
   }
 
-  // ==================== COUPONS ====================
-  async getCoupons() {
-    return this.apiCall('/coupons');
-  }
-
-  async getCouponsStats() {
-    return this.apiCall('/coupons/stats');
-  }
-
-  async getCouponById(id) {
-    return this.apiCall(`/coupons/${id}`);
-  }
-
-  async createCoupon(couponData) {
-    return this.apiCall('/admin/coupons', {
-      method: 'POST',
-      body: JSON.stringify(couponData)
-    });
-  }
-
-  async updateCoupon(id, couponData) {
-    return this.apiCall(`/admin/coupons/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(couponData)
-    });
-  }
-
-  async deleteCoupon(id) {
-    return this.apiCall(`/admin/coupons/${id}`, {
-      method: 'DELETE'
-    });
-  }
 
   // ==================== CMS ====================
   async getTransformations(params = {}) {
@@ -576,14 +544,6 @@ class AdminApiService {
 
 
 
-  // ==================== UPLOADS ====================
-  async uploadImage(formData) {
-    return this.apiCall('/uploads/admin/images', {
-      method: 'POST',
-      body: formData
-      // Don't set Content-Type for FormData - browser will set it with boundary
-    });
-  }
 
   async getImages() {
     return this.apiCall('/uploads/admin/images', {
@@ -628,10 +588,6 @@ class AdminApiService {
   }
 
   // ==================== PAYMENT VERIFICATION ====================
-  async getPayments(params = {}) {
-    const queryString = new URLSearchParams(params).toString();
-    return this.apiCall(`/admin/payments${queryString ? `?${queryString}` : ''}`);
-  }
 
   async getPendingPayments(params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -650,9 +606,6 @@ class AdminApiService {
     });
   }
 
-  async getPaymentById(paymentId) {
-    return this.apiCall(`/payments/${paymentId}`);
-  }
 
   // ==================== ORDER ACTIVATION ====================
   async activateOrder(orderId) {

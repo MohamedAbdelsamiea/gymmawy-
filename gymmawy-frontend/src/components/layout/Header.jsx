@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Menu, X, Globe, User, LogOut, ShoppingBag, Gift, Home, ShoppingCart, ChevronDown } from "lucide-react";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import languageEventService from "../../services/languageEventService";
 import { useCart } from "../../contexts/CartContext";
 import logo from "/assets/common/logo.webp"; // import your logo directly

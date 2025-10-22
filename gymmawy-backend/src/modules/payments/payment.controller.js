@@ -73,11 +73,11 @@ export async function createPayment(req, res, next) {
     const schema = z.object({
       amount: z.number().positive(),
       currency: z.enum(['EGP', 'SAR', 'AED', 'USD']),
-      method: z.enum(['INSTA_PAY', 'VODAFONE_CASH', 'TABBY', 'TAMARA', 'CARD', 'GYMMAWY_COINS']),
+      method: z.enum(['INSTAPAY', 'VODAFONECASH', 'TABBY', 'TAMARA', 'CARD', 'GYMMAWY_COINS']),
       transactionId: z.string().optional(),
       paymentProofUrl: z.string().url().optional(),
       paymentableId: z.string().uuid(),
-      paymentableType: z.enum(['PRODUCT', 'PLAN', 'PROGRAMME', 'MEDICAL', 'SUBSCRIPTION', 'PRODUCT', 'PROGRAMME']),
+      paymentableType: z.enum(['PROGRAMME', 'SUBSCRIPTION', 'ORDER']),
       metadata: z.object({}).optional()
     });
     

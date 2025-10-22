@@ -2,6 +2,8 @@ import { getPrismaClient } from "../../config/db.js";
 import { generateProgrammePurchaseNumber } from "../../utils/idGenerator.js";
 import { generateUserFriendlyPaymentReference } from "../../utils/paymentReference.js";
 import { Decimal } from "@prisma/client/runtime/library";
+import { sendEmail } from "../../utils/email.js";
+import { getProgrammeDeliveryTemplate } from "../../utils/emailTemplates.js";
 
 const prisma = getPrismaClient();
 
@@ -148,9 +150,9 @@ export async function getProgrammeById(id) {
 }
 
 export async function createProgramme(data) {
-  // Validate loyalty points required
+  // Validate Gymmawy Coins required
   if (data.loyaltyPointsRequired !== undefined && data.loyaltyPointsRequired !== null && data.loyaltyPointsRequired <= 0) {
-    const error = new Error("Loyalty points required must be greater than 0");
+    const error = new Error("Gymmawy Coins required must be greater than 0");
     error.status = 400;
     error.expose = true;
     throw error;
@@ -183,9 +185,9 @@ export async function createProgramme(data) {
 }
 
 export async function updateProgramme(id, data) {
-  // Validate loyalty points required
+  // Validate Gymmawy Coins required
   if (data.loyaltyPointsRequired !== undefined && data.loyaltyPointsRequired !== null && data.loyaltyPointsRequired <= 0) {
-    const error = new Error("Loyalty points required must be greater than 0");
+    const error = new Error("Gymmawy Coins required must be greater than 0");
     error.status = 400;
     error.expose = true;
     throw error;
@@ -306,11 +308,12 @@ export async function approveProgrammePurchase(id) {
     },
     include: {
       programme: true,
-      user: true
+      user: true,
+      coupon: true
     }
   });
 
-  // Award loyalty points for programme purchase completion
+  // Award Gymmawy Coins for programme purchase completion
   if (purchase.programme.loyaltyPointsAwarded > 0) {
     await prisma.user.update({
       where: { id: purchase.userId },
@@ -321,17 +324,34 @@ export async function approveProgrammePurchase(id) {
       }
     });
 
-    await prisma.loyaltyTransaction.create({
+    await prisma.payment.create({
       data: {
         userId: purchase.userId,
-        points: purchase.programme.loyaltyPointsAwarded,
-        type: 'EARNED',
-        source: 'PROGRAMME_PURCHASE',
-        sourceId: purchase.id
+        amount: purchase.programme.loyaltyPointsAwarded,
+        status: 'SUCCESS',
+        method: 'GYMMAWY_COINS',
+        currency: 'GYMMAWY_COINS',
+        paymentReference: `LOYALTY-PROGRAMME-${purchase.id}`,
+        paymentableType: 'PROGRAMME',
+        paymentableId: purchase.id,
+        metadata: {
+          type: 'EARNED',
+          source: 'PROGRAMME_PURCHASE',
+          sourceId: purchase.id
+        }
       }
     });
 
-    console.log(`Awarded ${purchase.programme.loyaltyPointsAwarded} loyalty points for programme purchase ${purchase.id}`);
+    console.log(`Awarded ${purchase.programme.loyaltyPointsAwarded} Gymmawy Coins for programme purchase ${purchase.id}`);
+  }
+
+  // Send programme delivery email
+  try {
+    await sendProgrammeDeliveryEmail(purchase);
+    console.log(`Programme delivery email sent successfully for purchase ${purchase.id}`);
+  } catch (emailError) {
+    console.error('Failed to send programme delivery email:', emailError);
+    // Don't throw error here as the main operation succeeded
   }
 
   return purchase;
@@ -537,6 +557,17 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
       }
     } while (attempts < maxAttempts);
     
+    // Determine initial status based on payment method
+    let initialStatus = 'PENDING';
+    if (paymentMethod) {
+      const gatewayMethods = ['TABBY', 'TAMARA', 'PAYMOB'];
+      if (gatewayMethods.includes(paymentMethod.toUpperCase())) {
+        initialStatus = 'COMPLETE'; // Gateway payments are automatically complete
+      } else {
+        initialStatus = 'PENDING'; // InstaPay and Vodafone Cash need admin approval
+      }
+    }
+
     // Create purchase record with server-calculated price
     const purchase = await tx.programmePurchase.create({
       data: {
@@ -549,7 +580,7 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
         couponId: validatedCoupon?.id || null,
         couponDiscount: couponDiscountAmount,
         purchasedAt: new Date(),
-        status: 'PENDING' // Will be updated to ACTIVE when payment is verified
+        status: initialStatus // Set based on payment method
       }
     });
 
@@ -602,6 +633,12 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
       // Generate user-friendly payment reference
       const paymentReference = await generateUserFriendlyPaymentReference();
       
+      // Determine payment status based on payment method
+      let paymentStatus = 'PENDING';
+      if (initialStatus === 'COMPLETE') {
+        paymentStatus = 'SUCCESS';
+      }
+      
       const payment = await tx.payment.create({
         data: {
           paymentReference,
@@ -612,7 +649,7 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
           paymentableType: 'PROGRAMME',
           userId: userId,
           paymentProofUrl: paymentProof,
-          status: 'PENDING',
+          status: paymentStatus,
           metadata: {
             programmeName,
             programmeDescription,
@@ -627,11 +664,125 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
       });
     }
 
+    // Send programme delivery email for gateway payments (COMPLETE status)
+    if (initialStatus === 'COMPLETE') {
+      try {
+        // Get the purchase with all related data for email
+        const purchaseForEmail = await tx.programmePurchase.findUnique({
+          where: { id: purchase.id },
+          include: {
+            user: true,
+            programme: true,
+            coupon: true
+          }
+        });
+        
+        if (purchaseForEmail) {
+          // Send email asynchronously (don't wait for it in transaction)
+          setImmediate(async () => {
+            try {
+              await sendProgrammeDeliveryEmail(purchaseForEmail);
+              console.log(`Programme delivery email sent successfully for gateway payment purchase ${purchase.id}`);
+            } catch (emailError) {
+              console.error('Failed to send programme delivery email for gateway payment:', emailError);
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error preparing programme delivery email for gateway payment:', error);
+        // Don't throw error here as the main operation succeeded
+      }
+    }
 
     return purchase;
   });
   
   } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Send programme delivery email to user
+ * @param {Object} purchase - Programme purchase data with user and programme info
+ */
+export async function sendProgrammeDeliveryEmail(purchase) {
+  try {
+    const user = purchase.user;
+    const programme = purchase.programme;
+    
+    // Format purchase date
+    const purchaseDate = new Date(purchase.purchasedAt).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    // Format payment amount
+    const paymentAmount = parseFloat(purchase.price).toFixed(2);
+    
+    // Get payment method from related payment
+    const payment = await prisma.payment.findFirst({
+      where: {
+        paymentableId: purchase.id,
+        paymentableType: 'PROGRAMME'
+      }
+    });
+    
+    const paymentMethod = payment?.method || 'Unknown';
+    
+    // Prepare email data
+    const emailData = {
+      firstName: user.firstName || user.email,
+      email: user.email,
+      programmeName: programme.name?.en || programme.name?.ar || 'Programme',
+      purchaseDate,
+      purchaseNumber: purchase.purchaseNumber,
+      paymentAmount,
+      currency: purchase.currency,
+      paymentMethod,
+      supportEmail: process.env.SUPPORT_EMAIL || 'info@gymmawy.net'
+    };
+    
+    // Determine user language preference
+    const userLanguage = user.language || 'en';
+    
+    // Generate email content
+    const html = getProgrammeDeliveryTemplate(emailData, userLanguage);
+    const text = `Hello ${emailData.firstName},\n\nYour programme "${emailData.programmeName}" is ready for download!\n\nPurchase Details:\n- Purchase Number: ${emailData.purchaseNumber}\n- Purchase Date: ${emailData.purchaseDate}\n- Payment Amount: ${emailData.paymentAmount} ${emailData.currency}\n- Payment Method: ${emailData.paymentMethod}\n\nThe programme PDF is attached to this email.\n\nThank you for choosing Gymmawy!`;
+    
+    // Prepare attachments (programme PDF)
+    const attachments = [];
+    if (programme.pdfUrl) {
+      attachments.push({
+        filename: `${programme.name?.en || 'programme'}.pdf`,
+        path: programme.pdfUrl,
+        cid: 'programme-pdf'
+      });
+    }
+    
+    // Send email
+    console.log('📧 Sending programme delivery email:', {
+      to: user.email,
+      subject: `Your Programme is Ready - ${emailData.programmeName}`,
+      programmeName: emailData.programmeName,
+      purchaseNumber: emailData.purchaseNumber,
+      hasAttachments: attachments.length > 0,
+      pdfUrl: programme.pdfUrl
+    });
+    
+    await sendEmail({
+      to: user.email,
+      subject: `Your Programme is Ready - ${emailData.programmeName}`,
+      html,
+      text,
+      attachments
+    });
+    
+    console.log(`✅ Programme delivery email sent successfully to ${user.email} for purchase ${purchase.purchaseNumber}`);
+    
+  } catch (error) {
+    console.error('Error sending programme delivery email:', error);
     throw error;
   }
 }
@@ -668,9 +819,9 @@ export async function adminUpdateProgrammePurchaseStatus(id, status) {
       }
     });
 
-    // Handle status changes that affect loyalty points and coupons
+    // Handle status changes that affect Gymmawy Coins and coupons
     if (previousStatus !== status) {
-      // If changing from COMPLETE to CANCELLED, reverse loyalty points
+      // If changing from COMPLETE to CANCELLED, reverse Gymmawy Coins
       if (previousStatus === 'COMPLETE' && status === 'CANCELLED') {
         if (currentPurchase.programme.loyaltyPointsAwarded > 0) {
           await tx.user.update({
@@ -682,17 +833,25 @@ export async function adminUpdateProgrammePurchaseStatus(id, status) {
             }
           });
 
-          await tx.loyaltyTransaction.create({
+          await tx.payment.create({
             data: {
               userId: currentPurchase.userId,
-              points: currentPurchase.programme.loyaltyPointsAwarded,
-              type: 'SPENT',
-              source: 'PROGRAMME_PURCHASE',
-              sourceId: currentPurchase.id
+              amount: -currentPurchase.programme.loyaltyPointsAwarded,
+              status: 'SUCCESS',
+              method: 'GYMMAWY_COINS',
+              currency: 'GYMMAWY_COINS',
+              paymentReference: `LOYALTY-SPENT-PROGRAMME-${currentPurchase.id}`,
+              paymentableType: 'PROGRAMME',
+              paymentableId: currentPurchase.id,
+              metadata: {
+                type: 'SPENT',
+                source: 'PROGRAMME_PURCHASE',
+                sourceId: currentPurchase.id
+              }
             }
           });
 
-          console.log(`Reversed ${currentPurchase.programme.loyaltyPointsAwarded} loyalty points for programme purchase status change from ${previousStatus} to ${status}`);
+          console.log(`Reversed ${currentPurchase.programme.loyaltyPointsAwarded} Gymmawy Coins for programme purchase status change from ${previousStatus} to ${status}`);
         }
 
         // Remove coupon usage if purchase had a coupon
@@ -706,7 +865,7 @@ export async function adminUpdateProgrammePurchaseStatus(id, status) {
           }
         }
       }
-      // If changing from CANCELLED to COMPLETE, award loyalty points
+      // If changing from CANCELLED to COMPLETE, award Gymmawy Coins
       else if (previousStatus === 'CANCELLED' && status === 'COMPLETE') {
         if (currentPurchase.programme.loyaltyPointsAwarded > 0) {
           await tx.user.update({
@@ -718,17 +877,25 @@ export async function adminUpdateProgrammePurchaseStatus(id, status) {
             }
           });
 
-          await tx.loyaltyTransaction.create({
+          await tx.payment.create({
             data: {
               userId: currentPurchase.userId,
-              points: currentPurchase.programme.loyaltyPointsAwarded,
-              type: 'EARNED',
-              source: 'PROGRAMME_PURCHASE',
-              sourceId: currentPurchase.id
+              amount: currentPurchase.programme.loyaltyPointsAwarded,
+              status: 'SUCCESS',
+              method: 'GYMMAWY_COINS',
+              currency: 'GYMMAWY_COINS',
+              paymentReference: `LOYALTY-EARNED-PROGRAMME-${currentPurchase.id}`,
+              paymentableType: 'PROGRAMME',
+              paymentableId: currentPurchase.id,
+              metadata: {
+                type: 'EARNED',
+                source: 'PROGRAMME_PURCHASE',
+                sourceId: currentPurchase.id
+              }
             }
           });
 
-          console.log(`Awarded ${currentPurchase.programme.loyaltyPointsAwarded} loyalty points for programme purchase status change from ${previousStatus} to ${status}`);
+          console.log(`Awarded ${currentPurchase.programme.loyaltyPointsAwarded} Gymmawy Coins for programme purchase status change from ${previousStatus} to ${status}`);
         }
 
         // Apply coupon usage if purchase had a coupon
@@ -741,6 +908,36 @@ export async function adminUpdateProgrammePurchaseStatus(id, status) {
             console.error('Failed to apply coupon usage for programme purchase status change:', error);
           }
         }
+      }
+    }
+
+    // Send programme delivery email when status changes to COMPLETE
+    if (status === 'COMPLETE' && previousStatus !== 'COMPLETE') {
+      try {
+        // Get the updated purchase with all related data for email
+        const purchaseForEmail = await tx.programmePurchase.findUnique({
+          where: { id },
+          include: {
+            user: true,
+            programme: true,
+            coupon: true
+          }
+        });
+        
+        if (purchaseForEmail) {
+          // Send email asynchronously (don't wait for it in transaction)
+          setImmediate(async () => {
+            try {
+              await sendProgrammeDeliveryEmail(purchaseForEmail);
+            } catch (emailError) {
+              console.error('Failed to send programme delivery email:', emailError);
+              // Don't throw error here as the main operation succeeded
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error preparing programme delivery email:', error);
+        // Don't throw error here as the main operation succeeded
       }
     }
 

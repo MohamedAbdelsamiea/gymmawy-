@@ -2,7 +2,7 @@ import React from 'react';
 import { useLocation } from '../hooks/useLocation';
 
 const LocationSelector = ({ onLocationChange }) => {
-  const { country, countryName, currency, currencySymbol, loading, setLocation } = useLocation();
+  const { country, currency, currencySymbol, loading, setLocation } = useLocation();
 
   const handleCountryChange = (newCountry) => {
     setLocation(newCountry);

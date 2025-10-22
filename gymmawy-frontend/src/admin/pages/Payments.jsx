@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CreditCard, DollarSign, TrendingUp, CheckCircle } from 'lucide-react';
 import adminApiService from '../../services/adminApiService';
 import DataTable from '../../components/common/DataTable';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 
 const Payments = () => {
   const { user } = useAuth();

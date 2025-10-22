@@ -92,6 +92,38 @@ export function getPasswordResetTemplate(data, language = 'en') {
 }
 
 /**
+ * Get programme delivery template
+ * @param {Object} data - Programme purchase data
+ * @param {string} language - Language code
+ * @returns {string} Rendered HTML
+ */
+export function getProgrammeDeliveryTemplate(data, language = 'en') {
+  const {
+    firstName = 'User',
+    email = '',
+    programmeName = 'Programme',
+    purchaseDate = '',
+    purchaseNumber = '',
+    paymentAmount = '0',
+    currency = 'EGP',
+    paymentMethod = 'Unknown',
+    supportEmail = 'info@gymmawy.net'
+  } = data;
+  
+  return renderEmailTemplate('programme-delivery', {
+    firstName,
+    email,
+    programmeName,
+    purchaseDate,
+    purchaseNumber,
+    paymentAmount,
+    currency,
+    paymentMethod,
+    supportEmail
+  }, language);
+}
+
+/**
  * Get email change verification template
  * @param {Object} data - User data and verification link
  * @param {string} language - Language code
@@ -119,37 +151,6 @@ export function getEmailChangeVerificationTemplate(data, language = 'en') {
   return template;
 }
 
-/**
- * Get programme delivery template
- * @param {Object} data - Programme and payment data
- * @param {string} language - Language code
- * @returns {string} Rendered HTML
- */
-export function getProgrammeDeliveryTemplate(data, language = 'en') {
-  const {
-    firstName = 'User',
-    email = '',
-    programmeName = 'Programme',
-    programmeUrl = '#',
-    purchaseDate = '',
-    purchaseNumber = '',
-    paymentAmount = '0',
-    currency = 'EGP',
-    paymentMethod = 'Cash'
-  } = data;
-  
-  return renderEmailTemplate('programme-delivery', {
-    firstName,
-    email,
-    programmeName,
-    programmeUrl,
-    purchaseDate,
-    purchaseNumber,
-    paymentAmount,
-    currency,
-    paymentMethod
-  }, language);
-}
 
 /**
  * Get available email templates

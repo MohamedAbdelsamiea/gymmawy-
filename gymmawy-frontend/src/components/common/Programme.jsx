@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { useCurrencyContext } from '../../contexts/CurrencyContext';
 import { Award, Gift, Info } from 'lucide-react';
 import AuthRequiredModal from '../modals/AuthRequiredModal';

@@ -9,8 +9,8 @@ const prisma = getPrismaClient();
 // Payment validation function
 // Handles different payment method requirements:
 // - CARD/TABBY/TAMARA: require transactionId (online payment gateway response)
-// - INSTA_PAY/VODAFONE_CASH: require paymentProofUrl (manual payment proof)
-// - GYMMAWY_COINS: no additional validation required (loyalty points payment)
+// - INSTAPAY/VODAFONECASH: require paymentProofUrl (manual payment proof)
+// - GYMMAWY_COINS: no additional validation required (Gymmawy Coins payment)
 function validatePaymentData(paymentMethod, transactionId, paymentProofUrl) {
   const errors = [];
   
@@ -21,8 +21,8 @@ function validatePaymentData(paymentMethod, transactionId, paymentProofUrl) {
     }
   }
   
-  // Manual payment methods (INSTA_PAY, VODAFONE_CASH) require payment proof URL
-  if (['INSTA_PAY', 'VODAFONE_CASH'].includes(paymentMethod)) {
+  // Manual payment methods (INSTAPAY, VODAFONECASH) require payment proof URL
+  if (['INSTAPAY', 'VODAFONECASH'].includes(paymentMethod)) {
     if (!paymentProofUrl || paymentProofUrl.trim() === '') {
       errors.push(`Payment proof URL is required for manual payment method: ${paymentMethod}`);
     }
@@ -34,7 +34,7 @@ function validatePaymentData(paymentMethod, transactionId, paymentProofUrl) {
   }
   
   // Validate that we have a recognized payment method
-  const validMethods = ['CARD', 'TABBY', 'TAMARA', 'INSTA_PAY', 'VODAFONE_CASH', 'GYMMAWY_COINS'];
+  const validMethods = ['CARD', 'TABBY', 'TAMARA', 'INSTAPAY', 'VODAFONECASH', 'GYMMAWY_COINS'];
   if (!validMethods.includes(paymentMethod)) {
     errors.push(`Invalid payment method: ${paymentMethod}. Must be one of: ${validMethods.join(', ')}`);
   }
@@ -56,7 +56,7 @@ export async function listPlans(req) {
     isActive: true
   };
   
-  // Filter by loyalty points if requested
+  // Filter by Gymmawy Coins if requested
   if (hasLoyaltyPoints === 'true') {
     whereClause.loyaltyPointsRequired = { gt: 0 };
   }
@@ -342,7 +342,7 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
     // Redeem coupon if couponId is provided (within the same transaction)
     if (couponId) {
       try {
-        await couponRedemptionService.redeemCoupon(
+        await couponService.redeemCouponForPurchase(
           userId, 
           couponId, 
           'SUBSCRIPTION', 
@@ -379,7 +379,7 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
 
     // Determine payment status based on method
     let paymentStatus = 'PENDING';
-    if (paymentMethod === 'INSTA_PAY' || paymentMethod === 'VODAFONE_CASH') {
+    if (paymentMethod === 'INSTAPAY' || paymentMethod === 'VODAFONECASH') {
       // Manual payments start as PENDING, will become PENDING_VERIFICATION when proof is uploaded
       paymentStatus = 'PENDING';
     } else if (paymentMethod === 'CARD' || paymentMethod === 'TABBY' || paymentMethod === 'TAMARA') {
@@ -446,7 +446,7 @@ export async function cancelSubscription(userId, id) {
   // Cancel coupon redemption if subscription had a coupon
   if (sub.couponId) {
     try {
-      await couponRedemptionService.cancelCouponRedemption(
+      await couponService.cancelCouponRedemption(
         userId,
         sub.couponId,
         'SUBSCRIPTION',
@@ -508,7 +508,7 @@ export async function activateSubscription(id) {
     }
   });
 
-  // Award loyalty points for subscription completion
+  // Award Gymmawy Coins for subscription completion
   if (subscription.subscriptionPlan.loyaltyPointsAwarded > 0) {
     await prisma.user.update({
       where: { id: subscription.userId },
@@ -519,7 +519,7 @@ export async function activateSubscription(id) {
       }
     });
 
-    // Create loyalty points payment record
+    // Create Gymmawy Coins payment record
     await prisma.payment.create({
       data: {
         userId: subscription.userId,
@@ -538,7 +538,7 @@ export async function activateSubscription(id) {
       }
     });
 
-    console.log(`Awarded ${subscription.subscriptionPlan.loyaltyPointsAwarded} loyalty points for subscription ${subscription.id}`);
+    console.log(`Awarded ${subscription.subscriptionPlan.loyaltyPointsAwarded} Gymmawy Coins for subscription ${subscription.id}`);
   }
 
 
@@ -658,9 +658,9 @@ export async function adminUpdateSubscriptionStatus(id, status) {
       }
     });
 
-    // Handle status changes that affect loyalty points and coupons
+    // Handle status changes that affect Gymmawy Coins and coupons
     if (previousStatus !== status) {
-      // If changing from ACTIVE to CANCELLED/EXPIRED, reverse loyalty points
+      // If changing from ACTIVE to CANCELLED/EXPIRED, reverse Gymmawy Coins
       if (previousStatus === 'ACTIVE' && (status === 'CANCELLED' || status === 'EXPIRED')) {
         if (currentSubscription.subscriptionPlan.loyaltyPointsAwarded > 0) {
           await tx.user.update({
@@ -672,7 +672,7 @@ export async function adminUpdateSubscriptionStatus(id, status) {
             }
           });
 
-          // Create loyalty points reversal payment record
+          // Create Gymmawy Coins reversal payment record
           await tx.payment.create({
             data: {
               userId: currentSubscription.userId,
@@ -691,7 +691,7 @@ export async function adminUpdateSubscriptionStatus(id, status) {
             }
           });
 
-          console.log(`Reversed ${currentSubscription.subscriptionPlan.loyaltyPointsAwarded} loyalty points for subscription status change from ${previousStatus} to ${status}`);
+          console.log(`Reversed ${currentSubscription.subscriptionPlan.loyaltyPointsAwarded} Gymmawy Coins for subscription status change from ${previousStatus} to ${status}`);
         }
 
         // Remove coupon usage if subscription had a coupon
@@ -705,7 +705,7 @@ export async function adminUpdateSubscriptionStatus(id, status) {
           }
         }
       }
-      // If changing from CANCELLED/EXPIRED to ACTIVE, award loyalty points
+      // If changing from CANCELLED/EXPIRED to ACTIVE, award Gymmawy Coins
       else if ((previousStatus === 'CANCELLED' || previousStatus === 'EXPIRED') && status === 'ACTIVE') {
         if (currentSubscription.subscriptionPlan.loyaltyPointsAwarded > 0) {
           await tx.user.update({
@@ -717,7 +717,7 @@ export async function adminUpdateSubscriptionStatus(id, status) {
             }
           });
 
-          // Create loyalty points payment record
+          // Create Gymmawy Coins payment record
           await tx.payment.create({
             data: {
               userId: currentSubscription.userId,
@@ -736,7 +736,7 @@ export async function adminUpdateSubscriptionStatus(id, status) {
             }
           });
 
-          console.log(`Awarded ${currentSubscription.subscriptionPlan.loyaltyPointsAwarded} loyalty points for subscription status change from ${previousStatus} to ${status}`);
+          console.log(`Awarded ${currentSubscription.subscriptionPlan.loyaltyPointsAwarded} Gymmawy Coins for subscription status change from ${previousStatus} to ${status}`);
         }
 
         // Apply coupon usage if subscription had a coupon

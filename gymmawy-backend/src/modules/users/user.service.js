@@ -19,7 +19,12 @@ export async function updateMe(userId, data) {
   const updateData = {};
   Object.keys(validatedData).forEach(key => {
     if (validatedData[key] !== undefined && validatedData[key] !== null && validatedData[key] !== '') {
-      updateData[key] = validatedData[key];
+      // Convert birthDate string to Date object if it's a date string
+      if (key === 'birthDate' && typeof validatedData[key] === 'string') {
+        updateData[key] = new Date(validatedData[key]);
+      } else {
+        updateData[key] = validatedData[key];
+      }
     }
   });
   
@@ -215,8 +220,7 @@ export async function adminCreateUser(userData) {
       firstName,
       lastName,
       mobileNumber,
-      role,
-      emailVerified: true // Admin created users are pre-verified
+      role
     }
   });
 
@@ -233,12 +237,17 @@ export async function adminUpdateUser(userId, userData) {
     throw e;
   }
 
-  const allowedFields = ['firstName', 'lastName', 'email', 'role', 'mobileNumber', 'building', 'street', 'city', 'country', 'postcode'];
+  const allowedFields = ['firstName', 'lastName', 'email', 'role', 'mobileNumber', 'birthDate', 'building', 'street', 'city', 'country', 'postcode'];
   const updateData = {};
   
   for (const field of allowedFields) {
     if (userData[field] !== undefined) {
-      updateData[field] = userData[field];
+      // Convert birthDate string to Date object if it's a date string
+      if (field === 'birthDate' && typeof userData[field] === 'string') {
+        updateData[field] = new Date(userData[field]);
+      } else {
+        updateData[field] = userData[field];
+      }
     }
   }
 

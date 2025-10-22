@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Award, Package, ShoppingBag, Calendar } from 'lucide-react';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useAuth } from '../../../hooks/useAuth';
 import orderService from '../../../services/orderService';
 import programmeService from '../../../services/programmeService';
 

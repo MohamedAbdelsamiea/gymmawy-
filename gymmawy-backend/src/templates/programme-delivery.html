@@ -48,21 +48,21 @@
         .logo {
             position: relative;
             z-index: 1;
-            width: 60px;
-            height: 60px;
             margin: 0 auto 20px;
-            background-color: rgba(255, 255, 255, 0.15);
-            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(10px);
+            text-align: center;
+            width: 100%;
         }
         
         .logo img {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
+            width: 80px;
+            height: auto;
+            max-height: 60px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
         }
         
         .header h1 {
@@ -190,30 +190,6 @@
             box-shadow: 0 6px 16px rgba(63, 0, 113, 0.4);
         }
         
-        .instructions {
-            background-color: #FEF3C7;
-            border: 1px solid #F59E0B;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .instructions h4 {
-            color: #92400E;
-            font-size: 16px;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
-        
-        .instructions ul {
-            color: #92400E;
-            font-size: 14px;
-            padding-left: 20px;
-        }
-        
-        .instructions li {
-            margin-bottom: 5px;
-        }
         
         .footer {
             background-color: #F8F9FA;
@@ -321,16 +297,6 @@
                 <div style="background-color: #E5E7EB; padding: 15px; border-radius: 8px; text-align: center; margin-top: 15px;">
                     <span style="color: #374151; font-weight: 600;">📄 Programme PDF attached to this email</span>
                 </div>
-            </div>
-            
-            <div class="instructions">
-                <h4>📖 Important Instructions</h4>
-                <ul>
-                    <li>Find the PDF attachment in this email and save it to your device</li>
-                    <li>You can access your programme anytime, even offline</li>
-                    <li>Follow the programme guidelines for best results</li>
-                    <li>Contact support if you have any questions about the programme</li>
-                </ul>
             </div>
             
             <div class="divider"></div>

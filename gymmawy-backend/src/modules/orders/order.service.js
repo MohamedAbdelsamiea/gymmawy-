@@ -562,9 +562,9 @@ export async function adminUpdateStatus(id, status) {
       data: { status }
     });
 
-    // Handle status changes that affect loyalty points and coupons
+    // Handle status changes that affect Gymmawy Coins and coupons
     if (previousStatus !== status) {
-      // If changing to CANCELLED/REFUNDED, restore stock and reverse loyalty points
+      // If changing to CANCELLED/REFUNDED, restore stock and reverse Gymmawy Coins
       if (status === 'CANCELLED' || status === 'REFUNDED') {
         // Restore stock for all items in the order
         for (const item of currentOrder.items) {
@@ -575,7 +575,7 @@ export async function adminUpdateStatus(id, status) {
         }
         console.log(`Restored stock for order ${currentOrder.id} status change to ${status}`);
 
-        // If changing from PAID to CANCELLED/REFUNDED, reverse loyalty points
+        // If changing from PAID to CANCELLED/REFUNDED, reverse Gymmawy Coins
         if (previousStatus === 'PAID') {
           let totalLoyaltyPoints = 0;
           for (const item of currentOrder.items) {
@@ -594,17 +594,25 @@ export async function adminUpdateStatus(id, status) {
               }
             });
 
-            await tx.loyaltyTransaction.create({
+            await tx.payment.create({
               data: {
                 userId: currentOrder.userId,
-                points: totalLoyaltyPoints,
-                type: 'SPENT',
-                source: 'ORDER_ITEM',
-                sourceId: currentOrder.id
+                amount: -totalLoyaltyPoints,
+                status: 'SUCCESS',
+                method: 'GYMMAWY_COINS',
+                currency: 'GYMMAWY_COINS',
+                paymentReference: `LOYALTY-SPENT-ORDER-${currentOrder.id}`,
+                paymentableType: 'ORDER',
+                paymentableId: currentOrder.id,
+                metadata: {
+                  type: 'SPENT',
+                  source: 'ORDER_ITEM',
+                  sourceId: currentOrder.id
+                }
               }
             });
 
-            console.log(`Reversed ${totalLoyaltyPoints} loyalty points for order status change from ${previousStatus} to ${status}`);
+            console.log(`Reversed ${totalLoyaltyPoints} Gymmawy Coins for order status change from ${previousStatus} to ${status}`);
           }
 
           // Remove coupon usage if order had a coupon
@@ -619,7 +627,7 @@ export async function adminUpdateStatus(id, status) {
           }
         }
       }
-      // If changing from CANCELLED/REFUNDED to PAID, subtract stock and award loyalty points
+      // If changing from CANCELLED/REFUNDED to PAID, subtract stock and award Gymmawy Coins
       else if ((previousStatus === 'CANCELLED' || previousStatus === 'REFUNDED') && status === 'PAID') {
         // Subtract stock for all items in the order
         for (const item of currentOrder.items) {
@@ -647,17 +655,25 @@ export async function adminUpdateStatus(id, status) {
             }
           });
 
-          await tx.loyaltyTransaction.create({
+          await tx.payment.create({
             data: {
               userId: currentOrder.userId,
-              points: totalLoyaltyPoints,
-              type: 'EARNED',
-              source: 'ORDER_ITEM',
-              sourceId: currentOrder.id
+              amount: totalLoyaltyPoints,
+              status: 'SUCCESS',
+              method: 'GYMMAWY_COINS',
+              currency: 'GYMMAWY_COINS',
+              paymentReference: `LOYALTY-EARNED-ORDER-${currentOrder.id}`,
+              paymentableType: 'ORDER',
+              paymentableId: currentOrder.id,
+              metadata: {
+                type: 'EARNED',
+                source: 'ORDER_ITEM',
+                sourceId: currentOrder.id
+              }
             }
           });
 
-          console.log(`Awarded ${totalLoyaltyPoints} loyalty points for order status change from ${previousStatus} to ${status}`);
+          console.log(`Awarded ${totalLoyaltyPoints} Gymmawy Coins for order status change from ${previousStatus} to ${status}`);
         }
 
         // Apply coupon usage if order had a coupon
@@ -804,7 +820,7 @@ export async function activateOrder(orderId, adminId) {
           planName.includes('medical') ||
           planName.includes('طبي') ||
           planName.includes('medic') ||
-          // Check if plan has medical-specific loyalty points (indicates medical plan)
+          // Check if plan has medical-specific Gymmawy Coins (indicates medical plan)
           (subscriptionPlan.medicalLoyaltyPointsAwarded && subscriptionPlan.medicalLoyaltyPointsAwarded > 0) ||
           // Check if plan has medical-specific requirements
           (subscriptionPlan.medicalLoyaltyPointsRequired && subscriptionPlan.medicalLoyaltyPointsRequired > 0);
@@ -817,9 +833,9 @@ export async function activateOrder(orderId, adminId) {
             status: 'ACTIVE',
             startDate,
             endDate,
-            price: subscriptionItem.totalPrice,
+            price: subscriptionItem.price * subscriptionItem.quantity,
             currency: order.currency,
-            paymentMethod: 'INSTA_PAY', // Default for manual orders
+            paymentMethod: 'INSTAPAY', // Default for manual orders
             isMedical: isMedicalPlan
           },
           include: {
@@ -827,7 +843,7 @@ export async function activateOrder(orderId, adminId) {
           }
         });
 
-        // Award loyalty points if applicable
+        // Award Gymmawy Coins if applicable
         if (subscriptionPlan.loyaltyPointsAwarded > 0) {
           await tx.user.update({
             where: { id: order.userId },
@@ -838,20 +854,28 @@ export async function activateOrder(orderId, adminId) {
             }
           });
 
-          await tx.loyaltyTransaction.create({
+          await tx.payment.create({
             data: {
               userId: order.userId,
-              points: subscriptionPlan.loyaltyPointsAwarded,
-              type: 'EARNED',
-              source: 'SUBSCRIPTION',
-              sourceId: subscription.id
+              amount: subscriptionPlan.loyaltyPointsAwarded,
+              status: 'SUCCESS',
+              method: 'GYMMAWY_COINS',
+              currency: 'GYMMAWY_COINS',
+              paymentReference: `LOYALTY-EARNED-SUBSCRIPTION-${subscription.id}`,
+              paymentableType: 'SUBSCRIPTION',
+              paymentableId: subscription.id,
+              metadata: {
+                type: 'EARNED',
+                source: 'SUBSCRIPTION',
+                sourceId: subscription.id
+              }
             }
           });
         }
       }
     }
 
-    // Award loyalty points for regular product items
+    // Award Gymmawy Coins for regular product items
     const regularItems = order.items.filter(item => 
       !subscriptionItems.some(subItem => subItem.id === item.id)
     );
@@ -873,17 +897,25 @@ export async function activateOrder(orderId, adminId) {
         }
       });
 
-      await tx.loyaltyTransaction.create({
+      await tx.payment.create({
         data: {
           userId: order.userId,
-          points: totalLoyaltyPoints,
-          type: 'EARNED',
-          source: 'ORDER_ITEM',
-          sourceId: order.id
+          amount: totalLoyaltyPoints,
+          status: 'SUCCESS',
+          method: 'GYMMAWY_COINS',
+          currency: 'GYMMAWY_COINS',
+          paymentReference: `LOYALTY-EARNED-ORDER-${order.id}`,
+          paymentableType: 'ORDER',
+          paymentableId: order.id,
+          metadata: {
+            type: 'EARNED',
+            source: 'ORDER_ITEM',
+            sourceId: order.id
+          }
         }
       });
 
-      console.log(`Awarded ${totalLoyaltyPoints} loyalty points for order ${order.id}`);
+      console.log(`Awarded ${totalLoyaltyPoints} Gymmawy Coins for order ${order.id}`);
     }
 
     return { order: updatedOrder, subscription };

@@ -4,7 +4,8 @@ import {
   handleWebhook,
   getIntentionStatus,
   refundTransaction,
-  getPaymentHistory
+  getPaymentHistory,
+  verifyPaymentPublic
 } from './paymob.controller.js';
 import { requireAuth } from '../../middlewares/authMiddleware.js';
 
@@ -12,6 +13,7 @@ const router = express.Router();
 
 // Public routes (no authentication required)
 router.post('/webhook', handleWebhook);
+router.get('/payment/:paymentId/verify', verifyPaymentPublic);
 
 // Protected routes (authentication required)
 router.post('/create-intention', requireAuth, createIntention);

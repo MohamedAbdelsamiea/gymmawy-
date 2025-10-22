@@ -55,12 +55,13 @@ const AddAdminModal = ({ isOpen, onClose, onSuccess }) => {
           validation = { isValid: false, error: 'confirmPasswordMismatch' };
         }
         break;
-      case 'email':
+      case 'email': {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (value && !emailRegex.test(value)) {
           validation = { isValid: false, error: 'invalidEmail' };
         }
         break;
+      }
       case 'mobileNumber':
         if (!value || value.trim() === '') {
           validation = { isValid: false, error: 'mobileNumberRequired' };
@@ -315,8 +316,8 @@ const AddAdminModal = ({ isOpen, onClose, onSuccess }) => {
                         {/\d/.test(formData.password) ? <Check className="h-3 w-3 mr-1" /> : <XIcon className="h-3 w-3 mr-1" />}
                         One number
                       </div>
-                      <div className={`flex items-center text-xs ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
-                        {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password) ? <Check className="h-3 w-3 mr-1" /> : <XIcon className="h-3 w-3 mr-1" />}
+                      <div className={`flex items-center text-xs ${/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                        {/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(formData.password) ? <Check className="h-3 w-3 mr-1" /> : <XIcon className="h-3 w-3 mr-1" />}
                         One special character
                       </div>
                     </div>

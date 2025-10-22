@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { useAsset } from '../../hooks/useAsset';
 
-const JoinUsButton = ({ className = '', onClick }) => {
-  const { t, i18n } = useTranslation('home');
+const JoinUsButton = ({ onClick }) => {
+  const { t } = useTranslation('home');
   const buttonImg = useAsset('button-img.webp');
 
   const handleJoinUsClick = () => {

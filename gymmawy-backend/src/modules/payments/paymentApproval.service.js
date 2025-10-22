@@ -106,7 +106,7 @@ export async function approvePayment(paymentId, adminId) {
     let subscription = null;
     let programmePurchase = null;
 
-    // Handle different paymentable types and award loyalty points
+    // Handle different paymentable types and award Gymmawy Coins
     if (payment.paymentableType === 'ORDER') {
       // Update order status to PAID
       order = await tx.order.update({
@@ -123,7 +123,7 @@ export async function approvePayment(paymentId, adminId) {
       });
 
       console.log(`✅ Subscription ${subscription.id} marked as PAID (requires admin activation)`);
-    } else if (payment.paymentableType === 'PROGRAMME_PURCHASE') {
+    } else if (payment.paymentableType === 'PROGRAMME') {
       // Handle programme purchase
       programmePurchase = await tx.programmePurchase.update({
         where: { id: payment.paymentableId },
@@ -136,23 +136,37 @@ export async function approvePayment(paymentId, adminId) {
     return { payment: updatedPayment, order, subscription, programmePurchase };
   });
 
-  // Award loyalty points after payment approval
+  // Award Gymmawy Coins after payment approval
   try {
     if (result.order) {
-      console.log(`🎁 Awarding loyalty points for order ${result.order.id}`);
+      console.log(`🎁 Awarding Gymmawy Coins for order ${result.order.id}`);
       await activateOrder(result.order.id, adminId);
       console.log(`✅ Loyalty points awarded for order ${result.order.id}`);
     } else if (result.subscription) {
-      console.log(`ℹ️ Subscription ${result.subscription.id} marked as PAID - loyalty points will be awarded when admin activates it`);
+      console.log(`ℹ️ Subscription ${result.subscription.id} marked as PAID - Gymmawy Coins will be awarded when admin activates it`);
     } else if (result.programmePurchase) {
-      console.log(`🎁 Awarding loyalty points for programme purchase ${result.programmePurchase.id}`);
-      await approveProgrammePurchase(result.programmePurchase.id);
-      console.log(`✅ Loyalty points awarded for programme purchase ${result.programmePurchase.id}`);
+      console.log(`🎁 Awarding Gymmawy Coins for programme purchase ${result.programmePurchase.id}`);
+      try {
+        await approveProgrammePurchase(result.programmePurchase.id);
+        console.log(`✅ Loyalty points awarded for programme purchase ${result.programmePurchase.id}`);
+      } catch (loyaltyError) {
+        console.error(`❌ Failed to award Gymmawy Coins: ${loyaltyError.message}`);
+        result.loyaltyPointsError = loyaltyError.message;
+      }
       
-      // Send programme delivery email
+      // Send programme delivery email (regardless of loyalty points success)
       try {
         console.log(`📧 Sending programme delivery email for purchase ${result.programmePurchase.id}`);
+        console.log(`📧 Programme purchase data:`, {
+          id: result.programmePurchase.id,
+          status: result.programmePurchase.status,
+          userId: result.programmePurchase.userId,
+          programmeId: result.programmePurchase.programmeId
+        });
+        
         const emailResult = await sendProgrammeDeliveryEmail(result.programmePurchase.id);
+        console.log(`📧 Email result:`, emailResult);
+        
         if (emailResult.success) {
           console.log(`✅ Programme delivery email sent successfully`);
           result.programmeEmailSent = true;
@@ -162,15 +176,15 @@ export async function approvePayment(paymentId, adminId) {
           result.programmeEmailError = emailResult.message;
         }
       } catch (emailError) {
-        console.error(`❌ Error sending programme delivery email:`, emailError.message);
+        console.error(`❌ Error sending programme delivery email:`, emailError);
         result.programmeEmailSent = false;
         result.programmeEmailError = emailError.message;
         // Don't fail the payment approval if email sending fails
       }
     }
   } catch (error) {
-    console.error(`❌ Failed to award loyalty points:`, error.message);
-    // Don't fail the payment approval if loyalty points awarding fails
+    console.error(`❌ Failed to award Gymmawy Coins:`, error.message);
+    // Don't fail the payment approval if Gymmawy Coins awarding fails
     result.loyaltyPointsError = error.message;
   }
 
@@ -243,7 +257,7 @@ export async function rejectPayment(paymentId, adminId) {
       });
 
       console.log(`❌ Subscription ${subscription.id} cancelled`);
-    } else if (payment.paymentableType === 'PROGRAMME_PURCHASE') {
+    } else if (payment.paymentableType === 'PROGRAMME') {
       programmePurchase = await tx.programmePurchase.update({
         where: { id: payment.paymentableId },
         data: { status: 'CANCELLED' }

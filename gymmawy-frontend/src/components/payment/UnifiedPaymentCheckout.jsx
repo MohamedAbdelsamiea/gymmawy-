@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../contexts/AuthContext.jsx';
+import { useAuth } from '../../hooks/useAuth';
 import { useCurrencyContext } from '../../contexts/CurrencyContext.jsx';
 import unifiedPaymentService from '../../services/unifiedPaymentService.js';
 import PaymobCheckout from './PaymobCheckout.jsx';

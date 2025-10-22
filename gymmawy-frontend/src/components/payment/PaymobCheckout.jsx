@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import paymobService from '../../services/paymobService.js';
-import { useAuth } from '../../contexts/AuthContext.jsx';
+import { useAuth } from '../../hooks/useAuth';
 import { useCurrencyContext } from '../../contexts/CurrencyContext.jsx';
 import './PaymobCheckout.css';
 

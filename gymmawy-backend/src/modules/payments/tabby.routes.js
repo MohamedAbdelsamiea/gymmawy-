@@ -3,6 +3,7 @@ import {
   createTabbyCheckout,
   handleTabbyWebhook,
   getTabbyPaymentStatus,
+  verifyPaymentPublic,
   captureTabbyPayment,
   refundTabbyPayment,
   closeTabbyPayment,
@@ -18,6 +19,7 @@ const router = Router();
 
 // Public routes (no authentication required)
 router.post('/webhook', handleTabbyWebhook);
+router.get('/payment/:paymentId/verify', verifyPaymentPublic);
 router.post('/webhook/setup', setupTabbyWebhook);
 router.get('/webhooks', listTabbyWebhooks);
 router.get('/availability', checkTabbyAvailability);
