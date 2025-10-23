@@ -1887,9 +1887,8 @@ return;
         type
       });
 
-      // Create subscription or programme purchase first if this is a subscription/programme type
+      // Create subscription first if this is a subscription type
       let subscriptionResult = null;
-      let programmeResult = null;
       
       if (type === 'subscription') {
         console.log('🔍 Creating subscription before Paymob payment...');
