@@ -1915,24 +1915,47 @@ return;
         console.log('✅ Subscription created successfully:', subscriptionResult);
       } else if (type === 'programme') {
         console.log('🔍 Creating programme purchase before Paymob payment...');
+        console.log('🔍 Programme details:', {
+          programmeId: plan.id,
+          programmeName: plan.name,
+          currency: currency,
+          couponId: couponValid && couponData ? couponData.id : null
+        });
         
-        // Import programme service dynamically
-        const { default: programmeService } = await import('../../services/programmeService.js');
-        
-        // Send only essential data - let backend calculate all prices
-        const programmeData = {
-          paymentMethod: 'PAYMOB',
-          currency: currency, // Current selected currency
-          // Coupon information - backend will validate and calculate discount
-          couponId: couponValid && couponData ? couponData.id : null,
-        };
+        try {
+          // Import programme service dynamically
+          const { default: programmeService } = await import('../../services/programmeService.js');
+          
+          // Send only essential data - let backend calculate all prices
+          const programmeData = {
+            paymentMethod: 'PAYMOB',
+            currency: currency, // Current selected currency
+            // Coupon information - backend will validate and calculate discount
+            couponId: couponValid && couponData ? couponData.id : null,
+          };
 
-        // Debug: Log programme data being sent
-        console.log('🔍 Programme data being sent to backend:', programmeData);
-        console.log('✅ Backend will calculate and validate all prices');
+          // Debug: Log programme data being sent
+          console.log('🔍 Programme data being sent to backend:', programmeData);
+          console.log('✅ Backend will calculate and validate all prices');
 
-        programmeResult = await programmeService.purchaseProgramme(plan.id, 'SA', programmeData);
-        console.log('✅ Programme purchase created successfully:', programmeResult);
+          programmeResult = await programmeService.purchaseProgramme(plan.id, 'SA', programmeData);
+          console.log('✅ Programme purchase created successfully:', programmeResult);
+          
+          // Verify the result has the expected structure
+          if (!programmeResult || !programmeResult.purchase) {
+            throw new Error('Invalid programme purchase response from backend');
+          }
+          
+          console.log('✅ Programme purchase verified:', {
+            purchaseId: programmeResult.purchase.id,
+            purchaseNumber: programmeResult.purchase.purchaseNumber,
+            status: programmeResult.purchase.status
+          });
+          
+        } catch (programmeError) {
+          console.error('❌ Programme purchase creation failed:', programmeError);
+          throw new Error(`Failed to create programme purchase: ${programmeError.message}`);
+        }
       }
 
       // Prepare payment data

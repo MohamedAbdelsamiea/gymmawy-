@@ -114,11 +114,11 @@ const PaymentSuccess = () => {
         
         // Check payment status
         if (payment.status === 'success') {
-          // Extract order reference from metadata if not provided directly
+          // Use the order reference from backend response (this is the human-readable reference)
           let orderReference = response.order_reference || payment.payment_id;
           let orderType = response.order_type || 'Order';
           
-          // Fallback: try to extract from metadata
+          // Fallback: try to extract from metadata only if backend didn't provide order_reference
           if (!response.order_reference && response.local_metadata) {
             const metadata = response.local_metadata;
             if (metadata.billingData?.subscriptionId) {
@@ -126,7 +126,7 @@ const PaymentSuccess = () => {
               orderReference = `SUB-${metadata.billingData.subscriptionId.substring(0, 8).toUpperCase()}`;
               orderType = 'Subscription';
             } else if (metadata.billingData?.programmeId) {
-              // This is a programme purchase
+              // This is a programme purchase - use the actual purchase number from backend
               orderReference = `PROG-${metadata.billingData.programmeId.substring(0, 8).toUpperCase()}`;
               orderType = 'Programme';
             }
@@ -148,11 +148,11 @@ const PaymentSuccess = () => {
           return;
         } else if (payment.status === 'pending') {
           // Payment is still processing, show pending state
-          // Extract order reference from metadata if not provided directly
+          // Use the order reference from backend response (this is the human-readable reference)
           let orderReference = response.order_reference || payment.payment_id;
           let orderType = response.order_type || 'Order';
           
-          // Fallback: try to extract from metadata
+          // Fallback: try to extract from metadata only if backend didn't provide order_reference
           if (!response.order_reference && response.local_metadata) {
             const metadata = response.local_metadata;
             if (metadata.billingData?.subscriptionId) {
@@ -160,7 +160,7 @@ const PaymentSuccess = () => {
               orderReference = `SUB-${metadata.billingData.subscriptionId.substring(0, 8).toUpperCase()}`;
               orderType = 'Subscription';
             } else if (metadata.billingData?.programmeId) {
-              // This is a programme purchase
+              // This is a programme purchase - use the actual purchase number from backend
               orderReference = `PROG-${metadata.billingData.programmeId.substring(0, 8).toUpperCase()}`;
               orderType = 'Programme';
             }
@@ -286,10 +286,6 @@ const PaymentSuccess = () => {
                 <div className="flex justify-between">
                   <span className="text-green-700">Amount Paid:</span>
                   <span className="font-semibold text-green-900">{paymentStatus.amount} {paymentStatus.currency}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-green-700">Payment Method:</span>
-                  <span className="font-medium text-green-900">{paymentStatus.provider || 'Tabby'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-green-700">Date & Time:</span>

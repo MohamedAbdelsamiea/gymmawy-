@@ -446,6 +446,12 @@ export async function purchaseProgramme(userId, programmeId, country = 'EG') {
 
 export async function purchaseProgrammeWithPayment(userId, programmeId, paymentData) {
   try {
+    console.log('🔍 Programme purchase creation started:', {
+      userId,
+      programmeId,
+      paymentData
+    });
+
     const {
       paymentMethod,
       paymentProof,
@@ -455,20 +461,42 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
       couponId
     } = paymentData;
 
+    console.log('🔍 Extracted payment data:', {
+      paymentMethod,
+      currency,
+      couponId
+    });
+
     // Get programme from database
     const programme = await prisma.programme.findUnique({ 
       where: { id: programmeId }
     });
     
     if (!programme) {
+      console.error('❌ Programme not found:', programmeId);
       throw new Error("Programme not found");
     }
     if (!programme.isActive) {
+      console.error('❌ Programme is not active:', programmeId);
       throw new Error("Programme is not available for purchase");
     }
 
+    console.log('✅ Programme found and active:', {
+      programmeId: programme.id,
+      programmeName: programme.name,
+      isActive: programme.isActive
+    });
+
     // Get programme price for the requested currency from individual price fields
     let programmePrice = null;
+    console.log('🔍 Programme prices:', {
+      priceAED: programme.priceAED,
+      priceEGP: programme.priceEGP,
+      priceSAR: programme.priceSAR,
+      priceUSD: programme.priceUSD,
+      requestedCurrency: currency
+    });
+
     switch (currency) {
       case 'AED':
         programmePrice = programme.priceAED ? { amount: programme.priceAED, currency: 'AED' } : null;
@@ -484,7 +512,10 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
         break;
     }
     
+    console.log('🔍 Selected programme price:', programmePrice);
+    
     if (!programmePrice) {
+      console.error('❌ Price not available for currency:', currency);
       throw new Error(`Price not available for currency: ${currency}`);
     }
 
@@ -568,6 +599,18 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
       }
     }
 
+    console.log('🔍 Creating programme purchase with data:', {
+      purchaseNumber,
+      userId,
+      programmeId,
+      finalPrice,
+      currency,
+      programmeDiscountPercentage,
+      couponId: validatedCoupon?.id || null,
+      couponDiscountAmount,
+      initialStatus
+    });
+
     // Create purchase record with server-calculated price
     const purchase = await tx.programmePurchase.create({
       data: {
@@ -582,6 +625,14 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
         purchasedAt: new Date(),
         status: initialStatus // Set based on payment method
       }
+    });
+
+    console.log('✅ Programme purchase created successfully:', {
+      purchaseId: purchase.id,
+      purchaseNumber: purchase.purchaseNumber,
+      status: purchase.status,
+      price: purchase.price.toString(),
+      currency: purchase.currency
     });
 
     // Redeem coupon if used (within the same transaction)
