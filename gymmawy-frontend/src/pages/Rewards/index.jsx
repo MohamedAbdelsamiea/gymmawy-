@@ -239,7 +239,7 @@ const RewardsPage = () => {
   };
 
   const handleSignup = () => {
-    navigate('/auth/signup');
+    navigate('/auth/register');
     setShowLoginPopup(false);
   };
 

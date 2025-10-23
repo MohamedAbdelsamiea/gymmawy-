@@ -15,7 +15,7 @@ const AuthRequiredModal = ({ isOpen, onClose, title, description }) => {
   };
 
   const handleSignup = () => {
-    navigate('/auth/signup');
+    navigate('/auth/register');
     onClose();
   };
 

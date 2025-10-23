@@ -261,6 +261,12 @@ const Header = () => {
     setProfileDropdownOpen(false);
   };
 
+  const handleRewardsNavigation = () => {
+    navigate('/rewards');
+    setProfileDropdownOpen(false);
+    setMobileProfileDropdownOpen(false);
+  };
+
   // Check if user is currently in dashboard (including checkout as it's a protected area)
   const isInDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/checkout');
 
@@ -390,14 +396,18 @@ const Header = () => {
                   <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50`}>
                     {/* Gymmawy Coins - Only for regular users, not admins */}
                     {user?.role !== 'ADMIN' && user?.role !== 'admin' && (
-                       <div className="px-2 py-2 text-sm text-gray-600" style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}>
+                       <button
+                         onClick={handleRewardsNavigation}
+                         className="w-full px-2 py-2 text-sm text-gray-600 hover:bg-gray-100 transition-colors duration-200"
+                         style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
+                       >
                          <div className="flex items-center gap-2">
                            {getGymmawyCoinIcon({ size: 32, className: "flex-shrink-0" })}
                            <span className="text-gymmawy-accent font-medium whitespace-nowrap">
                              {user.loyaltyPoints || 0} {t('auth.loyaltyPoints')}
                            </span>
                          </div>
-                       </div>
+                       </button>
                     )}
                     
                     {/* Conditional Navigation Link */}
@@ -497,14 +507,18 @@ const Header = () => {
                   <div className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50`}>
                     {/* Gymmawy Coins - Only for regular users, not admins */}
                     {user?.role !== 'ADMIN' && user?.role !== 'admin' && (
-                       <div className="px-2 py-2 text-sm text-gray-600" style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}>
+                       <button
+                         onClick={handleRewardsNavigation}
+                         className="w-full px-2 py-2 text-sm text-gray-600 hover:bg-gray-100 transition-colors duration-200"
+                         style={i18n.language === 'ar' ? { direction: 'rtl' } : {}}
+                       >
                          <div className="flex items-center gap-2">
                            {getGymmawyCoinIcon({ size: 32, className: "flex-shrink-0" })}
                            <span className="text-gymmawy-accent font-medium whitespace-nowrap">
                              {user.loyaltyPoints || 0} {t('auth.loyaltyPoints')}
                            </span>
                          </div>
-                       </div>
+                       </button>
                     )}
                     
                     {/* Conditional Navigation Link */}
