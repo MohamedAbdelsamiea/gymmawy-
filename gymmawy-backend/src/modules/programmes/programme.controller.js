@@ -114,17 +114,26 @@ export const purchaseFreeProgrammeController = async (req, res) => {
   try {
     const { id } = req.params;
     const { currency } = req.body;
+    const lang = req.query.lang || req.headers['accept-language']?.includes('ar') ? 'ar' : 'en';
     
     // Get programme details first
     const programme = await getProgrammeById(id);
     if (!programme) {
-      return res.status(404).json({ error: { message: "Programme not found" } });
+      const errorMessage = lang === 'ar' 
+        ? "البرنامج غير موجود" 
+        : "Programme not found";
+      return res.status(404).json({ error: { message: errorMessage } });
     }
     
     const result = await purchaseFreeProgramme(req.user.id, id, currency || 'EGP', programme);
+    
+    const successMessage = lang === 'ar'
+      ? "تم شراء البرنامج المجاني بنجاح! تحقق من بريدك الإلكتروني للحصول على البرنامج."
+      : "Free programme purchased successfully! Check your email for the programme.";
+    
     res.status(201).json({ 
       purchase: result,
-      message: "Free programme purchased successfully! Check your email for the programme."
+      message: successMessage
     });
   } catch (error) {
     const status = error.status || 500;
