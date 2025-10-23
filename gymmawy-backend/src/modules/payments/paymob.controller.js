@@ -191,10 +191,17 @@ export const handleWebhook = async (req, res) => {
     // Paymob sends HMAC in different header names, check both
     const hmacHeader = req.headers['x-paymob-hmac'] || req.headers['x-paymob-signature'] || req.headers['hmac'];
 
-    console.log('Received Paymob webhook:', {
-      headers: req.headers,
+    console.log('🔔 Received Paymob webhook:', {
+      timestamp: new Date().toISOString(),
+      headers: {
+        'content-type': req.headers['content-type'],
+        'user-agent': req.headers['user-agent'],
+        'x-paymob-hmac': hmacHeader ? 'present' : 'missing',
+        'x-forwarded-for': req.headers['x-forwarded-for'],
+        'x-real-ip': req.headers['x-real-ip']
+      },
       body: req.body,
-      hmacHeader: hmacHeader
+      payloadLength: rawPayload.length
     });
 
     // Process webhook with HMAC verification
@@ -247,34 +254,108 @@ export const handleWebhook = async (req, res) => {
     // Find the payment record using multiple lookup strategies
     let payment = null;
     
+    console.log('🔍 Searching for payment with webhook data:', {
+      orderData,
+      transactionId,
+      webhookType: type,
+      searchStrategies: []
+    });
+    
     // Strategy 1: Look by gatewayId (intention ID)
     if (orderData?.id) {
+      console.log('🔍 Strategy 1: Searching by gatewayId:', orderData.id);
       payment = await prisma.payment.findFirst({
         where: { gatewayId: orderData.id }
       });
+      if (payment) console.log('✅ Found payment by gatewayId:', payment.id);
     }
     
     // Strategy 2: Look by payment reference (special reference)
     if (!payment && orderData?.merchant_order_id) {
+      console.log('🔍 Strategy 2: Searching by paymentReference:', orderData.merchant_order_id);
       payment = await prisma.payment.findFirst({
         where: { paymentReference: orderData.merchant_order_id }
       });
+      if (payment) console.log('✅ Found payment by paymentReference:', payment.id);
     }
     
     // Strategy 3: Look by transaction ID (if this is an update)
     if (!payment && transactionId) {
+      console.log('🔍 Strategy 3: Searching by transactionId:', transactionId);
       payment = await prisma.payment.findFirst({
         where: { transactionId: transactionId }
       });
+      if (payment) console.log('✅ Found payment by transactionId:', payment.id);
+    }
+
+    // Strategy 4: Look by any of the IDs in a broader search
+    if (!payment) {
+      console.log('🔍 Strategy 4: Broad search across all payment fields');
+      const searchTerms = [
+        orderData?.id,
+        orderData?.merchant_order_id,
+        transactionId,
+        webhookData.obj?.other_endpoint_reference
+      ].filter(Boolean);
+      
+      if (searchTerms.length > 0) {
+        payment = await prisma.payment.findFirst({
+          where: {
+            OR: [
+              { gatewayId: { in: searchTerms } },
+              { paymentReference: { in: searchTerms } },
+              { transactionId: { in: searchTerms } }
+            ]
+          }
+        });
+        if (payment) console.log('✅ Found payment by broad search:', payment.id);
+      }
     }
 
     if (!payment) {
-      console.error('Payment not found for webhook:', {
+      console.error('❌ Payment not found for webhook after all strategies:', {
         orderData,
         transactionId,
-        webhookType: type
+        webhookType: type,
+        searchTerms: [
+          orderData?.id,
+          orderData?.merchant_order_id,
+          transactionId,
+          webhookData.obj?.other_endpoint_reference
+        ].filter(Boolean)
       });
-      return res.status(404).json({ error: { message: 'Payment not found' } });
+      
+      // Log recent payments for debugging
+      const recentPayments = await prisma.payment.findMany({
+        where: { method: 'PAYMOB' },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: {
+          id: true,
+          gatewayId: true,
+          paymentReference: true,
+          transactionId: true,
+          status: true,
+          createdAt: true
+        }
+      });
+      
+      console.log('📋 Recent Paymob payments for debugging:', recentPayments);
+      
+      return res.status(404).json({ 
+        error: { 
+          message: 'Payment not found',
+          debug: {
+            searchedTerms: [
+              orderData?.id,
+              orderData?.merchant_order_id,
+              transactionId,
+              webhookData.obj?.other_endpoint_reference
+            ].filter(Boolean),
+            recentPayments: recentPayments
+          }
+        } 
+      });
     }
 
     console.log('Found payment for webhook:', {
@@ -448,11 +529,13 @@ export const handleWebhook = async (req, res) => {
       }
     }
 
-    console.log('Webhook processed successfully for payment:', {
+    console.log('✅ Webhook processed successfully for payment:', {
       paymentId: payment.id,
       status: status,
       transactionId: transactionId,
-      webhookType: type
+      webhookType: type,
+      paymentableType: payment.paymentableType,
+      paymentableId: payment.paymentableId
     });
 
     // Return comprehensive response
@@ -464,7 +547,9 @@ export const handleWebhook = async (req, res) => {
         status: status,
         transactionId: transactionId,
         webhookType: type,
-        processedAt: new Date().toISOString()
+        processedAt: new Date().toISOString(),
+        paymentableType: payment.paymentableType,
+        paymentableId: payment.paymentableId
       }
     });
 
@@ -567,6 +652,182 @@ export const refundTransaction = async (req, res) => {
     console.error('Error processing refund:', error);
     res.status(500).json({
       error: { message: 'Failed to process refund' }
+    });
+  }
+};
+
+/**
+ * Test webhook endpoint for debugging
+ * POST /api/paymob/test-webhook
+ */
+export const testWebhook = async (req, res) => {
+  try {
+    const { paymentId, transactionId, orderId } = req.body;
+
+    console.log('🧪 Testing webhook with data:', { paymentId, transactionId, orderId });
+
+    // Find payment by any of the provided IDs
+    let payment = null;
+    const searchTerms = [paymentId, transactionId, orderId].filter(Boolean);
+
+    if (searchTerms.length > 0) {
+      payment = await prisma.payment.findFirst({
+        where: {
+          OR: [
+            { id: { in: searchTerms } },
+            { gatewayId: { in: searchTerms } },
+            { paymentReference: { in: searchTerms } },
+            { transactionId: { in: searchTerms } }
+          ]
+        }
+      });
+    }
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Payment not found',
+        searchedTerms: searchTerms
+      });
+    }
+
+    // Simulate webhook data
+    const mockWebhookData = {
+      type: 'TRANSACTION',
+      obj: {
+        id: transactionId || payment.transactionId || 'PAY-TEST-123',
+        amount_cents: Math.round(payment.amount * 100),
+        currency: payment.currency,
+        success: true,
+        error_occured: false,
+        is_voided: false,
+        is_refunded: false,
+        order: {
+          id: payment.gatewayId,
+          merchant_order_id: payment.paymentReference
+        }
+      }
+    };
+
+    console.log('🧪 Simulating webhook with data:', mockWebhookData);
+
+    // Process the webhook
+    const webhookResult = paymobService.processWebhook(JSON.stringify(mockWebhookData), null);
+    
+    if (!webhookResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Webhook processing failed',
+        details: webhookResult.error
+      });
+    }
+
+    // Update payment status
+    const updatedPayment = await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: 'SUCCESS',
+        transactionId: mockWebhookData.obj.id,
+        processedAt: new Date(),
+        metadata: {
+          ...payment.metadata,
+          testWebhook: true,
+          testWebhookAt: new Date().toISOString()
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Test webhook processed successfully',
+      payment: {
+        id: updatedPayment.id,
+        status: updatedPayment.status,
+        transactionId: updatedPayment.transactionId,
+        gatewayId: updatedPayment.gatewayId,
+        paymentReference: updatedPayment.paymentReference
+      }
+    });
+
+  } catch (error) {
+    console.error('Test webhook error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Test webhook failed',
+      details: error.message
+    });
+  }
+};
+
+/**
+ * Get webhook status and recent webhook logs
+ * GET /api/paymob/webhook-status
+ */
+export const getWebhookStatus = async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+
+    // Get recent Paymob payments with their status
+    const recentPayments = await prisma.payment.findMany({
+      where: { method: 'PAYMOB' },
+      orderBy: { createdAt: 'desc' },
+      take: parseInt(limit),
+      select: {
+        id: true,
+        gatewayId: true,
+        paymentReference: true,
+        transactionId: true,
+        status: true,
+        createdAt: true,
+        processedAt: true,
+        metadata: true
+      }
+    });
+
+    // Count payments by status
+    const statusCounts = await prisma.payment.groupBy({
+      by: ['status'],
+      where: { method: 'PAYMOB' },
+      _count: { status: true }
+    });
+
+    // Get pending payments that might need attention
+    const pendingPayments = await prisma.payment.findMany({
+      where: { 
+        method: 'PAYMOB',
+        status: 'PENDING',
+        createdAt: {
+          lt: new Date(Date.now() - 30 * 60 * 1000) // Older than 30 minutes
+        }
+      },
+      select: {
+        id: true,
+        gatewayId: true,
+        paymentReference: true,
+        status: true,
+        createdAt: true,
+        paymentableType: true,
+        paymentableId: true
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        recentPayments,
+        statusCounts,
+        pendingPayments,
+        webhookUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/api/paymob/webhook`,
+        lastChecked: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching webhook status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch webhook status',
+      details: error.message
     });
   }
 };

@@ -5,7 +5,9 @@ import {
   getIntentionStatus,
   refundTransaction,
   getPaymentHistory,
-  verifyPaymentPublic
+  verifyPaymentPublic,
+  testWebhook,
+  getWebhookStatus
 } from './paymob.controller.js';
 import { requireAuth } from '../../middlewares/authMiddleware.js';
 
@@ -20,5 +22,7 @@ router.post('/create-intention', requireAuth, createIntention);
 router.get('/intention/:intentionId/status', requireAuth, getIntentionStatus);
 router.post('/refund', requireAuth, refundTransaction);
 router.get('/payments', requireAuth, getPaymentHistory);
+router.post('/test-webhook', requireAuth, testWebhook);
+router.get('/webhook-status', requireAuth, getWebhookStatus);
 
 export default router;
