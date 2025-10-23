@@ -150,7 +150,7 @@ export async function sendProgrammeDeliveryEmail(programmePurchaseIdOrObject) {
       throw new Error(`Programme not found for purchase: ${programmePurchase.id}`);
     }
 
-    // Fetch payment data separately since there's no direct relationship
+    // Try to fetch payment data separately, but don't require it
     const payment = await prisma.payment.findFirst({
       where: {
         paymentableType: 'PROGRAMME',
@@ -165,9 +165,21 @@ export async function sendProgrammeDeliveryEmail(programmePurchaseIdOrObject) {
       }
     });
 
-    if (!payment) {
-      throw new Error(`Payment not found for programme purchase: ${programmePurchase.id}`);
-    }
+    // Use payment data from the separate payment record if available,
+    // otherwise fall back to programme purchase data
+    const paymentData = payment || {
+      amount: programmePurchase.price,
+      currency: programmePurchase.currency,
+      method: 'Unknown',
+      createdAt: programmePurchase.purchasedAt
+    };
+
+    console.log(`📧 [EMAIL SERVICE] Payment data for purchase ${programmePurchase.id}:`, {
+      hasSeparatePayment: !!payment,
+      amount: paymentData.amount.toString(),
+      currency: paymentData.currency,
+      method: paymentData.method
+    });
 
     // Check if programme has PDF
     if (!programmePurchase.programme.pdfUrl) {
@@ -176,14 +188,14 @@ export async function sendProgrammeDeliveryEmail(programmePurchaseIdOrObject) {
     }
 
     // Format dates
-    const purchaseDate = new Date(payment.createdAt).toLocaleDateString('en-US', {
+    const purchaseDate = new Date(paymentData.createdAt).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
 
     // Format payment amount
-    const paymentAmount = parseFloat(payment.amount).toFixed(2);
+    const paymentAmount = parseFloat(paymentData.amount).toFixed(2);
 
     // Get programme name (handle multilingual)
     let programmeName = 'Programme';
@@ -211,8 +223,8 @@ export async function sendProgrammeDeliveryEmail(programmePurchaseIdOrObject) {
       purchaseDate: purchaseDate,
       purchaseNumber: programmePurchase.purchaseNumber || programmePurchase.id,
       paymentAmount: paymentAmount,
-      currency: payment.currency,
-      paymentMethod: payment.method,
+      currency: paymentData.currency,
+      paymentMethod: paymentData.method,
       frontendUrl: frontendUrl,
       supportEmail: process.env.SUPPORT_EMAIL || 'support@gymmawy.com'
     };
