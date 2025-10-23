@@ -102,7 +102,7 @@ export const createIntention = async (req, res) => {
 
     // Prepare webhook URLs
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://gymmawy.fit';
     
     // Fix webhook URL construction - BASE_URL already includes /api
     const notificationUrl = baseUrl.includes('/api') 

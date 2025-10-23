@@ -487,7 +487,7 @@ export async function getOrderTracking(userId, orderId) {
     trackingNumber: `TRK${order.id.slice(-8).toUpperCase()}`,
     carrier: "Gymmawy Logistics",
     estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
-    trackingUrl: `${process.env.TRACKING_BASE_URL || 'https://tracking.gymmawy.com'}/${order.id}`,
+    trackingUrl: `${process.env.TRACKING_BASE_URL || 'https://tracking.gymmawy.fit'}/${order.id}`,
     history: [
       {
         status: "ORDER_PLACED",

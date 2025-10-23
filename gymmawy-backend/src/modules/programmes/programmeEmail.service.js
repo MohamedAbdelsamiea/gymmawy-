@@ -226,7 +226,7 @@ export async function sendProgrammeDeliveryEmail(programmePurchaseIdOrObject) {
       currency: paymentData.currency,
       paymentMethod: paymentData.method,
       frontendUrl: frontendUrl,
-      supportEmail: process.env.SUPPORT_EMAIL || 'support@gymmawy.com'
+      supportEmail: process.env.SUPPORT_EMAIL || 'support@gymmawy.fit'
     };
 
     // Determine user language (default to English since language field doesn't exist)

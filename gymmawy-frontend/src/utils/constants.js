@@ -2,7 +2,7 @@
 export const APP_CONSTANTS = {
   APP_NAME: 'Gymmawy',
   APP_VERSION: '1.0.0',
-  SUPPORT_EMAIL: 'support@gymmawy.com',
+  SUPPORT_EMAIL: 'support@gymmawy.fit',
   SUPPORT_PHONE: '+1 (555) 123-4567',
 };
 

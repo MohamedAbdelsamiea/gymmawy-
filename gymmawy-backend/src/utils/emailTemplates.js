@@ -58,7 +58,7 @@ export function getEmailVerificationTemplate(data, language = 'en') {
     verificationLink = '#'
   } = data;
   
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://gymmawy.fit';
   
   return renderEmailTemplate('email-verification', {
     firstName,
@@ -81,7 +81,7 @@ export function getPasswordResetTemplate(data, language = 'en') {
     resetLink = '#'
   } = data;
   
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://gymmawy.fit';
   
   return renderEmailTemplate('password-reset', {
     firstName,
@@ -107,7 +107,7 @@ export function getProgrammeDeliveryTemplate(data, language = 'en') {
     paymentAmount = '0',
     currency = 'EGP',
     paymentMethod = 'Unknown',
-    supportEmail = 'info@gymmawy.net'
+    supportEmail = 'info@gymmawy.fit'
   } = data;
   
   return renderEmailTemplate('programme-delivery', {
@@ -137,7 +137,7 @@ export function getEmailChangeVerificationTemplate(data, language = 'en') {
     verificationLink = '#'
   } = data;
   
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://gymmawy.fit';
   
   // Use the email change verification template
   const template = renderEmailTemplate('email-change-verification', {

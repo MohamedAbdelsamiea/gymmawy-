@@ -183,7 +183,7 @@ class AutoShipmentService {
       sender: {
         name: process.env.OTO_SENDER_NAME || 'Gymmawy',
         phone: process.env.OTO_SENDER_PHONE || '+201000000000',
-        email: process.env.OTO_SENDER_EMAIL || 'orders@gymmawy.com',
+        email: process.env.OTO_SENDER_EMAIL || 'orders@gymmawy.fit',
         pickupLocationCode: options.pickupLocationCode || 
                           process.env.OTO_DEFAULT_PICKUP_LOCATION || 
                           'WAREHOUSE_01'

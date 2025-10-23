@@ -29,7 +29,7 @@ const log = {
 // Test account credentials
 const TEST_ACCOUNTS = [
   {
-    email: 'qa_tester@gymmawy.com',
+    email: 'qa_tester@gymmawy.fit',
     password: 'Test123!',
     firstName: 'QA',
     lastName: 'Tester',

@@ -40,7 +40,7 @@ async function createAndEmailToken(user, type, subject, template, newEmail = nul
       newEmail: type === "EMAIL_CHANGE" ? newEmail : null
     },
   });
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const frontendUrl = process.env.FRONTEND_URL || "https://gymmawy.fit";
   let linkPath;
   if (type === "EMAIL_VERIFICATION") {
     linkPath = "/auth/verify-email";
@@ -154,7 +154,7 @@ export async function registerUser({
   });
   
   // Send verification email using template
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const frontendUrl = process.env.FRONTEND_URL || "https://gymmawy.fit";
   const link = `${frontendUrl}/auth/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
   
   // Use the new email template with the provided language
@@ -564,7 +564,7 @@ export async function resendVerificationEmail({ email, language = 'en' }) {
   });
 
   // Send verification email using template
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const frontendUrl = process.env.FRONTEND_URL || "https://gymmawy.fit";
   const link = `${frontendUrl}/auth/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
   
   // Use the new email template with the provided language
