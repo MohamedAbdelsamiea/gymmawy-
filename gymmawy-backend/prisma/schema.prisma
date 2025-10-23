@@ -561,6 +561,7 @@ enum SubscriptionStatus {
 
 enum ProgrammePurchaseStatus {
   PENDING
+  PAID
   COMPLETE
   CANCELLED
 }
