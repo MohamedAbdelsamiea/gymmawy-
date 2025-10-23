@@ -549,7 +549,7 @@ return { subscriptionDays: 0, giftDays: 0 };
   // Helper function to parse price from static data (e.g., "1999 L.E")
   const parsePriceFromStatic = (priceString) => {
     if (!priceString) {
-return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
+return { amount: 0, currency: currency || 'USD', currencySymbol: '$' };
 }
     
     // Extract amount and currency symbol
@@ -559,12 +559,12 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       const currencySymbol = match[2].trim();
       return {
         amount,
-        currency: currencySymbol === 'L.E' ? 'EGP' : 'EGP',
+        currency: currencySymbol === 'L.E' ? 'EGP' : currency || 'USD',
         currencySymbol,
       };
     }
     
-    return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
+    return { amount: 0, currency: currency || 'USD', currencySymbol: '$' };
   };
 
   // Debug: Log plan data to see what we're receiving (can be removed in production)
@@ -688,16 +688,16 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
   // Get normal price (using new allPrices format)
   const getNormalPrice = () => {
     if (!plan) {
-      return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
+      return { amount: 0, currency: currency || 'USD', currencySymbol: '$' };
     }
     
     // Use new allPrices format
     if (plan.allPrices?.regular) {
-      // Use the currency passed from home page, fallback to EGP if not available
+      // Use the currency passed from home page, fallback to USD if not available
       const currencies = Object.keys(plan.allPrices.regular);
       const defaultCurrency = currencies.includes(currency) ? currency : 
-                             currencies.includes('EGP') ? 'EGP' : 
-                             currencies[0] || 'EGP';
+                             currencies.includes('USD') ? 'USD' : 
+                             currencies[0] || 'USD';
       const amount = plan.allPrices.regular[defaultCurrency] || 0;
       
       
@@ -760,7 +760,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
     // Handle string prices
     if (typeof plan.price === 'string') {
       if (plan.price === 'FREE' || plan.price === 'مجاني') {
-        return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
+        return { amount: 0, currency: currency || 'USD', currencySymbol: '$' };
       }
       return parsePriceFromStatic(plan.price);
     }
@@ -779,8 +779,8 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       // Use the currency passed from home page, fallback to EGP if not available
       const currencies = Object.keys(plan.allPrices.medical);
       const defaultCurrency = currencies.includes(currency) ? currency : 
-                             currencies.includes('EGP') ? 'EGP' : 
-                             currencies[0] || 'EGP';
+                             currencies.includes('USD') ? 'USD' : 
+                             currencies[0] || 'USD';
       const amount = plan.allPrices.medical[defaultCurrency] || 0;
       
       // Get currency symbol
@@ -815,7 +815,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
     
     // For cart and product orders, don't use plan price
     if (type === 'cart' || type === 'product') {
-      return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
+      return { amount: 0, currency: currency || 'USD', currencySymbol: '$' };
     }
     
     // For other types or fallback
@@ -1014,7 +1014,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       } else {
         return {
           amount: cartTotal || 0,
-          currency: 'EGP',
+          currency: currency || 'USD',
           currencySymbol: 'L.E'
         };
       }
@@ -1022,7 +1022,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       const price = product.hasDiscount ? product.discountedPrice : product.price;
       return {
         amount: price * (product.quantity || 1),
-        currency: 'EGP',
+        currency: currency || 'USD',
         currencySymbol: 'L.E'
       };
     }
@@ -2422,7 +2422,7 @@ return;
                         paymentOption === 'paymob_card' ? 'PAYMOB' :
                         paymentOption === 'paymob_apple' ? 'PAYMOB' :
                         paymentOption?.toUpperCase(),
-          currency: 'EGP',
+          currency: currency || 'USD',
           couponId: couponValid && couponData ? couponData.id : null,
           shippingDetails: shippingDetails,
           shippingCost: shippingCost,
@@ -2447,7 +2447,7 @@ return;
                         paymentOption === 'paymob_card' ? 'PAYMOB' :
                         paymentOption === 'paymob_apple' ? 'PAYMOB' :
                         paymentOption?.toUpperCase(),
-          currency: 'EGP',
+          currency: currency || 'USD',
           couponId: couponValid && couponData ? couponData.id : null,
           shippingDetails: shippingDetails,
           shippingCost: shippingCost,

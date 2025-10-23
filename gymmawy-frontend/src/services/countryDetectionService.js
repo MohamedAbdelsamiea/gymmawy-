@@ -501,11 +501,11 @@ export const detectCountry = async () => {
   } catch (error) {
     console.error('Error detecting country:', error);
     
-    // Return default values (Egypt) if detection fails
+    // Return default values (International/USD) if detection fails
     return {
-      country: 'Egypt',
-      countryCode: 'EG',
-      phoneCode: '+20',
+      country: 'International',
+      countryCode: 'US',
+      phoneCode: '+1',
       city: '',
       region: ''
     };

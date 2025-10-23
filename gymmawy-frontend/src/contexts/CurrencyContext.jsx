@@ -15,7 +15,7 @@ export const useCurrencyContext = () => {
 
 export const CurrencyProvider = ({ children }) => {
   const { i18n } = useTranslation();
-  const [currency, setCurrency] = useState('EGP'); // Default to EGP for Egypt
+  const [currency, setCurrency] = useState('USD'); // Default to USD for international users
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [availableCurrencies] = useState(['EGP', 'AED', 'SAR', 'USD']);
@@ -42,7 +42,7 @@ export const CurrencyProvider = ({ children }) => {
               'US': 'USD'
             };
             
-            const detectedCurrency = countryCurrencyMap[detectedCountry?.countryCode] || 'EGP';
+            const detectedCurrency = countryCurrencyMap[detectedCountry?.countryCode] || 'USD';
             
             if (availableCurrencies.includes(detectedCurrency)) {
               setCurrency(detectedCurrency);
@@ -62,16 +62,16 @@ export const CurrencyProvider = ({ children }) => {
               } catch (apiError) {
                 console.warn('❌ API currency detection failed:', apiError.message);
                 
-                // Final fallback to EGP
-                setCurrency('EGP');
+                // Final fallback to USD
+                setCurrency('USD');
                 setIsDetectedCurrency(false);
-                console.log('⚠️ Using fallback currency: EGP');
+                console.log('⚠️ Using fallback currency: USD');
               }
         }
       } catch (err) {
         console.error('Currency initialization error:', err);
         setError(err.message);
-        setCurrency('EGP'); // Final fallback
+        setCurrency('USD'); // Final fallback
         setIsDetectedCurrency(false);
       } finally {
         setIsLoading(false);
@@ -106,7 +106,7 @@ export const CurrencyProvider = ({ children }) => {
       'USD': { code: 'USD', symbol: '$', symbolAr: '$', name: 'US Dollar', country: 'United States', flag: '🇺🇸' }
     };
     
-    return currencyInfo[curr] || currencyInfo['EGP'];
+    return currencyInfo[curr] || currencyInfo['USD'];
   };
 
   // Format price with current currency

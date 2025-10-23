@@ -5,7 +5,7 @@ import apiClient from './apiClient';
 
 class CurrencyService {
   constructor() {
-    this.currentCurrency = 'EGP'; // Default currency
+    this.currentCurrency = 'USD'; // Default currency
     this.currencyRates = {};
   }
 
@@ -25,12 +25,12 @@ class CurrencyService {
       throw new Error(data.error?.message || 'Currency detection failed');
     } catch (error) {
       console.error('Currency detection error:', error);
-      // Fallback to SAR for Tabby testing
-      this.currentCurrency = 'SAR';
-      this.saveCurrencyToStorage('SAR');
+      // Fallback to USD for international users
+      this.currentCurrency = 'USD';
+      this.saveCurrencyToStorage('USD');
       return {
         success: false,
-        currency: 'SAR',
+        currency: 'USD',
         error: error.message
       };
     }
