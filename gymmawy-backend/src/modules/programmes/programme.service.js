@@ -372,25 +372,7 @@ export async function approveProgrammePurchase(id) {
       }
     });
 
-    await prisma.payment.create({
-      data: {
-        userId: purchase.userId,
-        amount: purchase.programme.loyaltyPointsAwarded,
-        status: 'SUCCESS',
-        method: 'GYMMAWY_COINS',
-        currency: 'GYMMAWY_COINS',
-        paymentReference: `LOYALTY-PROGRAMME-${purchase.id}`,
-        paymentableType: 'PROGRAMME',
-        paymentableId: purchase.id,
-        metadata: {
-          type: 'EARNED',
-          source: 'PROGRAMME_PURCHASE',
-          sourceId: purchase.id
-        }
-      }
-    });
-
-    console.log(`Awarded ${purchase.programme.loyaltyPointsAwarded} Gymmawy Coins for programme purchase ${purchase.id}`);
+    console.log(`✅ Awarded ${purchase.programme.loyaltyPointsAwarded} loyalty points to user ${purchase.userId} for programme purchase ${purchase.id}`);
   }
 
   // Send programme delivery email
@@ -840,25 +822,7 @@ export async function adminUpdateProgrammePurchaseStatus(id, status) {
             }
           });
 
-          await tx.payment.create({
-            data: {
-              userId: currentPurchase.userId,
-              amount: -currentPurchase.programme.loyaltyPointsAwarded,
-              status: 'SUCCESS',
-              method: 'GYMMAWY_COINS',
-              currency: 'GYMMAWY_COINS',
-              paymentReference: `LOYALTY-SPENT-PROGRAMME-${currentPurchase.id}`,
-              paymentableType: 'PROGRAMME',
-              paymentableId: currentPurchase.id,
-              metadata: {
-                type: 'SPENT',
-                source: 'PROGRAMME_PURCHASE',
-                sourceId: currentPurchase.id
-              }
-            }
-          });
-
-          console.log(`Reversed ${currentPurchase.programme.loyaltyPointsAwarded} Gymmawy Coins for programme purchase status change from ${previousStatus} to ${status}`);
+          console.log(`✅ Reversed ${currentPurchase.programme.loyaltyPointsAwarded} loyalty points for user ${currentPurchase.userId} due to programme purchase status change from ${previousStatus} to ${status}`);
         }
 
         // Remove coupon usage if purchase had a coupon
@@ -884,25 +848,7 @@ export async function adminUpdateProgrammePurchaseStatus(id, status) {
             }
           });
 
-          await tx.payment.create({
-            data: {
-              userId: currentPurchase.userId,
-              amount: currentPurchase.programme.loyaltyPointsAwarded,
-              status: 'SUCCESS',
-              method: 'GYMMAWY_COINS',
-              currency: 'GYMMAWY_COINS',
-              paymentReference: `LOYALTY-EARNED-PROGRAMME-${currentPurchase.id}`,
-              paymentableType: 'PROGRAMME',
-              paymentableId: currentPurchase.id,
-              metadata: {
-                type: 'EARNED',
-                source: 'PROGRAMME_PURCHASE',
-                sourceId: currentPurchase.id
-              }
-            }
-          });
-
-          console.log(`Awarded ${currentPurchase.programme.loyaltyPointsAwarded} Gymmawy Coins for programme purchase status change from ${previousStatus} to ${status}`);
+          console.log(`✅ Awarded ${currentPurchase.programme.loyaltyPointsAwarded} loyalty points to user ${currentPurchase.userId} for programme purchase status change from ${previousStatus} to ${status}`);
         }
 
         // Apply coupon usage if purchase had a coupon

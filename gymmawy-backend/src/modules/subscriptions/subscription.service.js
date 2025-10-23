@@ -561,26 +561,7 @@ export async function activateSubscription(id) {
       }
     });
 
-    // Create Gymmawy Coins payment record
-    await prisma.payment.create({
-      data: {
-        userId: subscription.userId,
-        amount: new Decimal(loyaltyPoints),
-        currency: 'GYMMAWY_COINS',
-        method: 'GYMMAWY_COINS',
-        status: 'SUCCESS',
-        paymentReference: `LOYALTY-${subscription.id}-${Date.now()}`,
-        paymentableId: subscription.id,
-        paymentableType: 'SUBSCRIPTION',
-        metadata: {
-          type: 'LOYALTY_POINTS_EARNED',
-          source: 'SUBSCRIPTION',
-          sourceId: subscription.id
-        }
-      }
-    });
-
-    console.log(`Awarded ${loyaltyPoints} Gymmawy Coins for subscription ${subscription.id}`);
+    console.log(`✅ Awarded ${loyaltyPoints} loyalty points to user ${subscription.userId} for subscription ${subscription.id}`);
   } else {
     console.log(`No loyalty points to award for subscription ${subscription.id} (loyaltyPointsAwarded: ${subscription.subscriptionPlan.loyaltyPointsAwarded})`);
   }
@@ -716,26 +697,7 @@ export async function adminUpdateSubscriptionStatus(id, status) {
             }
           });
 
-          // Create Gymmawy Coins reversal payment record
-          await tx.payment.create({
-            data: {
-              userId: currentSubscription.userId,
-              amount: new Decimal(-currentSubscription.subscriptionPlan.loyaltyPointsAwarded),
-              currency: 'GYMMAWY_COINS',
-              method: 'GYMMAWY_COINS',
-              status: 'SUCCESS',
-              paymentReference: `LOYALTY-REVERSAL-${currentSubscription.id}-${Date.now()}`,
-              paymentableId: currentSubscription.id,
-              paymentableType: 'SUBSCRIPTION',
-              metadata: {
-                type: 'LOYALTY_POINTS_REVERSED',
-                source: 'SUBSCRIPTION',
-                sourceId: currentSubscription.id
-              }
-            }
-          });
-
-          console.log(`Reversed ${currentSubscription.subscriptionPlan.loyaltyPointsAwarded} Gymmawy Coins for subscription status change from ${previousStatus} to ${status}`);
+          console.log(`✅ Reversed ${currentSubscription.subscriptionPlan.loyaltyPointsAwarded} loyalty points for user ${currentSubscription.userId} due to subscription status change from ${previousStatus} to ${status}`);
         }
 
         // Remove coupon usage if subscription had a coupon
@@ -761,26 +723,7 @@ export async function adminUpdateSubscriptionStatus(id, status) {
             }
           });
 
-          // Create Gymmawy Coins payment record
-          await tx.payment.create({
-            data: {
-              userId: currentSubscription.userId,
-              amount: new Decimal(currentSubscription.subscriptionPlan.loyaltyPointsAwarded),
-              currency: 'GYMMAWY_COINS',
-              method: 'GYMMAWY_COINS',
-              status: 'SUCCESS',
-              paymentReference: `LOYALTY-${currentSubscription.id}-${Date.now()}`,
-              paymentableId: currentSubscription.id,
-              paymentableType: 'SUBSCRIPTION',
-              metadata: {
-                type: 'LOYALTY_POINTS_EARNED',
-                source: 'SUBSCRIPTION',
-                sourceId: currentSubscription.id
-              }
-            }
-          });
-
-          console.log(`Awarded ${currentSubscription.subscriptionPlan.loyaltyPointsAwarded} Gymmawy Coins for subscription status change from ${previousStatus} to ${status}`);
+          console.log(`✅ Awarded ${currentSubscription.subscriptionPlan.loyaltyPointsAwarded} loyalty points to user ${currentSubscription.userId} for subscription status change from ${previousStatus} to ${status}`);
         }
 
         // Record coupon usage when subscription is marked as ACTIVE

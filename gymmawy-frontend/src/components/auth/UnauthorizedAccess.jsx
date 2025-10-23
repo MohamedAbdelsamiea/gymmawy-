@@ -12,8 +12,28 @@ const UnauthorizedAccess = ({
   const { t } = useTranslation('auth');
   
   // Use translations if no custom title/message provided
-  const displayTitle = title || t('unauthorized.title');
-  const displayMessage = message || t('unauthorized.message');
+  const getDisplayTitle = () => {
+    if (title) return title;
+    switch (type) {
+      case 'admin':
+        return t('unauthorized.adminTitle');
+      default:
+        return t('unauthorized.title');
+    }
+  };
+  
+  const getDisplayMessage = () => {
+    if (message) return message;
+    switch (type) {
+      case 'admin':
+        return t('unauthorized.adminMessage');
+      default:
+        return t('unauthorized.message');
+    }
+  };
+  
+  const displayTitle = getDisplayTitle();
+  const displayMessage = getDisplayMessage();
   const getIcon = () => {
     switch (type) {
       case 'admin':

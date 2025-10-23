@@ -31,8 +31,6 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
     return (
       <UnauthorizedAccess 
         type="login"
-        title="Authentication Required"
-        message="You need to be logged in to access this page."
       />
     );
   }
@@ -43,8 +41,6 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
       return (
         <UnauthorizedAccess 
           type="admin"
-          title="Access Denied"
-          message="You don't have admin privileges to access this page."
         />
       );
     }
