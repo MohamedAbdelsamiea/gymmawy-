@@ -104,7 +104,7 @@ export async function sendProgrammeDeliveryEmail(programmePurchaseIdOrObject) {
       programmePurchase = programmePurchaseIdOrObject;
       
       // If the object doesn't have all required relations, fetch them
-      if (!programmePurchase.user || !programmePurchase.programme || !programmePurchase.payment) {
+      if (!programmePurchase.user || !programmePurchase.programme) {
         programmePurchase = await prisma.programmePurchase.findUnique({
           where: { id: programmePurchase.id },
           include: {
@@ -121,15 +121,6 @@ export async function sendProgrammeDeliveryEmail(programmePurchaseIdOrObject) {
                 id: true,
                 name: true,
                 pdfUrl: true
-              }
-            },
-            payment: {
-              select: {
-                id: true,
-                amount: true,
-                currency: true,
-                method: true,
-                createdAt: true
               }
             }
           }
