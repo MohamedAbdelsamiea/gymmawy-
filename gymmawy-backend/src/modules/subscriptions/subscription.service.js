@@ -3,6 +3,8 @@ import { generateSubscriptionNumber, generateUniqueId } from "../../utils/idGene
 import { generateUserFriendlyPaymentReference } from "../../utils/paymentReference.js";
 import * as couponService from "../coupons/coupon.service.js";
 import { Decimal } from "decimal.js";
+import { getCurrencyFromCountry, isValidCurrency } from "../../utils/currencyUtils.js";
+import { Currency } from "@prisma/client";
 
 const prisma = getPrismaClient();
 
@@ -158,17 +160,25 @@ export async function subscribeToPlan(userId, planId) {
   });
 }
 
-export async function createSubscriptionWithPayment(userId, subscriptionData) {
+export async function createSubscriptionWithPayment(userId, subscriptionData, req) {
   const {
     planId,
     paymentMethod,
     paymentProof,
     transactionId,
     isMedical = false,
-    currency = 'EGP',
+    currency = req?.currency || 'EGP', // Use detected currency from middleware
     couponId,
     reason
   } = subscriptionData;
+
+  // Validate currency
+  if (!isValidCurrency(currency)) {
+    const error = new Error(`Invalid currency: ${currency}. Supported currencies: ${Object.values(Currency).join(', ')}`);
+    error.status = 400;
+    error.expose = true;
+    throw error;
+  }
 
   // Get plan from database
   const plan = await prisma.subscriptionPlan.findUnique({ 

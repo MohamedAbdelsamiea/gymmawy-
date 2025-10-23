@@ -28,7 +28,7 @@ export async function createSubscriptionWithPayment(req, res, next) {
     // Use the user ID from the request
     const userId = req.user.id;
     
-    const subscription = await service.createSubscriptionWithPayment(userId, data);
+    const subscription = await service.createSubscriptionWithPayment(userId, data, req);
     res.status(201).json({ subscription });
   } catch (e) { 
     console.log('Validation error:', e.message);
@@ -94,7 +94,7 @@ export async function testCreateSubscriptionWithPayment(req, res, next) {
     const userId = 'cba5db85-a0b9-4680-9295-ab36668b60d7';
     console.log('🧪 Using test user ID:', userId);
     
-    const subscription = await service.createSubscriptionWithPayment(userId, data);
+    const subscription = await service.createSubscriptionWithPayment(userId, data, req);
     res.status(201).json({ 
       success: true,
       message: 'Test subscription created successfully',

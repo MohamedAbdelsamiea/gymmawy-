@@ -1,5 +1,6 @@
 import { WebServiceClient } from '@maxmind/geoip2-node';
 import { Currency } from '@prisma/client';
+import { getCurrencyFromCountry } from '../utils/currencyUtils.js';
 
 // Initialize MaxMind client with error handling
 let client = null;
@@ -120,12 +121,7 @@ async function detectCurrencyFromIP(req) {
       return process.env.DEV_CURRENCY || Currency.USD;
     }
     
-    switch (countryCode) {
-      case 'EG': return Currency.EGP;
-      case 'SA': return Currency.SAR;
-      case 'AE': return Currency.AED;
-      default: return Currency.USD; // Default for all other countries
-    }
+    return getCurrencyFromCountry(countryCode);
   } catch (error) {
     console.error('💥 Currency detection completely failed:', error);
     return process.env.DEV_CURRENCY || Currency.USD;

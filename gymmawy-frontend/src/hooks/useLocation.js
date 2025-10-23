@@ -107,28 +107,59 @@ export function useLocation() {
   };
 
   const getCountryInfo = (countryCode) => {
-    const countryMap = {
-      'EG': { countryName: 'Egypt', currency: 'EGP', currencySymbol: 'ج.م' },
-      'SA': { countryName: 'Saudi Arabia', currency: 'SAR', currencySymbol: 'ر.س' },
-      'AE': { countryName: 'UAE', currency: 'AED', currencySymbol: 'د.إ' },
-      'KW': { countryName: 'Kuwait', currency: 'KWD', currencySymbol: 'د.ك' },
-      'QA': { countryName: 'Qatar', currency: 'QAR', currencySymbol: 'ر.ق' },
-      'BH': { countryName: 'Bahrain', currency: 'BHD', currencySymbol: 'د.ب' },
-      'OM': { countryName: 'Oman', currency: 'OMR', currencySymbol: 'ر.ع' },
-      'JO': { countryName: 'Jordan', currency: 'JOD', currencySymbol: 'د.أ' },
-      'LB': { countryName: 'Lebanon', currency: 'LBP', currencySymbol: 'ل.ل' },
-      'MA': { countryName: 'Morocco', currency: 'MAD', currencySymbol: 'د.م' },
-      'TN': { countryName: 'Tunisia', currency: 'TND', currencySymbol: 'د.ت' },
-      'DZ': { countryName: 'Algeria', currency: 'DZD', currencySymbol: 'د.ج' },
-      'LY': { countryName: 'Libya', currency: 'LYD', currencySymbol: 'ل.د' },
-      'SD': { countryName: 'Sudan', currency: 'SDG', currencySymbol: 'ج.س' },
-      'IQ': { countryName: 'Iraq', currency: 'IQD', currencySymbol: 'د.ع' },
-      'SY': { countryName: 'Syria', currency: 'SYP', currencySymbol: 'ل.س' },
-      'YE': { countryName: 'Yemen', currency: 'YER', currencySymbol: 'ر.ي' },
-      'PS': { countryName: 'Palestine', currency: 'ILS', currencySymbol: '₪' },
+    // Centralized currency mapping to match backend logic
+    const getCurrencyFromCountry = (code) => {
+      switch (code?.toUpperCase()) {
+        case 'EG': return 'EGP';
+        case 'SA': return 'SAR';
+        case 'AE': return 'AED';
+        default: return 'USD';
+      }
     };
 
-    return countryMap[countryCode] || countryMap['EG'];
+    const getCurrencySymbol = (currency) => {
+      switch (currency) {
+        case 'EGP': return 'ج.م';
+        case 'SAR': return 'ر.س';
+        case 'AED': return 'د.إ';
+        case 'USD': return '$';
+        default: return '$';
+      }
+    };
+
+    const getCountryName = (code) => {
+      const countryMap = {
+        'EG': 'Egypt',
+        'SA': 'Saudi Arabia',
+        'AE': 'UAE',
+        'KW': 'Kuwait',
+        'QA': 'Qatar',
+        'BH': 'Bahrain',
+        'OM': 'Oman',
+        'JO': 'Jordan',
+        'LB': 'Lebanon',
+        'MA': 'Morocco',
+        'TN': 'Tunisia',
+        'DZ': 'Algeria',
+        'LY': 'Libya',
+        'SD': 'Sudan',
+        'IQ': 'Iraq',
+        'SY': 'Syria',
+        'YE': 'Yemen',
+        'PS': 'Palestine',
+      };
+      return countryMap[code?.toUpperCase()] || 'Unknown';
+    };
+
+    const currency = getCurrencyFromCountry(countryCode);
+    const countryName = getCountryName(countryCode);
+    const currencySymbol = getCurrencySymbol(currency);
+
+    return {
+      countryName,
+      currency,
+      currencySymbol,
+    };
   };
 
   const setLocationManually = (countryCode) => {
