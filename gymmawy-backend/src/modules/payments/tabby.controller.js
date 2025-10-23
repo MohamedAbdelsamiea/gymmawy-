@@ -567,11 +567,9 @@ async function handlePaymentAuthorized(webhookData) {
             break;
             
           case 'PROGRAMME':
-            await prisma.programmePurchase.update({
-              where: { id: payment.paymentableId },
-              data: { status: 'COMPLETE' }
-            });
-            console.log(`Programme purchase ${payment.paymentableId} status updated to COMPLETE`);
+            // Programme purchase is already created with COMPLETE status for gateway payments
+            // No need to update status - it's handled automatically in purchase creation
+            console.log(`Programme purchase ${payment.paymentableId} is already COMPLETE`);
             
             // Award loyalty points for programme purchase
             try {
@@ -936,11 +934,9 @@ async function handlePaymentClosed(webhookData) {
             break;
             
           case 'PROGRAMME':
-            await prisma.programmePurchase.update({
-              where: { id: payment.paymentableId },
-              data: { status: 'COMPLETE' }
-            });
-            console.log(`Programme purchase ${payment.paymentableId} status updated to COMPLETE`);
+            // Programme purchase is already created with COMPLETE status for gateway payments
+            // No need to update status - it's handled automatically in purchase creation
+            console.log(`Programme purchase ${payment.paymentableId} is already COMPLETE`);
             
             // Award loyalty points for programme purchase
             try {
