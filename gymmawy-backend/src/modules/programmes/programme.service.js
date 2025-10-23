@@ -347,6 +347,7 @@ export async function approveProgrammePurchase(id) {
 
   // Send programme delivery email
   try {
+    const { sendProgrammeDeliveryEmail } = await import('./programmeEmail.service.js');
     await sendProgrammeDeliveryEmail(purchase);
     console.log(`Programme delivery email sent successfully for purchase ${purchase.id}`);
   } catch (emailError) {
@@ -738,7 +739,7 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
 
         // Send programme delivery email
         try {
-          const { sendProgrammeDeliveryEmail } = await import('../emails/email.service.js');
+          const { sendProgrammeDeliveryEmail } = await import('./programmeEmail.service.js');
           await sendProgrammeDeliveryEmail(completedPurchase);
           console.log(`✅ Programme delivery email sent successfully for purchase ${completedPurchase.id}`);
         } catch (emailError) {
@@ -763,90 +764,6 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
   }
 }
 
-/**
- * Send programme delivery email to user
- * @param {Object} purchase - Programme purchase data with user and programme info
- */
-export async function sendProgrammeDeliveryEmail(purchase) {
-  try {
-    const user = purchase.user;
-    const programme = purchase.programme;
-    
-    // Format purchase date
-    const purchaseDate = new Date(purchase.purchasedAt).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-    
-    // Format payment amount
-    const paymentAmount = parseFloat(purchase.price).toFixed(2);
-    
-    // Get payment method from related payment
-    const payment = await prisma.payment.findFirst({
-      where: {
-        paymentableId: purchase.id,
-        paymentableType: 'PROGRAMME'
-      }
-    });
-    
-    const paymentMethod = payment?.method || 'Unknown';
-    
-    // Prepare email data
-    const emailData = {
-      firstName: user.firstName || user.email,
-      email: user.email,
-      programmeName: programme.name?.en || programme.name?.ar || 'Programme',
-      purchaseDate,
-      purchaseNumber: purchase.purchaseNumber,
-      paymentAmount,
-      currency: purchase.currency,
-      paymentMethod,
-      supportEmail: process.env.SUPPORT_EMAIL || 'info@gymmawy.net'
-    };
-    
-    // Determine user language preference
-    const userLanguage = user.language || 'en';
-    
-    // Generate email content
-    const html = getProgrammeDeliveryTemplate(emailData, userLanguage);
-    const text = `Hello ${emailData.firstName},\n\nYour programme "${emailData.programmeName}" is ready for download!\n\nPurchase Details:\n- Purchase Number: ${emailData.purchaseNumber}\n- Purchase Date: ${emailData.purchaseDate}\n- Payment Amount: ${emailData.paymentAmount} ${emailData.currency}\n- Payment Method: ${emailData.paymentMethod}\n\nThe programme PDF is attached to this email.\n\nThank you for choosing Gymmawy!`;
-    
-    // Prepare attachments (programme PDF)
-    const attachments = [];
-    if (programme.pdfUrl) {
-      attachments.push({
-        filename: `${programme.name?.en || 'programme'}.pdf`,
-        path: programme.pdfUrl,
-        cid: 'programme-pdf'
-      });
-    }
-    
-    // Send email
-    console.log('📧 Sending programme delivery email:', {
-      to: user.email,
-      subject: `Your Programme is Ready - ${emailData.programmeName}`,
-      programmeName: emailData.programmeName,
-      purchaseNumber: emailData.purchaseNumber,
-      hasAttachments: attachments.length > 0,
-      pdfUrl: programme.pdfUrl
-    });
-    
-    await sendEmail({
-      to: user.email,
-      subject: `Your Programme is Ready - ${emailData.programmeName}`,
-      html,
-      text,
-      attachments
-    });
-    
-    console.log(`✅ Programme delivery email sent successfully to ${user.email} for purchase ${purchase.purchaseNumber}`);
-    
-  } catch (error) {
-    console.error('Error sending programme delivery email:', error);
-    throw error;
-  }
-}
 
 export async function adminUpdateProgrammePurchaseStatus(id, status) {
   // Get the current programme purchase with all related data
@@ -989,6 +906,7 @@ export async function adminUpdateProgrammePurchaseStatus(id, status) {
           // Send email asynchronously (don't wait for it in transaction)
           setImmediate(async () => {
             try {
+              const { sendProgrammeDeliveryEmail } = await import('./programmeEmail.service.js');
               await sendProgrammeDeliveryEmail(purchaseForEmail);
             } catch (emailError) {
               console.error('Failed to send programme delivery email:', emailError);
