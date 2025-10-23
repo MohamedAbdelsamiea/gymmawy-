@@ -550,12 +550,13 @@ export async function activateSubscription(id) {
   }
 
   // Award Gymmawy Coins for subscription completion
-  if (subscription.subscriptionPlan.loyaltyPointsAwarded > 0) {
+  const loyaltyPoints = subscription.subscriptionPlan.loyaltyPointsAwarded || 0;
+  if (loyaltyPoints > 0) {
     await prisma.user.update({
       where: { id: subscription.userId },
       data: {
         loyaltyPoints: {
-          increment: subscription.subscriptionPlan.loyaltyPointsAwarded
+          increment: loyaltyPoints
         }
       }
     });
@@ -564,7 +565,7 @@ export async function activateSubscription(id) {
     await prisma.payment.create({
       data: {
         userId: subscription.userId,
-        amount: new Decimal(subscription.subscriptionPlan.loyaltyPointsAwarded),
+        amount: new Decimal(loyaltyPoints),
         currency: 'GYMMAWY_COINS',
         method: 'GYMMAWY_COINS',
         status: 'SUCCESS',
@@ -579,7 +580,9 @@ export async function activateSubscription(id) {
       }
     });
 
-    console.log(`Awarded ${subscription.subscriptionPlan.loyaltyPointsAwarded} Gymmawy Coins for subscription ${subscription.id}`);
+    console.log(`Awarded ${loyaltyPoints} Gymmawy Coins for subscription ${subscription.id}`);
+  } else {
+    console.log(`No loyalty points to award for subscription ${subscription.id} (loyaltyPointsAwarded: ${subscription.subscriptionPlan.loyaltyPointsAwarded})`);
   }
 
 

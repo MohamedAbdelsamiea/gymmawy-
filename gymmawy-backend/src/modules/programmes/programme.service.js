@@ -457,20 +457,6 @@ export async function purchaseProgramme(userId, programmeId, country = 'EG') {
   }
 
   return prisma.$transaction(async (tx) => {
-    // Check if user already purchased
-    const existing = await tx.programmePurchase.findFirst({
-      where: { 
-        userId: userId,
-        programmeId: programmeId
-      }
-    });
-    if (existing) {
-      const error = new Error("Programme already purchased");
-      error.status = 400;
-      error.expose = true;
-      throw error;
-    }
-
     // Create purchase record
     const price = country === 'SA' ? programme.priceSAR : programme.priceEGP;
     const currency = country === 'SA' ? 'SAR' : 'EGP';
@@ -498,134 +484,73 @@ export async function purchaseProgramme(userId, programmeId, country = 'EG') {
 
 export async function purchaseFreeProgramme(userId, programmeId, currency, programme) {
   try {
-    console.log('🆓 Processing free programme purchase:', {
+    console.log('🆓 Processing free programme delivery (email only):', {
       userId,
       programmeId,
       currency,
       programmeName: programme.name
     });
 
-    return prisma.$transaction(async (tx) => {
-      // Check if user already purchased this programme
-      const existing = await tx.programmePurchase.findFirst({
-        where: { 
-          userId: userId,
-          programmeId: programmeId
-        }
-      });
-      
-      if (existing) {
-        const error = new Error("Programme already purchased");
-        error.status = 400;
-        error.expose = true;
-        throw error;
+    // Get user information for email
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
       }
-
-      // Generate unique purchase number
-      let purchaseNumber;
-      let attempts = 0;
-      const maxAttempts = 5;
-      
-      do {
-        attempts++;
-        const timestamp = Date.now();
-        const randomSuffix = Math.random().toString(36).substr(2, 9).toUpperCase();
-        purchaseNumber = `PROG-FREE-${timestamp}-${randomSuffix}`;
-        
-        const existingPurchase = await tx.programmePurchase.findUnique({
-          where: { purchaseNumber }
-        });
-        
-        if (!existingPurchase) break;
-        
-        if (attempts >= maxAttempts) {
-          throw new Error("Failed to generate unique purchase number after multiple attempts");
-        }
-      } while (attempts < maxAttempts);
-
-      // Create purchase record for free programme
-      const purchase = await tx.programmePurchase.create({
-        data: {
-          purchaseNumber,
-          userId,
-          programmeId,
-          price: new Decimal(0),
-          currency: currency,
-          discountPercentage: 0,
-          purchasedAt: new Date(),
-          status: 'COMPLETE' // Free programmes are immediately complete
-        }
-      });
-
-      console.log('✅ Free programme purchase created:', {
-        purchaseId: purchase.id,
-        purchaseNumber: purchase.purchaseNumber,
-        status: purchase.status
-      });
-
-      // Award loyalty points if applicable
-      if (programme.loyaltyPointsAwarded && programme.loyaltyPointsAwarded > 0) {
-        await tx.loyaltyPoint.create({
-          data: {
-            userId: purchase.userId,
-            amount: programme.loyaltyPointsAwarded,
-            status: 'SUCCESS',
-            method: 'GYMMAWY_COINS',
-            currency: 'GYMMAWY_COINS',
-            paymentReference: `LOYALTY-PROGRAMME-${purchase.id}`,
-            paymentableType: 'PROGRAMME',
-            paymentableId: purchase.id,
-            metadata: {
-              type: 'EARNED',
-              source: 'PROGRAMME_PURCHASE',
-              sourceId: purchase.id
-            }
-          }
-        });
-
-        console.log(`Awarded ${programme.loyaltyPointsAwarded} Gymmawy Coins for free programme purchase ${purchase.id}`);
-      }
-
-      // Send programme delivery email immediately for free programmes
-      try {
-        // Fetch the purchase with all required relations for email
-        const purchaseWithRelations = await tx.programmePurchase.findUnique({
-          where: { id: purchase.id },
-          include: {
-            user: {
-              select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-              }
-            },
-            programme: {
-              select: {
-                id: true,
-                name: true,
-                pdfUrl: true
-              }
-            }
-          }
-        });
-
-        if (purchaseWithRelations) {
-          const { sendProgrammeDeliveryEmail } = await import('./programmeEmail.service.js');
-          await sendProgrammeDeliveryEmail(purchaseWithRelations);
-          console.log(`Free programme delivery email sent successfully for purchase ${purchase.id}`);
-        } else {
-          console.error('Failed to fetch purchase with relations for email');
-        }
-      } catch (emailError) {
-        console.error('Failed to send free programme delivery email:', emailError);
-        // Don't throw error here as the main operation succeeded
-      }
-
-      return purchase;
     });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Create a mock purchase object for email service compatibility
+    const mockPurchase = {
+      id: `free-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      purchaseNumber: `FREE-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+      userId: user.id,
+      programmeId: programme.id,
+      price: 0,
+      currency: currency,
+      discountPercentage: 0,
+      purchasedAt: new Date(),
+      status: 'COMPLETE',
+      user: user,
+      programme: {
+        id: programme.id,
+        name: programme.name,
+        pdfUrl: programme.pdfUrl
+      }
+    };
+
+    console.log('✅ Mock purchase object created for email:', {
+      purchaseId: mockPurchase.id,
+      purchaseNumber: mockPurchase.purchaseNumber,
+      userEmail: user.email,
+      programmeName: programme.name
+    });
+
+    // Send programme delivery email
+    try {
+      const { sendProgrammeDeliveryEmail } = await import('./programmeEmail.service.js');
+      await sendProgrammeDeliveryEmail(mockPurchase);
+      console.log(`Free programme delivery email sent successfully to ${user.email}`);
+    } catch (emailError) {
+      console.error('Failed to send free programme delivery email:', emailError);
+      throw new Error(`Failed to send programme email: ${emailError.message}`);
+    }
+
+    // Return success response without creating database records
+    return {
+      success: true,
+      message: 'Free programme sent via email successfully',
+      purchaseNumber: mockPurchase.purchaseNumber,
+      email: user.email
+    };
   } catch (error) {
-    console.error('❌ Failed to process free programme purchase:', error);
+    console.error('❌ Failed to process free programme delivery:', error);
     throw error;
   }
 }

@@ -915,12 +915,14 @@ export async function activateOrder(orderId, adminId) {
         });
 
         // Award Gymmawy Coins if applicable
-        if (subscriptionPlan.loyaltyPointsAwarded > 0) {
+        const loyaltyPoints = subscriptionPlan.loyaltyPointsAwarded || 0;
+        console.log(`Order activation - Subscription plan loyalty points: ${loyaltyPoints} (raw: ${subscriptionPlan.loyaltyPointsAwarded})`);
+        if (loyaltyPoints > 0) {
           await tx.user.update({
             where: { id: order.userId },
             data: {
               loyaltyPoints: {
-                increment: subscriptionPlan.loyaltyPointsAwarded
+                increment: loyaltyPoints
               }
             }
           });
@@ -928,7 +930,7 @@ export async function activateOrder(orderId, adminId) {
           await tx.payment.create({
             data: {
               userId: order.userId,
-              amount: subscriptionPlan.loyaltyPointsAwarded,
+              amount: loyaltyPoints,
               status: 'SUCCESS',
               method: 'GYMMAWY_COINS',
               currency: 'GYMMAWY_COINS',
@@ -942,6 +944,8 @@ export async function activateOrder(orderId, adminId) {
               }
             }
           });
+        } else {
+          console.log(`No loyalty points to award for subscription ${subscription.id} (loyaltyPointsAwarded: ${subscriptionPlan.loyaltyPointsAwarded})`);
         }
       }
     }
