@@ -97,8 +97,8 @@ async function updateAllDomainReferences() {
     const subscriptionPlans = await prisma.subscriptionPlan.findMany({
       where: {
         OR: [
-          { name: { path: '$', string_contains: OLD_DOMAIN } },
-          { description: { path: '$', string_contains: OLD_DOMAIN } }
+          { name: { path: ['$'], string_contains: OLD_DOMAIN } },
+          { description: { path: ['$'], string_contains: OLD_DOMAIN } }
         ]
       }
     });
@@ -134,7 +134,7 @@ async function updateAllDomainReferences() {
     // Check Programme name JSON fields
     const programmes = await prisma.programme.findMany({
       where: {
-        name: { path: '$', string_contains: OLD_DOMAIN }
+        name: { path: ['$'], string_contains: OLD_DOMAIN }
       }
     });
     
@@ -153,7 +153,7 @@ async function updateAllDomainReferences() {
     // Check Video title JSON fields
     const videos = await prisma.video.findMany({
       where: {
-        title: { path: '$', string_contains: OLD_DOMAIN }
+        title: { path: ['$'], string_contains: OLD_DOMAIN }
       }
     });
     
@@ -172,7 +172,7 @@ async function updateAllDomainReferences() {
     // Check Transformation title JSON fields
     const transformations = await prisma.transformation.findMany({
       where: {
-        title: { path: '$', string_contains: OLD_DOMAIN }
+        title: { path: ['$'], string_contains: OLD_DOMAIN }
       }
     });
     
@@ -192,9 +192,9 @@ async function updateAllDomainReferences() {
     const popups = await prisma.homepagePopup.findMany({
       where: {
         OR: [
-          { header: { path: '$', string_contains: OLD_DOMAIN } },
-          { subheader: { path: '$', string_contains: OLD_DOMAIN } },
-          { buttonText: { path: '$', string_contains: OLD_DOMAIN } }
+          { header: { path: ['$'], string_contains: OLD_DOMAIN } },
+          { subheader: { path: ['$'], string_contains: OLD_DOMAIN } },
+          { buttonText: { path: ['$'], string_contains: OLD_DOMAIN } }
         ]
       }
     });
@@ -243,7 +243,7 @@ async function updateAllDomainReferences() {
     // Check Payment metadata
     const paymentsWithMetadata = await prisma.payment.findMany({
       where: {
-        metadata: { path: '$', string_contains: OLD_DOMAIN }
+        metadata: { path: ['$'], string_contains: OLD_DOMAIN }
       }
     });
     
@@ -262,7 +262,7 @@ async function updateAllDomainReferences() {
     // Check Order metadata
     const ordersWithMetadata = await prisma.order.findMany({
       where: {
-        metadata: { path: '$', string_contains: OLD_DOMAIN }
+        metadata: { path: ['$'], string_contains: OLD_DOMAIN }
       }
     });
     
