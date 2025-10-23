@@ -1873,6 +1873,7 @@ return;
   // Handle Paymob payment
   const handlePaymobPayment = async (programmeResult = null) => {
     try {
+      console.log('🔍 handlePaymobPayment called with programmeResult:', programmeResult);
       setSubmitting(true);
       setError(null);
 
@@ -2405,6 +2406,7 @@ return;
 
     // Handle Paymob payments separately
     if (paymentOption === 'paymob_card' || paymentOption === 'paymob_apple') {
+      console.log('🔍 Calling handlePaymobPayment with programmeResult:', programmeResult);
       await handlePaymobPayment(programmeResult);
       return { success: true };
     }
