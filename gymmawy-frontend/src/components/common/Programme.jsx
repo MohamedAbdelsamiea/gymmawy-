@@ -110,10 +110,15 @@ return imagePath;
       try {
         setLoading(true);
         const { currency } = getCurrencyInfo();
-        const result = await programmeService.purchaseFreeProgramme(programme.id, currency);
+        const result = await programmeService.purchaseFreeProgramme(programme.id, currency, i18n.language);
         
         // Show success modal instead of alert
-        const successMessage = result.message || 'Free programme purchased successfully! Check your email for the programme.';
+        const successMessage = result.message || (i18n.language === 'ar' 
+          ? 'تم شراء البرنامج المجاني بنجاح! تحقق من بريدك الإلكتروني للحصول على البرنامج.'
+          : 'Free programme purchased successfully! Check your email for the programme.');
+        
+        const successTitle = i18n.language === 'ar' ? 'نجح!' : 'Success!';
+        const buttonText = i18n.language === 'ar' ? 'موافق' : 'OK';
         
         // Create a custom modal
         const modal = document.createElement('div');
@@ -126,13 +131,13 @@ return imagePath;
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 class="text-lg font-medium text-gray-900 mb-2">Success!</h3>
+              <h3 class="text-lg font-medium text-gray-900 mb-2">${successTitle}</h3>
               <p class="text-sm text-gray-600 mb-4">${successMessage}</p>
               <button 
                 onclick="this.closest('.fixed').remove(); window.location.reload();" 
                 class="w-full bg-gymmawy-primary text-white px-4 py-2 rounded-lg hover:bg-gymmawy-primary-dark transition-colors"
               >
-                OK
+                ${buttonText}
               </button>
             </div>
           </div>
@@ -152,6 +157,12 @@ return imagePath;
         console.error('Free programme purchase error:', error);
         
         // Show error modal
+        const errorTitle = i18n.language === 'ar' ? 'خطأ' : 'Error';
+        const errorMessage = error.message || (i18n.language === 'ar' 
+          ? 'فشل في شراء البرنامج المجاني. يرجى المحاولة مرة أخرى.'
+          : 'Failed to purchase free programme. Please try again.');
+        const errorButtonText = i18n.language === 'ar' ? 'موافق' : 'OK';
+        
         const errorModal = document.createElement('div');
         errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
         errorModal.innerHTML = `
@@ -162,13 +173,13 @@ return imagePath;
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <h3 class="text-lg font-medium text-gray-900 mb-2">Error</h3>
-              <p class="text-sm text-gray-600 mb-4">${error.message || 'Failed to purchase free programme. Please try again.'}</p>
+              <h3 class="text-lg font-medium text-gray-900 mb-2">${errorTitle}</h3>
+              <p class="text-sm text-gray-600 mb-4">${errorMessage}</p>
               <button 
                 onclick="this.closest('.fixed').remove();" 
                 class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
               >
-                OK
+                ${errorButtonText}
               </button>
             </div>
           </div>

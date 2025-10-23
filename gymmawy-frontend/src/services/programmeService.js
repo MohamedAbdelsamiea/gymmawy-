@@ -30,9 +30,9 @@ class ProgrammeService {
     }
   }
 
-  async purchaseFreeProgramme(id, currency = 'EGP') {
+  async purchaseFreeProgramme(id, currency = 'EGP', language = 'en') {
     try {
-      return await apiClient.post(`/programmes/${id}/purchase-free`, {
+      return await apiClient.post(`/programmes/${id}/purchase-free?lang=${language}`, {
         currency,
       });
     } catch (error) {

@@ -565,16 +565,7 @@ async function handlePaymentAuthorized(webhookData) {
             });
             console.log(`Subscription ${payment.paymentableId} status updated to PAID`);
             
-            // Award loyalty points for subscription
-            try {
-              const { awardLoyaltyPointsForSubscription } = await import('../../utils/loyaltyPoints.js');
-              const loyaltyResult = await awardLoyaltyPointsForSubscription(payment.paymentableId);
-              if (loyaltyResult.success) {
-                console.log(`✅ Loyalty points awarded for subscription ${payment.paymentableId}: ${loyaltyResult.loyaltyPoints} points`);
-              }
-            } catch (loyaltyError) {
-              console.error(`❌ Failed to award loyalty points for subscription ${payment.paymentableId}:`, loyaltyError);
-            }
+            console.log(`ℹ️ Loyalty points will be awarded when subscription is activated by admin`);
             break;
             
           case 'PROGRAMME':
@@ -932,16 +923,7 @@ async function handlePaymentClosed(webhookData) {
             });
             console.log(`Subscription ${payment.paymentableId} status updated to PAID`);
             
-            // Award loyalty points for subscription
-            try {
-              const { awardLoyaltyPointsForSubscription } = await import('../../utils/loyaltyPoints.js');
-              const loyaltyResult = await awardLoyaltyPointsForSubscription(payment.paymentableId);
-              if (loyaltyResult.success) {
-                console.log(`✅ Loyalty points awarded for subscription ${payment.paymentableId}: ${loyaltyResult.loyaltyPoints} points`);
-              }
-            } catch (loyaltyError) {
-              console.error(`❌ Failed to award loyalty points for subscription ${payment.paymentableId}:`, loyaltyError);
-            }
+            console.log(`ℹ️ Loyalty points will be awarded when subscription is activated by admin`);
             break;
             
           case 'PROGRAMME':
