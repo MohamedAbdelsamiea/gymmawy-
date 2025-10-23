@@ -32,6 +32,7 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [enableLoyaltyPoints, setEnableLoyaltyPoints] = useState(false);
+  const [isFree, setIsFree] = useState(false);
   const [errorField, setErrorField] = useState(null);
 
   // Effect to initialize form data when modal opens
@@ -70,6 +71,12 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
         });
         
         setEnableLoyaltyPoints((editData.loyaltyPointsAwarded > 0) || (editData.loyaltyPointsRequired > 0));
+        
+        // Check if programme is free (any price is 0)
+        const isProgrammeFree = programmePrices.EGP === '0' || programmePrices.SAR === '0' || 
+                               programmePrices.AED === '0' || programmePrices.USD === '0';
+        setIsFree(isProgrammeFree);
+        
         setImageUrl(editData.imageUrl || '');
         setSelectedImage(null);
         setPdfUrl(editData.pdfUrl || '');
@@ -100,6 +107,7 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
         });
         
         setEnableLoyaltyPoints(false);
+        setIsFree(false);
         setImageUrl('');
         setSelectedImage(null);
         setPdfUrl('');
@@ -204,6 +212,27 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
     }));
   };
 
+  const handleIsFreeChange = (checked) => {
+    setIsFree(checked);
+    if (checked) {
+      // Set all prices to 0 when making it free
+      setPricing({
+        EGP: '0',
+        SAR: '0',
+        AED: '0',
+        USD: '0'
+      });
+    } else {
+      // Reset prices to empty when unchecking free
+      setPricing({
+        EGP: '',
+        SAR: '',
+        AED: '',
+        USD: ''
+      });
+    }
+  };
+
   const scrollToError = (fieldName) => {
     const element = document.querySelector(`[name="${fieldName}"]`);
     if (element) {
@@ -238,15 +267,29 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
       }
     }
 
-    // Client-side validation for pricing - all currencies are required
-    const requiredCurrencies = ['EGP', 'SAR', 'AED', 'USD'];
-    
-    for (const currency of requiredCurrencies) {
-      const amount = pricing[currency];
-      if (!amount || parseFloat(amount) <= 0) {
-        showFormError(`Price (${currency}) is required and must be greater than 0`, 'pricing');
-        setLoading(false);
-        return;
+    // Client-side validation for pricing
+    if (!isFree) {
+      // For paid programmes, all currencies are required and must be greater than 0
+      const requiredCurrencies = ['EGP', 'SAR', 'AED', 'USD'];
+      
+      for (const currency of requiredCurrencies) {
+        const amount = pricing[currency];
+        if (!amount || parseFloat(amount) <= 0) {
+          showFormError(`Price (${currency}) is required and must be greater than 0`, 'pricing');
+          setLoading(false);
+          return;
+        }
+      }
+    } else {
+      // For free programmes, ensure all prices are 0
+      const requiredCurrencies = ['EGP', 'SAR', 'AED', 'USD'];
+      for (const currency of requiredCurrencies) {
+        const amount = pricing[currency];
+        if (amount !== '0' && amount !== 0) {
+          showFormError(`Free programmes must have all prices set to 0`, 'pricing');
+          setLoading(false);
+          return;
+        }
       }
     }
 
@@ -326,9 +369,9 @@ const AddProgrammeModal = ({ isOpen, onClose, onSuccess, editData, isEdit = fals
       // Prepare pricing data for submission
       const prices = [];
       Object.entries(pricing).forEach(([currency, amount]) => {
-        if (amount && parseFloat(amount) > 0) {
+        if (amount !== '' && amount !== null && amount !== undefined) {
           prices.push({
-            amount: parseFloat(amount),
+            amount: parseFloat(amount) || 0,
             currency: currency,
             type: 'NORMAL'
           });
@@ -460,7 +503,21 @@ return null;
 
               {/* Programme Pricing */}
               <div className="space-y-4">
-                <h4 className="text-md font-medium text-gray-800">Programme Pricing</h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-md font-medium text-gray-800">Programme Pricing</h4>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="isFree"
+                      checked={isFree}
+                      onChange={(e) => handleIsFreeChange(e.target.checked)}
+                      className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300 rounded"
+                    />
+                    <label htmlFor="isFree" className="text-sm font-medium text-gray-700">
+                      Free Programme
+                    </label>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -470,10 +527,11 @@ return null;
                       type="number"
                       value={pricing.EGP ?? ''}
                       onChange={(e) => handlePricingChange('EGP', e.target.value)}
-                      required
+                      required={!isFree}
+                      disabled={isFree}
                       step="0.01"
                       min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent ${isFree ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                       placeholder="0.00"
                     />
                   </div>
@@ -486,10 +544,11 @@ return null;
                       type="number"
                       value={pricing.SAR ?? ''}
                       onChange={(e) => handlePricingChange('SAR', e.target.value)}
-                      required
+                      required={!isFree}
+                      disabled={isFree}
                       step="0.01"
                       min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent ${isFree ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                       placeholder="0.00"
                     />
                   </div>
@@ -502,10 +561,11 @@ return null;
                       type="number"
                       value={pricing.AED ?? ''}
                       onChange={(e) => handlePricingChange('AED', e.target.value)}
-                      required
+                      required={!isFree}
+                      disabled={isFree}
                       step="0.01"
                       min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent ${isFree ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                       placeholder="0.00"
                     />
                   </div>
@@ -518,10 +578,11 @@ return null;
                       type="number"
                       value={pricing.USD ?? ''}
                       onChange={(e) => handlePricingChange('USD', e.target.value)}
-                      required
+                      required={!isFree}
+                      disabled={isFree}
                       step="0.01"
                       min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gymmawy-primary focus:border-transparent ${isFree ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                       placeholder="0.00"
                     />
                   </div>

@@ -101,6 +101,7 @@ return imagePath;
         programme.priceUSD?.amount || programme.priceUSD
       ];
       
+      // A programme is free if any price is 0, null, or undefined
       return prices.some(price => price === 0 || price === null || price === undefined);
     };
 
