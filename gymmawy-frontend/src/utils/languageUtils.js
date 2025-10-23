@@ -6,7 +6,7 @@
  * @returns {string} - Primary language code (e.g., 'en', 'ar')
  */
 export function getPrimaryLanguage(locale) {
-  if (!locale) return 'en';
+  if (!locale) return 'ar';
   return locale.split('-')[0];
 }
 

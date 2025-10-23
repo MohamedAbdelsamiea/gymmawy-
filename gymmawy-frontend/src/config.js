@@ -15,8 +15,8 @@ export const config = {
   ENABLE_DEBUG: import.meta.env.VITE_ENABLE_DEBUG === 'true',
   
   // Localization
-  DEFAULT_LANGUAGE: 'en',
-  SUPPORTED_LANGUAGES: ['en', 'ar'],
+  DEFAULT_LANGUAGE: 'ar',
+  SUPPORTED_LANGUAGES: ['ar', 'en'],
   
   // Pagination
   DEFAULT_PAGE_SIZE: 10,

@@ -20,14 +20,14 @@ export const useLanguageInit = () => {
           setIsInitialized(true);
         } else {
           // No saved language, detect from browser or use default
-          const detectedLanguage = i18n.language || 'en';
+          const detectedLanguage = i18n.language || 'ar';
           await i18n.changeLanguage(detectedLanguage);
           setIsInitialized(true);
         }
       } catch (error) {
         console.error('Language initialization error:', error);
-        // Fallback to English
-        await i18n.changeLanguage('en');
+        // Fallback to Arabic
+        await i18n.changeLanguage('ar');
         setIsInitialized(true);
       }
     };

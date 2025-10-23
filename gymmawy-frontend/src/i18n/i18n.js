@@ -8,7 +8,7 @@ i18n
   .use(initReactI18next)
   .use(HttpBackend)
   .init({
-    fallbackLng: 'en',
+    fallbackLng: 'ar',
     debug: import.meta.env.DEV,
     
     interpolation: {
@@ -30,7 +30,7 @@ i18n
       useSuspense: true,
     },
     load: 'languageOnly',
-    preload: ['en', 'ar'],
+    preload: ['ar', 'en'],
     ns: ['translation', 'common', 'header', 'footer', 'checkout', 'payment', 'currency', 'rewards', 'terms', 'privacy'],
     defaultNS: 'translation',
   });

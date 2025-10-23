@@ -9,7 +9,7 @@ import { isArabic, isEnglish, getPrimaryLanguage } from '../utils/languageUtils'
 export function useLanguage() {
   const { i18n } = useTranslation();
   
-  const currentLanguage = i18n.language || 'en';
+  const currentLanguage = i18n.language || 'ar';
   const primaryLanguage = getPrimaryLanguage(currentLanguage);
   
   return {
