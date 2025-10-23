@@ -121,8 +121,6 @@ const UserOverview = () => {
 
       console.log('✅ Total purchases loaded:', purchases.length);
       console.log('📊 Sample purchase data:', purchases[0]);
-      console.log('📊 Sample programme data:', programmesData[0]);
-      console.log('📊 Sample subscription data:', subscriptionsData[0]);
       
       if (purchases.length === 0) {
         console.log('⚠️ No purchases found. This could be because:');
