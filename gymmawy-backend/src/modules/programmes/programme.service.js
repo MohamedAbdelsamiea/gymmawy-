@@ -4,8 +4,6 @@ import { generateUserFriendlyPaymentReference } from "../../utils/paymentReferen
 import { Decimal } from "@prisma/client/runtime/library";
 import { sendEmail } from "../../utils/email.js";
 import { getProgrammeDeliveryTemplate } from "../../utils/emailTemplates.js";
-import { getCurrencyFromCountry, isValidCurrency } from "../../utils/currencyUtils.js";
-import { Currency } from "@prisma/client";
 
 const prisma = getPrismaClient();
 
@@ -431,7 +429,7 @@ export async function getPendingProgrammePurchases() {
   });
 }
 
-export async function purchaseProgramme(userId, programmeId, country = 'EG', currency = null) {
+export async function purchaseProgramme(userId, programmeId, country = 'EG') {
   const programme = await prisma.programme.findUnique({ where: { id: programmeId } });
   if (!programme) {
     throw new Error("Programme not found");
@@ -440,50 +438,17 @@ export async function purchaseProgramme(userId, programmeId, country = 'EG', cur
     throw new Error("Programme is not available for purchase");
   }
 
-  // Validate currency if provided
-  if (currency && !isValidCurrency(currency)) {
-    throw new Error(`Invalid currency: ${currency}. Supported currencies: ${Object.values(Currency).join(', ')}`);
-  }
-
   return prisma.$transaction(async (tx) => {
-    // Determine currency and price based on country/currency
-    let price, finalCurrency;
-    
-    if (currency) {
-      // Use provided currency
-      finalCurrency = currency;
-      switch (currency) {
-        case 'SAR': price = programme.priceSAR; break;
-        case 'AED': price = programme.priceAED; break;
-        case 'USD': price = programme.priceUSD; break;
-        case 'EGP': 
-        default: price = programme.priceEGP; break;
-      }
-    } else {
-      // Fallback to country-based logic
-      switch (country) {
-        case 'SA': 
-          price = programme.priceSAR; 
-          finalCurrency = 'SAR'; 
-          break;
-        case 'AE': 
-          price = programme.priceAED; 
-          finalCurrency = 'AED'; 
-          break;
-        case 'EG':
-        default: 
-          price = programme.priceEGP; 
-          finalCurrency = 'EGP'; 
-          break;
-      }
-    }
+    // Create purchase record
+    const price = country === 'SA' ? programme.priceSAR : programme.priceEGP;
+    const currency = country === 'SA' ? 'SAR' : 'EGP';
     
     const purchase = await tx.programmePurchase.create({
       data: {
         userId,
         programmeId,
         price: price,
-        currency: finalCurrency,
+        currency: currency,
         discountPercentage: programme.discountPercentage,
       }
     });

@@ -1,6 +1,5 @@
 import { WebServiceClient } from '@maxmind/geoip2-node';
 import { Currency } from '@prisma/client';
-import { getCurrencyFromCountry } from '../utils/currencyUtils.js';
 
 // Initialize MaxMind client with error handling
 let client = null;
@@ -110,6 +109,7 @@ async function detectCurrencyFromIP(req) {
   // Skip localhost - but allow override for development
   if (!ip || ip === '127.0.0.1' || ip === '::1') {
     // For development, you can override this by setting an environment variable
+    console.log(`🏠 Localhost detected, using dev currency: ${process.env.DEV_CURRENCY || Currency.USD}`);
     return process.env.DEV_CURRENCY || Currency.USD; // Default for localhost
   }
   
@@ -117,14 +117,29 @@ async function detectCurrencyFromIP(req) {
     const countryCode = await getCountryFromIP(ip);
     
     if (!countryCode) {
-      console.log(`⚠️ No country code returned for IP: ${ip}, using default currency`);
-      return process.env.DEV_CURRENCY || Currency.USD;
+      console.log(`⚠️ No country code returned for IP: ${ip}, using default currency: ${Currency.USD}`);
+      return Currency.USD;
     }
     
-    return getCurrencyFromCountry(countryCode);
+    console.log(`🌍 Country code detected: ${countryCode} for IP: ${ip}`);
+    
+    switch (countryCode) {
+      case 'EG': 
+        console.log(`✅ Egypt detected, using EGP`);
+        return Currency.EGP;
+      case 'SA': 
+        console.log(`✅ Saudi Arabia detected, using SAR`);
+        return Currency.SAR;
+      case 'AE': 
+        console.log(`✅ UAE detected, using AED`);
+        return Currency.AED;
+      default: 
+        console.log(`✅ Other country (${countryCode}) detected, using USD`);
+        return Currency.USD; // Default for all other countries
+    }
   } catch (error) {
     console.error('💥 Currency detection completely failed:', error);
-    return process.env.DEV_CURRENCY || Currency.USD;
+    return Currency.USD;
   }
 }
 
@@ -134,8 +149,19 @@ async function detectCurrencyFromIP(req) {
 async function getCountryFromIP(ip) {
   // Check if client is available
   if (!client) {
-    console.warn('⚠️ MaxMind client not available, using fallback currency detection');
-    return null;
+    console.warn('⚠️ MaxMind client not available, trying fallback IP detection');
+    
+    // Try fallback IP detection service
+    try {
+      const response = await fetch(`https://ipapi.co/${ip}/json/`, { timeout: 5000 });
+      const data = await response.json();
+      const countryCode = data.country_code;
+      console.log(`✅ Fallback IP detection for ${ip}:`, countryCode || 'No country code');
+      return countryCode || null;
+    } catch (fallbackErr) {
+      console.error('❌ Fallback IP detection also failed:', fallbackErr.message);
+      return null;
+    }
   }
 
   try {
@@ -151,6 +177,18 @@ async function getCountryFromIP(ip) {
       code: err.code,
       type: err.constructor.name
     });
+    
+    // Try fallback IP detection service
+    try {
+      console.log(`🔄 Trying fallback IP detection for ${ip}`);
+      const response = await fetch(`https://ipapi.co/${ip}/json/`, { timeout: 5000 });
+      const data = await response.json();
+      const countryCode = data.country_code;
+      console.log(`✅ Fallback IP detection for ${ip}:`, countryCode || 'No country code');
+      return countryCode || null;
+    } catch (fallbackErr) {
+      console.error('❌ Fallback IP detection also failed:', fallbackErr.message);
+    }
     
     // Don't log full stack trace in production
     if (process.env.NODE_ENV === 'development') {
