@@ -48,7 +48,10 @@ const UserOverview = () => {
               id: order.id,
               type: 'order',
               date: order.createdAt,
-              items: order.items?.map(item => item.product?.name || item.name).join(', ') || 'Order',
+              items: order.items?.map(item => {
+                const name = item.product?.name || item.name;
+                return typeof name === 'object' ? (name.en || name.ar || 'Product') : name;
+              }).join(', ') || 'Order',
               amount: parseFloat(order.totalAmount || order.price || 0),
               currency: order.currency || 'EGP',
               status: order.status,
@@ -73,7 +76,9 @@ const UserOverview = () => {
               id: purchase.id,
               type: 'programme',
               date: purchase.purchasedAt || purchase.createdAt,
-              items: purchase.programme?.name || 'Programme',
+              items: typeof purchase.programme?.name === 'object' 
+                ? (purchase.programme.name.en || purchase.programme.name.ar || 'Programme')
+                : (purchase.programme?.name || 'Programme'),
               amount: parseFloat(purchase.price || 0),
               currency: purchase.currency || 'EGP',
               status: purchase.status,
@@ -96,7 +101,9 @@ const UserOverview = () => {
               id: subscription.id,
               type: 'subscription',
               date: subscription.createdAt || subscription.startDate,
-              items: subscription.subscriptionPlan?.name || 'Subscription Plan',
+              items: typeof subscription.subscriptionPlan?.name === 'object' 
+                ? (subscription.subscriptionPlan.name.en || subscription.subscriptionPlan.name.ar || 'Subscription Plan')
+                : (subscription.subscriptionPlan?.name || 'Subscription Plan'),
               amount: parseFloat(subscription.price || 0),
               currency: subscription.currency || 'EGP',
               status: subscription.status,
@@ -114,6 +121,8 @@ const UserOverview = () => {
 
       console.log('✅ Total purchases loaded:', purchases.length);
       console.log('📊 Sample purchase data:', purchases[0]);
+      console.log('📊 Sample programme data:', programmesData[0]);
+      console.log('📊 Sample subscription data:', subscriptionsData[0]);
       
       if (purchases.length === 0) {
         console.log('⚠️ No purchases found. This could be because:');
