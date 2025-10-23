@@ -131,6 +131,22 @@ export async function awardLoyaltyPoints(userId, purchaseType, purchaseId, optio
       }
     });
 
+    // Create payment record for loyalty points earned
+    const paymentReference = `LOYALTY-${sourceDescription}-${purchaseId}`;
+    await prisma.payment.create({
+      data: {
+        userId: userId,
+        amount: loyaltyPoints,
+        status: 'SUCCESS',
+        method: 'GYMMAWY_COINS',
+        currency: 'GYMMAWY_COINS',
+        paymentReference: paymentReference,
+        paymentableType: purchaseType,
+        paymentableId: purchaseId,
+        metadata: metadata
+      }
+    });
+
     console.log(`✅ Awarded ${loyaltyPoints} loyalty points to user ${userId} for ${purchaseType} ${purchaseId}`);
     console.log(`💰 User ${userId} now has ${updatedUser.loyaltyPoints} total loyalty points`);
 

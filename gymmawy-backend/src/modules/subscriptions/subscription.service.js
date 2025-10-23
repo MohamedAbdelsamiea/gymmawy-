@@ -561,6 +561,25 @@ export async function activateSubscription(id) {
       }
     });
 
+    // Create Gymmawy Coins payment record
+    await prisma.payment.create({
+      data: {
+        userId: subscription.userId,
+        amount: new Decimal(loyaltyPoints),
+        currency: 'GYMMAWY_COINS',
+        method: 'GYMMAWY_COINS',
+        status: 'SUCCESS',
+        paymentReference: `LOYALTY-${subscription.id}-${Date.now()}`,
+        paymentableId: subscription.id,
+        paymentableType: 'SUBSCRIPTION',
+        metadata: {
+          type: 'LOYALTY_POINTS_EARNED',
+          source: 'SUBSCRIPTION',
+          sourceId: subscription.id
+        }
+      }
+    });
+
     console.log(`Awarded ${loyaltyPoints} Gymmawy Coins for subscription ${subscription.id}`);
   } else {
     console.log(`No loyalty points to award for subscription ${subscription.id} (loyaltyPointsAwarded: ${subscription.subscriptionPlan.loyaltyPointsAwarded})`);
@@ -738,6 +757,25 @@ export async function adminUpdateSubscriptionStatus(id, status) {
             data: {
               loyaltyPoints: {
                 increment: currentSubscription.subscriptionPlan.loyaltyPointsAwarded
+              }
+            }
+          });
+
+          // Create Gymmawy Coins payment record
+          await tx.payment.create({
+            data: {
+              userId: currentSubscription.userId,
+              amount: new Decimal(currentSubscription.subscriptionPlan.loyaltyPointsAwarded),
+              currency: 'GYMMAWY_COINS',
+              method: 'GYMMAWY_COINS',
+              status: 'SUCCESS',
+              paymentReference: `LOYALTY-${currentSubscription.id}-${Date.now()}`,
+              paymentableId: currentSubscription.id,
+              paymentableType: 'SUBSCRIPTION',
+              metadata: {
+                type: 'LOYALTY_POINTS_EARNED',
+                source: 'SUBSCRIPTION',
+                sourceId: currentSubscription.id
               }
             }
           });

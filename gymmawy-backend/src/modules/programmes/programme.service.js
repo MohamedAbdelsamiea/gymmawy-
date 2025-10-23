@@ -372,6 +372,24 @@ export async function approveProgrammePurchase(id) {
       }
     });
 
+    await prisma.payment.create({
+      data: {
+        userId: purchase.userId,
+        amount: purchase.programme.loyaltyPointsAwarded,
+        status: 'SUCCESS',
+        method: 'GYMMAWY_COINS',
+        currency: 'GYMMAWY_COINS',
+        paymentReference: `LOYALTY-PROGRAMME-${purchase.id}`,
+        paymentableType: 'PROGRAMME',
+        paymentableId: purchase.id,
+        metadata: {
+          type: 'EARNED',
+          source: 'PROGRAMME_PURCHASE',
+          sourceId: purchase.id
+        }
+      }
+    });
+
     console.log(`Awarded ${purchase.programme.loyaltyPointsAwarded} Gymmawy Coins for programme purchase ${purchase.id}`);
   }
 
@@ -862,6 +880,24 @@ export async function adminUpdateProgrammePurchaseStatus(id, status) {
             data: {
               loyaltyPoints: {
                 increment: currentPurchase.programme.loyaltyPointsAwarded
+              }
+            }
+          });
+
+          await tx.payment.create({
+            data: {
+              userId: currentPurchase.userId,
+              amount: currentPurchase.programme.loyaltyPointsAwarded,
+              status: 'SUCCESS',
+              method: 'GYMMAWY_COINS',
+              currency: 'GYMMAWY_COINS',
+              paymentReference: `LOYALTY-EARNED-PROGRAMME-${currentPurchase.id}`,
+              paymentableType: 'PROGRAMME',
+              paymentableId: currentPurchase.id,
+              metadata: {
+                type: 'EARNED',
+                source: 'PROGRAMME_PURCHASE',
+                sourceId: currentPurchase.id
               }
             }
           });

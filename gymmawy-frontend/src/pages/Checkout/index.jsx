@@ -9,8 +9,10 @@ import { useLanguage } from '../../hooks/useLanguage';
 import { config } from '../../config';
 import checkoutService from '../../services/checkoutService';
 import imageUploadService from '../../services/imageUploadService';
+import tabbyService from '../../services/tabbyService';
 import rewardsService from '../../services/rewardsService';
 import currencyService from '../../services/currencyService';
+import useTabbyPromo from '../../hooks/useTabbyPromo';
 import countryDetectionService from '../../services/countryDetectionService';
 import { useSecureImage } from '../../hooks/useSecureImage';
 import { useFormPersistence } from '../../hooks/useFormPersistence';
@@ -52,7 +54,7 @@ const Checkout = () => {
   const { isArabic } = useLanguage();
   const { user, isAuthenticated } = useAuth();
   const { showError, showSuccess, showInfo } = useToast();
-  const { currency: detectedCurrency, isLoading: currencyLoading, formatPrice, isTabbySupported } = useCurrencyContext();
+  const { currency: detectedCurrency, isLoading: currencyLoading, formatPrice } = useCurrencyContext();
   const { cart, loadCart, loading: cartLoading } = useCart();
   
   const location = useLocation();
@@ -114,7 +116,12 @@ return fallback;
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
+  const [tabbyAvailable, setTabbyAvailable] = useState(false);
+  const [tabbyRejectionMessage, setTabbyRejectionMessage] = useState(null);
+  const [forceTabbyAvailable, setForceTabbyAvailable] = useState(false);
+  const [tabbyPrescoringLoading, setTabbyPrescoringLoading] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
+  const [tabbyConfiguration, setTabbyConfiguration] = useState(null);
   const [shippingDetails, setShippingDetails] = useState({
     shippingBuilding: '',
     shippingStreet: '',
@@ -433,6 +440,8 @@ return fallback;
     return instructions;
   };
 
+  // Get Tabby hook data
+  const { currentCountry } = useTabbyPromo();
 
   // Get phone number based on currency for Tabby
   const getPhoneForCurrency = (currency) => {
@@ -2407,6 +2416,33 @@ return;
       return { success: true };
     }
 
+    // Handle Tabby payment separately
+    if (paymentOption === 'tabby') {
+      // Check if Tabby has a rejection message (not available)
+      if (tabbyRejectionMessage) {
+        const errorMessage = i18n.language === 'ar' 
+          ? 'طريقة الدفع المختارة غير متاحة. يرجى اختيار طريقة دفع أخرى' 
+          : 'Selected payment method is not available. Please choose another payment method';
+        setError(errorMessage);
+        showError(errorMessage);
+        setSubmitting(false);
+        return { success: false, error: errorMessage };
+      }
+      
+      await handleTabbyPayment();
+      return { success: true };
+    }
+
+    // Prevent submission for Tamara (not yet available)
+    if (paymentOption === 'tamara') {
+      const errorMessage = i18n.language === 'ar' 
+        ? 'هذا الخيار غير متاح حالياً' 
+        : 'This payment option is currently unavailable';
+      setError(errorMessage);
+      showError(errorMessage);
+      setSubmitting(false);
+      return { success: false, error: errorMessage };
+    }
 
     try {
       // Upload payment proof if provided (File object)
@@ -3398,13 +3434,24 @@ return;
                   </div>
                 )}
 
+                {/* Tabby/Tamara Placeholder */}
+                {paymentOption === 'tamara' && (
+                  <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800">
+                      {t('checkout.tamaraComingSoon')}
+                    </p>
+                    <p className="text-xs text-yellow-600 mt-1">
+                      {i18n.language === 'ar' ? 'هذا الخيار غير متاح حالياً' : 'This payment option is currently unavailable'}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Submit Button */}
               <div className="flex justify-end pb-12 sm:pb-0">
                 <button
                   type="submit"
-                  disabled={submitting || (!isLoyaltyRedemption && !paymentOption)}
+                  disabled={submitting || (!isLoyaltyRedemption && (!paymentOption || paymentOption === 'tamara'))}
                   className="px-8 py-3 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
                   {submitting ? (
