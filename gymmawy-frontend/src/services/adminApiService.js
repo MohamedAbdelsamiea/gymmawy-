@@ -239,7 +239,7 @@ class AdminApiService {
   }
 
   async activateSubscription(id) {
-    return this.apiCall(`/subscriptions/admin/${id}/approve`, {
+    return this.apiCall(`/subscriptions/admin/${id}/activate`, {
       method: 'PATCH'
     });
   }
