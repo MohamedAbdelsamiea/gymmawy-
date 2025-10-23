@@ -283,7 +283,7 @@ export const handleWebhook = async (req, res) => {
     if (!payment && transactionId) {
       console.log('🔍 Strategy 3: Searching by transactionId:', transactionId);
       payment = await prisma.payment.findFirst({
-        where: { transactionId: transactionId }
+        where: { transactionId: String(transactionId) } // Convert to string
       });
       if (payment) console.log('✅ Found payment by transactionId:', payment.id);
     }
@@ -410,7 +410,7 @@ export const handleWebhook = async (req, res) => {
       where: { id: payment.id },
       data: {
         status: status,
-        transactionId: transactionId,
+        transactionId: String(transactionId), // Convert to string
         processedAt: new Date(),
         metadata: {
           ...payment.metadata,
@@ -463,15 +463,15 @@ export const handleWebhook = async (req, res) => {
             break;
             
           case 'ORDER':
-            await prisma.order.update({
-              where: { id: payment.paymentableId },
-              data: { 
-                status: 'PAID',
-                paymentMethod: 'PAYMOB',
-                paymentReference: transactionId,
-                updatedAt: new Date()
-              }
-            });
+        await prisma.order.update({
+          where: { id: payment.paymentableId },
+          data: { 
+            status: 'PAID',
+            paymentMethod: 'PAYMOB',
+            paymentReference: String(transactionId), // Convert to string
+            updatedAt: new Date()
+          }
+        });
             console.log(`Order ${payment.paymentableId} status updated to PAID`);
             
         // Create OTO shipment for paid orders
@@ -509,7 +509,7 @@ export const handleWebhook = async (req, res) => {
           data: {
             status: 'PAID',
             paymentMethod: 'PAYMOB',
-            paymentReference: transactionId,
+            paymentReference: String(transactionId), // Convert to string
             updatedAt: new Date()
           }
         });
