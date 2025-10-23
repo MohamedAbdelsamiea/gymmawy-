@@ -30,5 +30,6 @@
   "days": "{{count}} day",
   "days_other": "{{count}} days",
   "currency": "Currency",
-  "selectCurrency": "Select Currency"
+  "selectCurrency": "Select Currency",
+  "auth_required": "Authentication required"
 }

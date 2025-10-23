@@ -5,7 +5,7 @@ import apiClient from './apiClient';
 
 class CurrencyService {
   constructor() {
-    this.currentCurrency = 'SAR'; // Changed to SAR for Tabby testing
+    this.currentCurrency = 'EGP'; // Default currency
     this.currencyRates = {};
   }
 

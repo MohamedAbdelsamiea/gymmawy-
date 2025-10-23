@@ -26,14 +26,6 @@ try {
  */
 export async function currencyDetectionMiddleware(req, res, next) {
   try {
-    // Check if DEV_CURRENCY is set for development override
-    if (process.env.DEV_CURRENCY) {
-      console.log(`🔧 DEV_CURRENCY override: ${process.env.DEV_CURRENCY}`);
-      req.currency = process.env.DEV_CURRENCY;
-      res.set('X-Currency', process.env.DEV_CURRENCY);
-      next();
-      return;
-    }
     
     // Check for user currency preference from headers or cookies
     const userCurrencyPreference = req.headers['x-user-currency'] || req.cookies?.userCurrencyPreference;
@@ -69,8 +61,8 @@ export async function currencyDetectionMiddleware(req, res, next) {
   } catch (error) {
     console.error('Currency detection error:', error.message);
     
-    // Fallback to USD if detection fails
-    const fallbackCurrency = process.env.DEV_CURRENCY || Currency.USD;
+    // Fallback to EGP if detection fails
+    const fallbackCurrency = Currency.EGP;
     req.currency = fallbackCurrency;
     res.set('X-Currency', fallbackCurrency);
     

@@ -74,7 +74,7 @@ return fallback;
   };
   
   // Get data from location state (plan, product, or cart items)
-  const { plan, product, cartItems, type, currency: passedCurrency, buyNow, subtotal: cartSubtotal, shipping: cartShipping, total: cartTotal, fromPaymentFailure, paymentFailureReason, fromPaymentCancel, preserveCart } = location.state || {};
+  const { plan, product, cartItems, type, buyNow, subtotal: cartSubtotal, shipping: cartShipping, total: cartTotal, fromPaymentFailure, paymentFailureReason, fromPaymentCancel, preserveCart } = location.state || {};
   
   // Initialize form persistence for checkout form
   const {
@@ -118,7 +118,6 @@ return fallback;
   const [error, setError] = useState(null);
   const [tabbyAvailable, setTabbyAvailable] = useState(false);
   const [tabbyRejectionMessage, setTabbyRejectionMessage] = useState(null);
-  const [forceTabbyAvailable, setForceTabbyAvailable] = useState(false);
   const [tabbyPrescoringLoading, setTabbyPrescoringLoading] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
   const [tabbyConfiguration, setTabbyConfiguration] = useState(null);
@@ -142,7 +141,6 @@ return fallback;
         if (parsedData.type === 'loyalty') {
           setLoyaltyData(parsedData);
           setIsLoyaltyRedemption(true);
-          console.log('🎁 Loyalty redemption detected:', parsedData);
         }
       } catch (error) {
         console.error('Error parsing loyalty checkout data:', error);
@@ -175,7 +173,6 @@ return fallback;
         if (storedData.subscriptionReason) {
           setSubscriptionReason(storedData.subscriptionReason);
         }
-        console.log('Loaded stored checkout data');
       }
     }
   }, [hasStoredData, isPersistenceLoading, loadData]);
@@ -206,16 +203,14 @@ return fallback;
         product,
         cartItems,
         type,
-        currency: passedCurrency,
         buyNow,
         subtotal: cartSubtotal,
         shipping: cartShipping,
         total: cartTotal
       };
       sessionStorage.setItem('originalPurchaseData', JSON.stringify(originalPurchaseData));
-      console.log('💾 Stored original purchase data for payment retry:', originalPurchaseData);
     }
-  }, [plan, product, cartItems, type, passedCurrency, buyNow, cartSubtotal, cartShipping, cartTotal]);
+  }, [plan, product, cartItems, type, buyNow, cartSubtotal, cartShipping, cartTotal]);
 
   // Load cart data when returning from payment failure/cancellation (only for cart purchases)
   useEffect(() => {
@@ -227,7 +222,6 @@ return fallback;
           !cartItems && 
           isAuthenticated && 
           !cartLoadAttempted) {
-        console.log('🛒 Loading cart data for payment retry...');
         setCartLoadAttempted(true);
         setIsLoadingCart(true);
         setCartLoadError(null);
@@ -241,7 +235,6 @@ return fallback;
         cartLoadTimeoutRef.current = setTimeout(async () => {
           try {
             await loadCart(true); // Force load cart for payment retry
-            console.log('✅ Cart loaded successfully');
           } catch (error) {
             console.error('❌ Failed to load cart:', error);
             setCartLoadError(error.message);
@@ -266,7 +259,6 @@ return fallback;
   // Transform cart data when it's loaded
   useEffect(() => {
     if (cart && cart.items && cart.items.length > 0 && !cartItems) {
-      console.log('🛒 Transforming cart data for checkout...');
       
       const transformCartItem = (item) => {
         const product = item.product;
@@ -323,7 +315,6 @@ return fallback;
       const shipping = subtotal > freeShippingThreshold ? 0 : baseShippingAmount;
       const total = subtotal + shipping;
       
-      console.log('✅ Cart data transformed:', { items: transformedItems.length, subtotal, total });
       
       // Show success message when cart is loaded for payment retry
       if (fromPaymentFailure || fromPaymentCancel) {
@@ -335,19 +326,11 @@ return fallback;
     }
   }, [cart, cartItems, fromPaymentFailure, fromPaymentCancel, i18n.language, showSuccess]);
 
-  // Debug: Log currency detection
-  console.log('🔍 Checkout - Currency detection:', {
-    detectedCurrency,
-    currencyLoading,
-    plan: plan?.name
-  });
   
-  // Use detected currency from CurrencyContext (user can change via currency selector)
-  // This ensures prices update when user changes currency
-  const currency = detectedCurrency || passedCurrency || 'USD';
+  // Use detected currency from CurrencyContext (auto-detected based on user location)
+  const currency = detectedCurrency || 'EGP';
   
   // Debug: Log the currency being used
-  // console.log('🔍 Checkout - Currency from home page:', passedCurrency);
   // console.log('🔍 Checkout - Detected currency:', detectedCurrency);
   // console.log('🔍 Checkout - Final currency:', currency);
   // console.log('🔍 Checkout - Type:', type);
@@ -383,22 +366,9 @@ return fallback;
     const loyaltyCheckoutData = sessionStorage.getItem('loyaltyCheckoutData');
     const hasLoyaltyData = !!loyaltyCheckoutData || !!loyaltyData;
     
-    // Debug logging
-    console.log('🔍 Redirect check - Data status:', {
-      plan: !!plan,
-      product: !!product,
-      cartItems: !!cartItems,
-      loyaltyData: !!loyaltyData,
-      loyaltyCheckoutData: !!loyaltyCheckoutData,
-      hasLoyaltyData,
-      isLoyaltyRedemption
-    });
     
     if (!plan && !product && !cartItems && !hasLoyaltyData) {
-      console.log('No checkout data found, redirecting to home');
       navigate('/');
-    } else {
-      console.log('✅ Checkout data found, staying on page');
     }
   }, [plan, product, cartItems, cart, loadedCartItems, isLoadingCart, navigate, loyaltyData, isLoyaltyRedemption]);
 
@@ -408,12 +378,6 @@ return fallback;
     console.log('🔄 PRESCORING - Flag reset, allowing new call');
   };
   
-  // Clear any existing rejection message for testing
-  useEffect(() => {
-    if (forceTabbyAvailable) {
-      setTabbyRejectionMessage(null);
-    }
-  }, [forceTabbyAvailable]);
 
   // Generate dynamic Tabby instructions based on real configuration
   const getTabbyInstructions = () => {
@@ -736,12 +700,6 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
                              currencies[0] || 'EGP';
       const amount = plan.allPrices.regular[defaultCurrency] || 0;
       
-      console.log('🔍 Checkout - Normal price debug:', {
-        passedCurrency: currency,
-        availableCurrencies: currencies,
-        selectedCurrency: defaultCurrency,
-        amount: amount
-      });
       
       // Get currency symbol
       const currencySymbol = getCurrencySymbol(defaultCurrency, i18n.language);
@@ -786,12 +744,6 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       // Get currency symbol
       const currencySymbol = getCurrencySymbol(selectedCurrency, i18n.language);
       
-      console.log('🔍 Checkout - Individual price fields debug:', {
-        currency: currency,
-        selectedCurrency: selectedCurrency,
-        selectedPrice: selectedPrice,
-        currencySymbol: currencySymbol
-      });
       
       return {
         amount: selectedPrice,
@@ -1023,14 +975,6 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       }
     }
     
-    console.log('🔍 Checkout - Programme price debug:', {
-      detectedCurrency: detectedCurrency,
-      selectedCurrency: selectedCurrency,
-      selectedPrice: selectedPrice,
-      currencySymbol: currencySymbol,
-      planPriceSAR: plan?.priceSAR,
-      planPriceUSD: plan?.priceUSD
-    });
     
     return { amount: selectedPrice, currency: selectedCurrency, currencySymbol: currencySymbol };
   };
@@ -1288,17 +1232,6 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
     return subtotal - discount.totalDiscount + shippingCost;
   }, [subtotal, discount.totalDiscount, shippingCost]);
   
-  // Debug: Log order summary calculation
-  console.log('🔍 Order Summary Debug:', {
-    detectedCurrency,
-    originalPrice,
-    subtotal,
-    discount: discount.totalDiscount,
-    shippingCost,
-    total,
-    planPriceSAR: plan?.priceSAR,
-    currentPrice
-  });
 
   // Get Tabby rejection message based on reason
   const getTabbyRejectionMessage = (rejectionReason) => {
@@ -1317,13 +1250,11 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
   const checkTabbyAvailability = async (currency) => {
     // Prevent multiple simultaneous calls
     if (tabbyPrescoringLoading) {
-      console.log('🔍 PRESCORING - Already in progress, skipping');
       return;
     }
 
     // Prevent multiple calls for the same currency
     if (prescoringCalledRef.current) {
-      console.log('🔍 PRESCORING - Already called for this currency, skipping');
       return;
     }
 
@@ -1332,20 +1263,7 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
 
     try {
       setTabbyPrescoringLoading(true);
-      console.log('🔍 PRESCORING - Checking Tabby availability:', {
-        currency,
-        currentCountry,
-        forceTabbyAvailable,
-        total
-      });
       
-      // Force Tabby available for testing - this should never be called when force is true
-      if (forceTabbyAvailable) {
-        console.log('🧪 Testing mode: Forcing Tabby availability (this should not be called)');
-        setTabbyAvailable(true);
-        setTabbyRejectionMessage(null);
-        return;
-      }
       
       // Skip country check for pre-scoring - let Tabby API determine eligibility
       console.log(`🔍 Country detected: ${currentCountry} - proceeding to pre-scoring`);
@@ -1362,7 +1280,6 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
       }
       
       // Now do actual pre-scoring with Tabby API using REAL order data
-      console.log('🔍 PRESCORING - Performing official Tabby pre-scoring check');
       
       // Create real order data for pre-scoring (not test data)
       const realOrderData = {
@@ -1423,15 +1340,12 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
         attachment: {}
       };
       
-      console.log('🔍 PRESCORING - Real order data for pre-scoring:', JSON.stringify(realOrderData, null, 2));
       
       // Create checkout data for pre-scoring
       const checkoutData = tabbyService.createCheckoutData(realOrderData, type === 'cart' ? 'order' : type);
-      console.log('🔍 PRESCORING - Checkout data for pre-scoring:', JSON.stringify(checkoutData, null, 2));
       
       // Perform official Tabby pre-scoring (calls backend endpoint)
       const prescoringResult = await tabbyService.performBackgroundPrescoring(realOrderData, type);
-      console.log('🔍 PRESCORING - Official Tabby response:', prescoringResult);
       
       // Check official Tabby status as per documentation
       if (prescoringResult.status === 'created') {
@@ -1489,42 +1403,12 @@ return { amount: 0, currency: 'EGP', currencySymbol: 'L.E' };
 
   // Check Tabby availability when currency changes
   useEffect(() => {
-    console.log('🔍 PRESCORING TRIGGER - useEffect called:', {
-      currency,
-      currencyLoading,
-      total,
-      currentCountry,
-      forceTabbyAvailable,
-      prescoringCalled: prescoringCalledRef.current
-    });
     
-    if (currency && !currencyLoading && total > 0 && !forceTabbyAvailable && !tabbyPrescoringLoading) {
-      console.log('🔍 PRESCORING TRIGGER - Conditions met, calling checkTabbyAvailability');
+    if (currency && !currencyLoading && total > 0 && !tabbyPrescoringLoading) {
       checkTabbyAvailability(currency);
-    } else {
-      console.log('🔍 PRESCORING TRIGGER - Conditions not met:', {
-        hasCurrency: !!currency,
-        notLoading: !currencyLoading,
-        hasTotal: total > 0,
-        notForced: !forceTabbyAvailable,
-        notPrescoringLoading: !tabbyPrescoringLoading
-      });
     }
-  }, [currency, currencyLoading, total, forceTabbyAvailable]); // Removed tabbyPrescoringLoading to prevent infinite loop
+  }, [currency, currencyLoading, total]); // Removed tabbyPrescoringLoading to prevent infinite loop
 
-  // Immediate effect when force flag changes
-  useEffect(() => {
-    if (forceTabbyAvailable) {
-      console.log('🧪 Force Tabby flag changed - immediately setting available');
-      setTabbyAvailable(true);
-      setTabbyRejectionMessage(null);
-    } else {
-      // When force mode is disabled, recheck availability
-      if (currency && !currencyLoading && total > 0) {
-        checkTabbyAvailability(currency);
-      }
-    }
-  }, [forceTabbyAvailable]);
 
   // Handle payment failure state
   useEffect(() => {
@@ -1907,9 +1791,6 @@ return;
           reason: subscriptionReason || null,
         };
 
-        // Debug: Log subscription data being sent
-        console.log('🔍 Subscription data being sent to backend:', subscriptionData);
-        console.log('✅ Backend will calculate and validate all prices');
 
         subscriptionResult = await checkoutService.createSubscription(subscriptionData);
         console.log('✅ Subscription created successfully:', subscriptionResult);
@@ -1964,7 +1845,6 @@ return;
         }
       };
 
-      console.log('🔍 Paymob payment data:', paymentData);
 
       // Import PaymobService dynamically
       const { default: paymobService } = await import('../../services/paymobService.js');
@@ -2097,14 +1977,6 @@ return;
       // Create checkout data for Tabby
       const checkoutData = tabbyService.createCheckoutData(orderData, type === 'cart' ? 'order' : type);
 
-      // Debug: Log the complete order data being sent to Tabby
-      console.log('🔍 COMPLETE ORDER DATA FOR TABBY:');
-      console.log('📦 Order Data:', JSON.stringify(orderData, null, 2));
-      console.log('🔧 Checkout Data:', JSON.stringify(checkoutData, null, 2));
-      console.log('📱 Phone Number:', orderData.user.mobileNumber);
-      console.log('💰 Currency:', orderData.currency);
-      console.log('🌍 Country:', orderData.shippingAddress?.country || 'No shipping address');
-      console.log('🏙️ City:', orderData.shippingAddress?.city || 'No shipping address');
 
       // Validate checkout data
       const validation = tabbyService.validateCheckoutData(checkoutData);
@@ -2130,11 +2002,6 @@ return;
         return;
       }
       
-      // Debug: Log the result structure
-      console.log('🔍 Tabby checkout result:', result);
-      console.log('🔍 Tabby checkout_session:', result?.checkout_session);
-      console.log('🔍 Tabby checkout_url:', result?.checkout_session?.checkout_url);
-      console.log('🔍 Full result structure:', JSON.stringify(result, null, 2));
 
       // Check multiple possible locations for checkout URL
       const checkoutUrl = result?.checkout_session?.checkout_url || 
@@ -2375,9 +2242,6 @@ return;
           couponId: couponValid && couponData ? couponData.id : null,
         };
 
-        // Debug: Log programme data being sent
-        console.log('🔍 Programme data being sent to backend:', programmeData);
-        console.log('✅ Backend will calculate and validate all prices');
 
         programmeResult = await programmeService.purchaseProgramme(plan.id, 'SA', programmeData);
         console.log('✅ Programme purchase created successfully:', programmeResult);
@@ -2490,9 +2354,6 @@ return;
           subscriptionData.paymentProof = paymentProofUrl;
         }
 
-        // Debug: Log subscription data being sent
-        console.log('🔍 Subscription data being sent to backend:', subscriptionData);
-        console.log('✅ Backend will calculate and validate all prices');
 
         const result = await checkoutService.createSubscription(subscriptionData);
         // console.log('Subscription created:', result);
@@ -2536,8 +2397,6 @@ return;
           throw new Error('Payment method is required');
         }
 
-        console.log('Creating programme purchase with data:', programmeData);
-        console.log('Programme ID:', plan.id);
 
         const result = await checkoutService.purchaseProgramme(plan.id, programmeData);
         console.log('Programme purchased:', result);
@@ -2600,7 +2459,6 @@ return;
           orderData.paymentProof = paymentProofUrl;
         }
 
-        console.log('Creating single product order with data:', orderData);
         const result = await checkoutService.createOrder(orderData);
         console.log('Single product order created:', result);
         showSuccess(i18n.language === 'ar' ? 'تم إنشاء الطلب بنجاح!' : 'Order created successfully!');

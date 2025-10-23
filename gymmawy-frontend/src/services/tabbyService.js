@@ -13,21 +13,12 @@ class TabbyService {
    */
   async performBackgroundPrescoring(orderData, type) {
     try {
-      console.log('🔍 PRESCORING - Starting background pre-scoring check via backend');
-      console.log('📦 Order Data:', JSON.stringify(orderData, null, 2));
-      console.log('📱 Buyer Phone:', orderData.buyer?.phone);
-      console.log('💰 Currency:', orderData.currency);
-      console.log('🌍 Shipping Country:', orderData.shipping_address?.country || 'No shipping address');
-      console.log('🏙️ Shipping City:', orderData.shipping_address?.city || 'No shipping address');
-      console.log('🔗 API Endpoint: /tabby/prescoring');
       
       const response = await apiClient.post('/tabby/prescoring', {
         orderData,
         type
       });
       
-      console.log('🔍 PRESCORING - Backend response received:');
-      console.log('📦 Response Data:', JSON.stringify(response, null, 2));
       console.log('✅ Session Status:', response?.status);
       console.log('🔧 Configuration:', response?.configuration);
       console.log('❌ Rejection Reason:', response?.rejection_reason);

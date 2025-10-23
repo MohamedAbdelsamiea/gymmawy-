@@ -31,5 +31,6 @@
   "days": "{{count}} يوم",
   "days_other": "{{count}} أيام",
   "currency": "العملة",
-  "selectCurrency": "اختر العملة"
+  "selectCurrency": "اختر العملة",
+  "auth_required": "تسجيل الدخول مطلوب"
 }

@@ -7,13 +7,13 @@ import { useLanguage } from '../../hooks/useLanguage';
 import rewardsService from '../../services/rewardsService';
 import { useFormPersistence } from '../../hooks/useFormPersistence';
 import CityAutocomplete from '../../components/common/CityAutocomplete';
+import { getGymmawyCoinIcon } from '../../utils/currencyUtils';
 
 import { 
   ArrowLeft,
   MapPin,
   Package,
   Gift,
-  Coins,
   Shield,
   CheckCircle,
   XCircle,
@@ -84,12 +84,12 @@ const RewardsCheckout = () => {
     
     if (numDays >= 7) {
       const weeks = Math.floor(numDays / 7);
-      return t('common.weeks', { count: weeks });
+      return t('checkout:common.weeks', { count: weeks });
     } else if (numDays >= 30) {
       const months = Math.floor(numDays / 30);
-      return t('common.months', { count: months });
+      return t('checkout:common.months', { count: months });
     } else {
-      return t('common.days', { count: numDays });
+      return t('checkout:common.days', { count: numDays });
     }
   };
 
@@ -103,6 +103,9 @@ const RewardsCheckout = () => {
 
   // Get duration data from the reward item
   const getDurationData = () => {
+    // Get reward data from location state
+    const rewardData = location.state || {};
+    
     if (!rewardData) {
       return { subscriptionDays: 0, giftDays: 0 };
     }
@@ -126,6 +129,7 @@ const RewardsCheckout = () => {
   const durationData = getDurationData();
 
   // Calculate point requirements
+  const rewardData = location.state || {};
   const normalPointsRequired = rewardData?.loyaltyPointsRequired || pointsRequired || 0;
   const medicalPointsRequired = rewardData?.medicalLoyaltyPointsRequired || rewardData?.loyaltyPointsRequired || pointsRequired || 0;
 
@@ -162,7 +166,7 @@ const RewardsCheckout = () => {
       : pointsRequired;
     
     setIsValid(Object.keys(errors).length === 0 && itemId && category && currentPointsRequired > 0);
-  }, [formData, itemId, category, pointsRequired, selectedDuration, normalPointsRequired, medicalPointsRequired, t]);
+  }, [formData, itemId, category, pointsRequired, selectedDuration, normalPointsRequired, medicalPointsRequired]);
 
   // Auto-save form data
   useEffect(() => {
@@ -223,47 +227,86 @@ const RewardsCheckout = () => {
         ? (selectedDuration === 'medical' ? medicalPointsRequired : normalPointsRequired)
         : pointsRequired;
 
-      // Validate redemption first
-      await rewardsService.validateRedemption(itemId, category, currentPointsRequired);
+      // For programmes, use a simplified redemption flow
+      if (category === 'programmes') {
+        // Validate redemption first
+        await rewardsService.validateRedemption(itemId, category, currentPointsRequired);
 
-      // Process redemption
-      const result = await rewardsService.redeemReward(
-        itemId,
-        category,
-        // Only send shipping details for products
-        category === 'products' ? {
-          shippingBuilding: formData.shippingBuilding,
-          shippingStreet: formData.shippingStreet,
-          shippingCity: formData.shippingCity,
-          shippingCountry: formData.shippingCountry,
-          shippingPostcode: formData.shippingPostcode,
-        } : {},
-        { 
-          pointsRequired: currentPointsRequired, 
-          quantity, 
-          size,
-          isMedical: selectedDuration === 'medical'
-        }
-      );
+        // Process programme redemption
+        const result = await rewardsService.redeemReward(
+          itemId,
+          category,
+          {}, // No shipping details for programmes
+          { 
+            pointsRequired: currentPointsRequired, 
+            quantity, 
+            isMedical: selectedDuration === 'medical'
+          }
+        );
 
-      // Clear saved form data
-      clearData();
+        // Clear saved form data
+        clearData();
 
-      showSuccess(t('rewards:redemptionSuccess'));
-      
-      // Navigate to success page
-      navigate('/payment/success', {
-        replace: true,
-        state: {
-          orderId: result?.orderId,
-          orderNumber: result?.orderNumber,
-          amount: totals.total,
-          currency: 'GYMMAWY_COINS',
-          method: 'GYMMAWY_COINS',
-          fromRewards: true,
-          rewardName: name
-        }
-      });
+        showSuccess(t('rewards:redemptionSuccess'));
+        
+        // Navigate to success page
+        navigate('/payment/success', {
+          replace: true,
+          state: {
+            orderId: result?.orderId,
+            orderNumber: result?.orderNumber,
+            amount: totals.total,
+            currency: 'GYMMAWY_COINS',
+            method: 'GYMMAWY_COINS',
+            fromRewards: true,
+            rewardName: name,
+            isProgramme: true
+          }
+        });
+      } else {
+        // For products and other categories, use the existing flow
+        // Validate redemption first
+        await rewardsService.validateRedemption(itemId, category, currentPointsRequired);
+
+        // Process redemption
+        const result = await rewardsService.redeemReward(
+          itemId,
+          category,
+          // Only send shipping details for products
+          category === 'products' ? {
+            shippingBuilding: formData.shippingBuilding,
+            shippingStreet: formData.shippingStreet,
+            shippingCity: formData.shippingCity,
+            shippingCountry: formData.shippingCountry,
+            shippingPostcode: formData.shippingPostcode,
+          } : {},
+          { 
+            pointsRequired: currentPointsRequired, 
+            quantity, 
+            size,
+            isMedical: selectedDuration === 'medical'
+          }
+        );
+
+        // Clear saved form data
+        clearData();
+
+        showSuccess(t('rewards:redemptionSuccess'));
+        
+        // Navigate to success page
+        navigate('/payment/success', {
+          replace: true,
+          state: {
+            orderId: result?.orderId,
+            orderNumber: result?.orderNumber,
+            amount: totals.total,
+            currency: 'GYMMAWY_COINS',
+            method: 'GYMMAWY_COINS',
+            fromRewards: true,
+            rewardName: name
+          }
+        });
+      }
 
     } catch (error) {
       console.error('Redemption error:', error);
@@ -306,7 +349,7 @@ const RewardsCheckout = () => {
             className="flex items-center text-gray-600 hover:text-gray-800 mb-4 transition-colors"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
-            {t('common:back')}
+            {t('checkout:checkout.back')}
           </button>
           
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -317,283 +360,145 @@ const RewardsCheckout = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Form */}
-          <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Single Column Layout */}
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              {t('checkout:checkout.orderSummary')}
+            </h2>
 
-              {/* Shipping Address - Only for products */}
-              {category === 'products' && (
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <div className="flex items-center mb-6">
-                    <MapPin className="h-6 w-6 text-[#190143] mr-3" />
-                    <h2 className="text-xl font-semibold text-gray-900">
-                      {t('checkout:shippingAddress')}
-                    </h2>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('checkout:building')} *
-                      </label>
-                      <input
-                        type="text"
-                        name="shippingBuilding"
-                        value={formData.shippingBuilding}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#190143] focus:border-transparent ${
-                          validationErrors.shippingBuilding ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder={t('checkout:enterBuilding')}
-                      />
-                      {validationErrors.shippingBuilding && (
-                        <p className="mt-1 text-sm text-red-600">{validationErrors.shippingBuilding}</p>
-                      )}
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('checkout:street')} *
-                      </label>
-                      <input
-                        type="text"
-                        name="shippingStreet"
-                        value={formData.shippingStreet}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#190143] focus:border-transparent ${
-                          validationErrors.shippingStreet ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder={t('checkout:enterStreet')}
-                      />
-                      {validationErrors.shippingStreet && (
-                        <p className="mt-1 text-sm text-red-600">{validationErrors.shippingStreet}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('checkout:city')} *
-                      </label>
-                      <CityAutocomplete
-                        value={formData.shippingCity}
-                        onSelect={handleCitySelect}
-                        onChange={(value) => setFormData(prev => ({ ...prev, shippingCity: value }))}
-                        error={validationErrors.shippingCity}
-                        placeholder={t('checkout:enterCity')}
-                      />
-                      {validationErrors.shippingCity && (
-                        <p className="mt-1 text-sm text-red-600">{validationErrors.shippingCity}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('checkout:country')} *
-                      </label>
-                      <select
-                        name="shippingCountry"
-                        value={formData.shippingCountry}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#190143] focus:border-transparent ${
-                          validationErrors.shippingCountry ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                      >
-                        <option value="Egypt">Egypt</option>
-                        <option value="Saudi Arabia">Saudi Arabia</option>
-                        <option value="UAE">UAE</option>
-                        <option value="Other">Other</option>
-                      </select>
-                      {validationErrors.shippingCountry && (
-                        <p className="mt-1 text-sm text-red-600">{validationErrors.shippingCountry}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('checkout:postcode')}
-                      </label>
-                      <input
-                        type="text"
-                        name="shippingPostcode"
-                        value={formData.shippingPostcode}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#190143] focus:border-transparent"
-                        placeholder={t('checkout:enterPostcode')}
-                      />
-                    </div>
-                  </div>
+            {/* Reward Item */}
+            <div className="flex items-center space-x-4 mb-6 p-4 bg-gray-50 rounded-lg">
+              {image ? (
+                <img
+                  src={image}
+                  alt={name}
+                  className="w-16 h-16 object-cover rounded-lg"
+                />
+              ) : (
+                <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                  <Gift className="h-8 w-8 text-gray-400" />
                 </div>
               )}
-
-              {/* Duration Selection (for packages) */}
-              {category === 'packages' && (
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <div className="flex items-center mb-6">
-                    <Calendar className="h-6 w-6 text-[#190143] mr-3" />
-                    <h2 className="text-xl font-semibold text-gray-900">
-                      {t('checkout:chooseDuration')}
-                    </h2>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                      <input
-                        type="radio"
-                        name="duration"
-                        value="normal"
-                        checked={selectedDuration === 'normal'}
-                        onChange={(e) => setSelectedDuration(e.target.value)}
-                        className="h-4 w-4 text-[#190143] focus:ring-[#190143] border-gray-300"
-                      />
-                      <div className="ml-3 flex-1">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-900">
-                            {durationData.subscriptionDays > 0 ? (
-                              <>
-                                {formatSubscriptionPeriod(durationData.subscriptionDays)}
-                                {formatGiftPeriod(durationData.giftDays)}
-                              </>
-                            ) : (
-                              <span className="text-gray-500">{t('checkout:durationNotSpecified')}</span>
-                            )}
-                          </span>
-                          <div className="flex items-center text-sm font-medium text-[#190143]">
-                            <Coins className="h-4 w-4 mr-1" />
-                            {normalPointsRequired} {t('rewards:points')}
-                          </div>
-                        </div>
-                      </div>
-                    </label>
-
-                    <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                      <input
-                        type="radio"
-                        name="duration"
-                        value="medical"
-                        checked={selectedDuration === 'medical'}
-                        onChange={(e) => setSelectedDuration(e.target.value)}
-                        className="h-4 w-4 text-[#190143] focus:ring-[#190143] border-gray-300"
-                      />
-                      <div className="ml-3 flex-1">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-900">
-                            {durationData.subscriptionDays > 0 ? (
-                              <>
-                                {formatSubscriptionPeriod(durationData.subscriptionDays)}
-                                {formatGiftPeriod(durationData.giftDays)} - {t('checkout:medicalPackage')}
-                              </>
-                            ) : (
-                              <span className="text-gray-500">{t('checkout:durationNotSpecified')} - {t('checkout:medicalPackage')}</span>
-                            )}
-                          </span>
-                          <div className="flex items-center text-sm font-medium text-[#190143]">
-                            <Coins className="h-4 w-4 mr-1" />
-                            {medicalPointsRequired} {t('rewards:points')}
-                          </div>
-                        </div>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <button
-                  type="submit"
-                  disabled={!isValid || isSubmitting}
-                  className="w-full bg-[#190143] text-white py-4 px-6 rounded-lg font-semibold text-lg hover:bg-[#2a0a5c] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-                      {t('rewards:processing')}
-                    </>
-                  ) : (
-                    <>
-                      <Gift className="h-5 w-5 mr-3" />
-                      {t('rewards:redeemNow')}
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm p-6 sticky top-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                {t('checkout:orderSummary')}
-              </h2>
-
-              {/* Reward Item */}
-              <div className="flex items-center space-x-4 mb-6 p-4 bg-gray-50 rounded-lg">
-                {image ? (
-                  <img
-                    src={image}
-                    alt={name}
-                    className="w-16 h-16 object-cover rounded-lg"
-                  />
-                ) : (
-                  <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
-                    <Gift className="h-8 w-8 text-gray-400" />
-                  </div>
+              <div className="flex-1">
+                <h3 className="font-medium text-gray-900">{name}</h3>
+                {quantity > 1 && (
+                  <p className="text-sm text-gray-500">Qty: {quantity}</p>
                 )}
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900">{name}</h3>
-                  <p className="text-sm text-gray-500 capitalize">{category}</p>
-                  {quantity > 1 && (
-                    <p className="text-sm text-gray-500">Qty: {quantity}</p>
-                  )}
-                  {size && (
-                    <p className="text-sm text-gray-500">Size: {size}</p>
-                  )}
-                </div>
+                {size && category === 'products' && (
+                  <p className="text-sm text-gray-500">Size: {size}</p>
+                )}
               </div>
+            </div>
 
-              {/* Pricing */}
-              <div className="space-y-3 mb-6">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">{t('checkout:subtotal')}</span>
-                  <span className="font-medium flex items-center">
-                    {totals.subtotal} <Coins className="h-4 w-4 ml-1 text-yellow-500" />
-                  </span>
+            {/* Duration Selection (for packages) */}
+            {category === 'packages' && (
+              <div className="mb-6">
+                <div className="flex items-center mb-4">
+                  <Calendar className="h-5 w-5 text-[#190143] mr-2" />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {t('checkout:checkout.chooseDuration')}
+                  </h3>
                 </div>
                 
+                <div className="space-y-3">
+                  <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="duration"
+                      value="normal"
+                      checked={selectedDuration === 'normal'}
+                      onChange={(e) => setSelectedDuration(e.target.value)}
+                      className="h-4 w-4 text-[#190143] focus:ring-[#190143] border-gray-300"
+                    />
+                    <div className="ml-3 flex-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-900">
+                          {durationData.subscriptionDays > 0 ? (
+                            <>
+                              {formatSubscriptionPeriod(durationData.subscriptionDays)}
+                              {formatGiftPeriod(durationData.giftDays)}
+                            </>
+                          ) : (
+                            <span className="text-gray-500">{t('checkout:checkout.durationNotSpecified')}</span>
+                          )}
+                        </span>
+                        <div className="flex items-center text-sm font-medium text-[#190143]">
+                          {getGymmawyCoinIcon({ size: 20, className: "mr-2" })}
+                          {normalPointsRequired}
+                        </div>
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="duration"
+                      value="medical"
+                      checked={selectedDuration === 'medical'}
+                      onChange={(e) => setSelectedDuration(e.target.value)}
+                      className="h-4 w-4 text-[#190143] focus:ring-[#190143] border-gray-300"
+                    />
+                    <div className="ml-3 flex-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-900">
+                          {durationData.subscriptionDays > 0 ? (
+                            <>
+                              {formatSubscriptionPeriod(durationData.subscriptionDays)}
+                              {formatGiftPeriod(durationData.giftDays)} - {t('checkout:checkout.medicalPackage')}
+                            </>
+                          ) : (
+                              <span className="text-gray-500">{t('checkout:checkout.durationNotSpecified')} - {t('checkout:checkout.medicalPackage')}</span>
+                          )}
+                        </span>
+                        <div className="flex items-center text-sm font-medium text-[#190143]">
+                          {getGymmawyCoinIcon({ size: 20, className: "mr-2" })}
+                          {medicalPointsRequired}
+                        </div>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Pricing */}
+            <div className="space-y-3 mb-6">
+              {/* Shipping - Only for products */}
+              {category === 'products' && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">{t('checkout:shipping')}</span>
+                  <span className="text-gray-600">{t('checkout:checkout.shipping')}</span>
                   <span className="font-medium text-green-600">
-                    {t('checkout:free')}
+                    {t('checkout:checkout.free')}
                   </span>
                 </div>
+              )}
 
-                <hr className="border-gray-200" />
-
-                <div className="flex justify-between text-lg font-semibold">
-                  <span>{t('checkout:total')}</span>
-                  <span className="flex items-center text-[#190143]">
-                    {totals.total} <Coins className="h-5 w-5 ml-1 text-yellow-500" />
-                  </span>
-                </div>
+              <div className="flex justify-between text-lg font-semibold">
+                <span>{t('checkout:checkout.total')}</span>
+                <span className="flex items-center text-[#190143]">
+                  {getGymmawyCoinIcon({ size: 24, className: "mr-2" })} {totals.total}
+                </span>
               </div>
+            </div>
 
-              {/* Payment Method */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <div className="flex items-center">
-                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                  <span className="text-sm font-medium text-green-800">
-                    {t('rewards:paymentMethod')}
-                  </span>
-                </div>
-                <p className="text-sm text-green-700 mt-1">
-                  {t('rewards:gymmawyCoinsPayment')}
-                </p>
+            {/* Payment Method */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center">
+                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                <span className="text-sm font-medium text-green-800">
+                  {t('rewards:paymentMethod')}
+                </span>
               </div>
+              <p className="text-sm text-green-700 mt-1">
+                {t('rewards:gymmawyCoinsPayment')}
+              </p>
+            </div>
 
-              {/* Security Notice */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            {/* Security Notice - Only for products */}
+            {category === 'products' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <div className="flex items-start">
                   <Shield className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
                   <div>
@@ -606,7 +511,28 @@ const RewardsCheckout = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* Redeem Button */}
+            <form onSubmit={handleSubmit}>
+              <button
+                type="submit"
+                disabled={!isValid || isSubmitting}
+                className="w-full bg-[#190143] text-white py-4 px-6 rounded-lg font-semibold text-lg hover:bg-[#2a0a5c] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                    {t('rewards:processing')}
+                  </>
+                ) : (
+                  <>
+                    <Gift className="h-5 w-5 mr-3" />
+                    {t('rewards:redeemNow')}
+                  </>
+                )}
+              </button>
+            </form>
           </div>
         </div>
       </div>

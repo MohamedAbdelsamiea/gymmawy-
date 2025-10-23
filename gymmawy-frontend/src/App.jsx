@@ -5,8 +5,8 @@ import { CurrencyProvider } from './contexts/CurrencyContext.jsx';
 import { CartProvider } from './contexts/CartContext';
 import { AppRoutes } from './routes';
 import { ToastContainer } from './components/common/Toast';
-import SlimCurrencySelector from './components/SlimCurrencySelector';
 import ScrollToTop from './components/common/ScrollToTop';
+import GTM from './components/GTM';
 import { useTranslation } from 'react-i18next';
 import { useEffect, Suspense } from 'react';
 import { useLanguageInit } from './hooks/useLanguageInit';
@@ -92,10 +92,10 @@ function App() {
           <CartProvider>
             <ToastProvider>
               <Router>
+                <GTM />
                 <ScrollToTop />
                 <RTLHandler />
                 <AppRoutes />
-                <SlimCurrencySelector />
                 <ToastContainer />
               </Router>
             </ToastProvider>

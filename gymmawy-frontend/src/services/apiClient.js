@@ -15,9 +15,6 @@ class ApiClient {
         const refreshToken = localStorage.getItem('refreshToken');
         const userCurrencyPreference = localStorage.getItem('userCurrencyPreference');
         
-        console.log('API Client - Token from localStorage:', token ? 'present' : 'null');
-        console.log('API Client - Refresh token from localStorage:', refreshToken ? 'present' : 'null');
-        console.log('API Client - User currency preference:', userCurrencyPreference);
         
         const headers = {
           ...(token && { 'Authorization': `Bearer ${token}` }),
@@ -185,7 +182,6 @@ class ApiClient {
       }
 
       const responseData = await response.json();
-      console.log('API Client - Response data:', responseData);
       return responseData;
     } catch (error) {
       console.error(`API request failed for ${endpoint}:`, error);

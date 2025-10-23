@@ -350,7 +350,12 @@ export async function processRedemption(userId, itemId, category, pointsRequired
       throw new Error(validation.error);
     }
 
-    // Process the redemption in a transaction
+    // For programmes, use special handling
+    if (category === 'programmes') {
+      return await processProgrammeRedemption(userId, itemId, pointsRequired, options, validation);
+    }
+
+    // Process other redemptions in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Deduct points from user
       const updatedUser = await tx.user.update({
@@ -456,6 +461,126 @@ export async function processRedemption(userId, itemId, category, pointsRequired
 
   } catch (error) {
     console.error('❌ Redemption processing failed:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Process programme redemption with special handling
+ */
+async function processProgrammeRedemption(userId, programmeId, pointsRequired, options, validation) {
+  try {
+    console.log('📚 Processing programme redemption:', { userId, programmeId, pointsRequired });
+
+    // Get programme details
+    const programme = await prisma.programme.findUnique({
+      where: { id: programmeId },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        pdfUrl: true,
+        imageUrl: true,
+        loyaltyPointsRequired: true
+      }
+    });
+
+    if (!programme) {
+      throw new Error('Programme not found');
+    }
+
+    // Process the redemption in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Deduct points from user
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: {
+          loyaltyPoints: {
+            decrement: pointsRequired
+          }
+        }
+      });
+
+      // Create programme purchase
+      const programmePurchase = await tx.programmePurchase.create({
+        data: {
+          userId,
+          programmeId,
+          price: pointsRequired,
+          currency: 'GYMMAWY_COINS',
+          status: 'COMPLETED',
+          purchasedAt: new Date(),
+          metadata: {
+            redemption: true,
+            pointsSpent: pointsRequired,
+            isMedical: options.isMedical || false
+          }
+        }
+      });
+
+      // Create payment record for the programme purchase
+      const payment = await tx.payment.create({
+        data: {
+          userId: userId,
+          amount: -pointsRequired, // Negative amount for spent points
+          currency: 'GYMMAWY_COINS',
+          method: 'GYMMAWY_COINS',
+          status: 'SUCCESS',
+          paymentReference: await generateUniqueId(),
+          paymentableId: programmePurchase.id,
+          paymentableType: 'PROGRAMME_PURCHASE',
+          metadata: {
+            type: 'REDEMPTION',
+            category: 'programmes',
+            programmeId: programmeId,
+            pointsSpent: pointsRequired,
+            isMedical: options.isMedical || false
+          }
+        }
+      });
+
+      // Update programme stock if applicable
+      if (programme.stock !== null) {
+        await tx.programme.update({
+          where: { id: programmeId },
+          data: {
+            stock: {
+              decrement: 1
+            }
+          }
+        });
+      }
+
+      return {
+        programmePurchase,
+        payment,
+        updatedUser,
+        programme
+      };
+    });
+
+    console.log('✅ Programme redemption processed successfully:', result.payment.id);
+
+    // Send programme via email (this would be implemented in email service)
+    // await sendProgrammeEmail(userId, programme);
+
+    return {
+      success: true,
+      redemptionId: result.payment.id,
+      orderId: result.programmePurchase.id,
+      orderNumber: result.programmePurchase.id, // Use purchase ID as order number
+      pointsSpent: pointsRequired,
+      remainingPoints: result.updatedUser.loyaltyPoints,
+      reward: {
+        id: programme.id,
+        name: programme.name,
+        category: 'programmes',
+        pointsRequired: programme.loyaltyPointsRequired
+      }
+    };
+
+  } catch (error) {
+    console.error('❌ Programme redemption processing failed:', error.message);
     throw error;
   }
 }

@@ -21,7 +21,6 @@ export const CurrencyProvider = ({ children }) => {
   const [availableCurrencies] = useState(['EGP', 'AED', 'SAR', 'USD']);
   const [detectedCountry, setDetectedCountry] = useState(null);
   const [isDetectedCurrency, setIsDetectedCurrency] = useState(false);
-  const [userPreference, setUserPreference] = useState(null);
 
   // Initialize currency detection
   useEffect(() => {
@@ -30,29 +29,11 @@ export const CurrencyProvider = ({ children }) => {
         setIsLoading(true);
         setError(null);
 
-            // Check for stored user preference first
-            const storedPreference = localStorage.getItem('userCurrencyPreference');
-            console.log('🔍 Checking stored user preference:', storedPreference);
-            if (storedPreference && availableCurrencies.includes(storedPreference)) {
-              console.log('🔄 Setting currency to stored preference:', storedPreference);
-              setCurrency(storedPreference);
-              setUserPreference(storedPreference);
-              setIsDetectedCurrency(false);
-              console.log('✅ Using stored user preference:', storedPreference);
-              console.log('⚠️ Skipping country detection due to stored preference');
-              setIsLoading(false);
-              return;
-            }
-
-            // No stored preference, detect from location
-            console.log('🔄 No stored preference found, starting country detection...');
+        // Always detect currency from location (no stored preferences)
+        console.log('🔄 Starting currency auto-detection...');
             const detectedCountry = await countryDetectionService.detectCountry();
             setDetectedCountry(detectedCountry);
             
-            console.log('🌍 Country Detection Results:');
-            console.log('  - Detected Country:', detectedCountry);
-            console.log('  - Country Code:', detectedCountry?.countryCode);
-            console.log('  - Country Name:', detectedCountry?.country);
             // Map country codes to currencies
             const countryCurrencyMap = {
               'EG': 'EGP',
@@ -62,23 +43,19 @@ export const CurrencyProvider = ({ children }) => {
             };
             
             const detectedCurrency = countryCurrencyMap[detectedCountry?.countryCode] || 'EGP';
-            console.log('  - Country Currency:', detectedCurrency);
             
             if (availableCurrencies.includes(detectedCurrency)) {
               setCurrency(detectedCurrency);
               setIsDetectedCurrency(true);
-              console.log('✅ Currency detected from country:', detectedCountry, '->', detectedCurrency);
             } else {
               // Fallback to API detection
               try {
                 console.log('🔄 Falling back to API currency detection...');
                 const detectionResult = await currencyService.detectCurrency();
-                console.log('🌐 API Detection Results:', detectionResult);
                 
                 if (detectionResult.success && availableCurrencies.includes(detectionResult.currency)) {
                   setCurrency(detectionResult.currency);
                   setIsDetectedCurrency(true);
-                  console.log('✅ Currency detected from API:', detectionResult.currency);
                 } else {
                   throw new Error('Invalid currency detected');
                 }
@@ -104,54 +81,11 @@ export const CurrencyProvider = ({ children }) => {
         initializeCurrency();
   }, []);
 
-  // Log final currency state after updates
-  useEffect(() => {
-    if (!isLoading) {
-      console.log('🎯 Final Currency Selection:');
-      console.log('  - Selected Currency:', currency);
-      console.log('  - Is Detected Currency:', isDetectedCurrency);
-      console.log('  - User Preference:', userPreference);
-      console.log('  - Detected Country:', detectedCountry);
-      console.log('  - Available Currencies:', availableCurrencies);
-    }
-  }, [currency, isLoading, isDetectedCurrency, userPreference, detectedCountry, availableCurrencies]);
 
-  // Change currency
+  // Change currency - DISABLED: Only auto-detection is allowed
   const changeCurrency = async (newCurrency) => {
-    if (!availableCurrencies.includes(newCurrency)) {
-      console.error('Invalid currency:', newCurrency);
-      return false;
-    }
-
-    try {
-      setError(null);
-      
-      // Update currency service
-      currencyService.setCurrentCurrency(newCurrency);
-      setCurrency(newCurrency);
-      setUserPreference(newCurrency);
-      setIsDetectedCurrency(false);
-
-      // Store user preference in localStorage
-      localStorage.setItem('userCurrencyPreference', newCurrency);
-
-      // Update user preference if authenticated
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          await currencyService.updatePreferredCurrency(newCurrency, token);
-        } catch (err) {
-          console.warn('Failed to update preferred currency:', err);
-        }
-      }
-
-      console.log('Currency changed to:', newCurrency, '(user preference)');
-      return true;
-    } catch (err) {
-      console.error('Currency change error:', err);
-      setError(err.message);
-      return false;
-    }
+    console.warn('Manual currency change is disabled. Currency is auto-detected based on user location.');
+    return false;
   };
 
   // Get currency info
@@ -256,7 +190,6 @@ export const CurrencyProvider = ({ children }) => {
     availableCurrencies,
     detectedCountry,
     isDetectedCurrency,
-    userPreference,
     
     // Actions
     changeCurrency,
