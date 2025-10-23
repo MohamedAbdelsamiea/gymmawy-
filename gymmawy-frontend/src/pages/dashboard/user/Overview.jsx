@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Award, Package, ShoppingBag, Calendar, CreditCard } from 'lucide-react';
+import { Award, BookOpen, ShoppingBag, FileText } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import orderService from '../../../services/orderService';
 import programmeService from '../../../services/programmeService';
 import subscriptionService from '../../../services/subscriptionService';
+import { getGymmawyCoinIcon } from '../../../utils/currencyUtils';
 
 const UserOverview = () => {
   const { t } = useTranslation("dashboard");
@@ -212,7 +213,7 @@ const UserOverview = () => {
           </div>
           <div className="text-right">
             <div className="flex items-center gap-2 mb-1">
-              <Award className="h-6 w-6" />
+              {getGymmawyCoinIcon({ size: 32, className: "flex-shrink-0" })}
               <span className="text-3xl font-bold">{user?.loyaltyPoints || 0}</span>
             </div>
             <p className="text-sm opacity-90">{t('user.overview.loyaltyPoints', 'Gymmawy Points')}</p>
@@ -274,9 +275,9 @@ const UserOverview = () => {
                         {purchase.type === 'order' ? (
                           <ShoppingBag className="h-4 w-4 text-blue-600 mr-2" />
                         ) : purchase.type === 'subscription' ? (
-                          <CreditCard className="h-4 w-4 text-green-600 mr-2" />
+                          <BookOpen className="h-4 w-4 text-green-600 mr-2" />
                         ) : (
-                          <Package className="h-4 w-4 text-purple-600 mr-2" />
+                          <FileText className="h-4 w-4 text-purple-600 mr-2" />
                         )}
                         <span className="text-sm text-gray-900 capitalize">{purchase.type}</span>
                       </div>
@@ -298,7 +299,7 @@ const UserOverview = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {purchase.loyaltyPointsEarned > 0 ? (
                         <span className="flex items-center text-green-600 font-semibold">
-                          <Award className="h-4 w-4 mr-1" />
+                          {getGymmawyCoinIcon({ size: 16, className: "mr-1" })}
                           +{purchase.loyaltyPointsEarned}
                         </span>
                       ) : (
