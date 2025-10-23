@@ -594,7 +594,7 @@ const Header = () => {
               className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'} hover:text-white transition-colors duration-300 font-medium whitespace-nowrap`}
             >
               <Globe size={20} />
-              <span>{i18n.language === "en" ? "العربية" : "English"}</span>
+              <span>{i18n.language === "en" ? "English" : "العربية"}</span>
             </button>
           </div>
         </nav>
@@ -710,7 +710,7 @@ const Header = () => {
               className={`flex items-center ${i18n.language === 'ar' ? 'space-x-reverse space-x-2' : 'space-x-2'} hover:text-white transition-colors duration-300 font-medium ${i18n.language === 'ar' ? 'text-right' : 'text-left'}`}
             >
               <Globe size={20} />
-              <span>{i18n.language === "en" ? "العربية" : "English"}</span>
+              <span>{i18n.language === "en" ? "English" : "العربية"}</span>
             </button>
           </div>
         </nav>
