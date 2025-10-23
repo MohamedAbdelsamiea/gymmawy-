@@ -31,64 +31,80 @@ const UserOverview = () => {
         subscriptionService.getUserSubscriptions()
       ]);
 
+      // Debug: Log the actual API responses
+      console.log('🔍 Orders API response:', ordersResponse);
+      console.log('🔍 Programmes API response:', programmePurchasesResponse);
+      console.log('🔍 Subscriptions API response:', subscriptionsResponse);
+
       const purchases = [];
 
       // Process orders
-      if (ordersResponse.status === 'fulfilled' && ordersResponse.value?.data) {
-        console.log('📦 Processing orders:', ordersResponse.value.data.length);
-        ordersResponse.value.data.forEach(order => {
-          purchases.push({
-            id: order.id,
-            type: 'order',
-            date: order.createdAt,
-            items: order.items?.map(item => item.product?.name || item.name).join(', ') || 'Order',
-            amount: order.totalPrice || order.amount || 0,
-            currency: order.currency || 'EGP',
-            status: order.status,
-            loyaltyPointsEarned: order.loyaltyPointsEarned || 0,
-            reference: order.orderNumber || order.id
+      if (ordersResponse.status === 'fulfilled') {
+        const ordersData = ordersResponse.value?.items || ordersResponse.value?.data || [];
+        console.log('📦 Processing orders:', ordersData.length);
+        if (Array.isArray(ordersData)) {
+          ordersData.forEach(order => {
+            purchases.push({
+              id: order.id,
+              type: 'order',
+              date: order.createdAt,
+              items: order.items?.map(item => item.product?.name || item.name).join(', ') || 'Order',
+              amount: parseFloat(order.totalAmount || order.price || 0),
+              currency: order.currency || 'EGP',
+              status: order.status,
+              loyaltyPointsEarned: order.loyaltyPointsEarned || 0,
+              reference: order.orderNumber || order.id
+            });
           });
-        });
+        }
       } else if (ordersResponse.status === 'rejected') {
         console.error('❌ Failed to fetch orders:', ordersResponse.reason);
       }
 
       // Process programme purchases
-      if (programmePurchasesResponse.status === 'fulfilled' && programmePurchasesResponse.value?.data) {
-        console.log('📚 Processing programmes:', programmePurchasesResponse.value.data.length);
-        programmePurchasesResponse.value.data.forEach(purchase => {
-          purchases.push({
-            id: purchase.id,
-            type: 'programme',
-            date: purchase.purchaseDate || purchase.createdAt,
-            items: purchase.programme?.name || 'Programme',
-            amount: purchase.amount || 0,
-            currency: purchase.currency || 'EGP',
-            status: purchase.status,
-            loyaltyPointsEarned: 0,
-            reference: purchase.purchaseNumber || purchase.id
+      if (programmePurchasesResponse.status === 'fulfilled') {
+        const programmesData = Array.isArray(programmePurchasesResponse.value) 
+          ? programmePurchasesResponse.value 
+          : programmePurchasesResponse.value?.data || programmePurchasesResponse.value?.items || [];
+        console.log('📚 Processing programmes:', programmesData.length);
+        if (Array.isArray(programmesData)) {
+          programmesData.forEach(purchase => {
+            purchases.push({
+              id: purchase.id,
+              type: 'programme',
+              date: purchase.purchasedAt || purchase.createdAt,
+              items: purchase.programme?.name || 'Programme',
+              amount: parseFloat(purchase.price || 0),
+              currency: purchase.currency || 'EGP',
+              status: purchase.status,
+              loyaltyPointsEarned: 0,
+              reference: purchase.purchaseNumber || purchase.id
+            });
           });
-        });
+        }
       } else if (programmePurchasesResponse.status === 'rejected') {
         console.error('❌ Failed to fetch programmes:', programmePurchasesResponse.reason);
       }
 
       // Process subscriptions
-      if (subscriptionsResponse.status === 'fulfilled' && subscriptionsResponse.value?.items) {
-        console.log('💳 Processing subscriptions:', subscriptionsResponse.value.items.length);
-        subscriptionsResponse.value.items.forEach(subscription => {
-          purchases.push({
-            id: subscription.id,
-            type: 'subscription',
-            date: subscription.createdAt || subscription.startDate,
-            items: subscription.subscriptionPlan?.name || 'Subscription Plan',
-            amount: subscription.price || 0,
-            currency: subscription.currency || 'EGP',
-            status: subscription.status,
-            loyaltyPointsEarned: subscription.subscriptionPlan?.loyaltyPointsAwarded || 0,
-            reference: subscription.subscriptionNumber || subscription.id
+      if (subscriptionsResponse.status === 'fulfilled') {
+        const subscriptionsData = subscriptionsResponse.value?.items || subscriptionsResponse.value?.data || [];
+        console.log('💳 Processing subscriptions:', subscriptionsData.length);
+        if (Array.isArray(subscriptionsData)) {
+          subscriptionsData.forEach(subscription => {
+            purchases.push({
+              id: subscription.id,
+              type: 'subscription',
+              date: subscription.createdAt || subscription.startDate,
+              items: subscription.subscriptionPlan?.name || 'Subscription Plan',
+              amount: parseFloat(subscription.price || 0),
+              currency: subscription.currency || 'EGP',
+              status: subscription.status,
+              loyaltyPointsEarned: subscription.subscriptionPlan?.loyaltyPointsAwarded || 0,
+              reference: subscription.subscriptionNumber || subscription.id
+            });
           });
-        });
+        }
       } else if (subscriptionsResponse.status === 'rejected') {
         console.error('❌ Failed to fetch subscriptions:', subscriptionsResponse.reason);
       }
@@ -97,6 +113,15 @@ const UserOverview = () => {
       purchases.sort((a, b) => new Date(b.date) - new Date(a.date));
 
       console.log('✅ Total purchases loaded:', purchases.length);
+      console.log('📊 Sample purchase data:', purchases[0]);
+      
+      if (purchases.length === 0) {
+        console.log('⚠️ No purchases found. This could be because:');
+        console.log('- User has no orders, programmes, or subscriptions');
+        console.log('- API endpoints are returning empty data');
+        console.log('- Data structure is different than expected');
+      }
+      
       setPurchaseHistory(purchases);
 
     } catch (err) {
@@ -190,10 +215,17 @@ const UserOverview = () => {
 
       {/* Purchase History */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-gray-200 flex justify-between items-center">
           <h3 className="text-lg font-semibold text-gray-900">
             {t('user.overview.purchaseHistory', 'Purchase History')}
           </h3>
+          <button
+            onClick={loadPurchaseHistory}
+            disabled={loading}
+            className="px-3 py-1 text-sm bg-gymmawy-primary text-white rounded-md hover:bg-gymmawy-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Loading...' : 'Refresh'}
+          </button>
         </div>
         
         <div className="overflow-x-auto">
@@ -249,7 +281,7 @@ const UserOverview = () => {
                       {purchase.items}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {purchase.amount.toFixed(2)} {purchase.currency}
+                      {typeof purchase.amount === 'number' ? purchase.amount.toFixed(2) : purchase.amount || '0.00'} {purchase.currency}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(purchase.status)}`}>
@@ -279,6 +311,13 @@ const UserOverview = () => {
               <p className="text-xs text-gray-400 mt-1">
                 {t('user.overview.startShopping', 'Start shopping to see your purchase history here')}
               </p>
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-xs text-yellow-800">
+                  <p className="font-medium">Debug Info:</p>
+                  <p>Check browser console for API response details</p>
+                  <p>Click "Refresh" to retry loading purchases</p>
+                </div>
+              )}
             </div>
           )}
         </div>
