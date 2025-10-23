@@ -95,11 +95,12 @@ return imagePath;
       
       // Check if any price is 0 or null/undefined
       const prices = [
-        programme.priceEGP?.amount || programme.priceEGP,
-        programme.priceSAR?.amount || programme.priceSAR,
-        programme.priceAED?.amount || programme.priceAED,
-        programme.priceUSD?.amount || programme.priceUSD
+        programme.priceEGP?.amount ?? programme.priceEGP,
+        programme.priceSAR?.amount ?? programme.priceSAR,
+        programme.priceAED?.amount ?? programme.priceAED,
+        programme.priceUSD?.amount ?? programme.priceUSD
       ];
+      
       
       // A programme is free if any price is 0, null, or undefined
       return prices.some(price => price === 0 || price === null || price === undefined);
@@ -111,14 +112,69 @@ return imagePath;
         const { currency } = getCurrencyInfo();
         const result = await programmeService.purchaseFreeProgramme(programme.id, currency);
         
-        // Show success message
-        alert(result.message || 'Free programme purchased successfully! Check your email for the programme.');
+        // Show success modal instead of alert
+        const successMessage = result.message || 'Free programme purchased successfully! Check your email for the programme.';
         
-        // Optionally refresh the page or update UI
-        window.location.reload();
+        // Create a custom modal
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        modal.innerHTML = `
+          <div class="bg-white rounded-lg p-6 max-w-md mx-auto m-4 shadow-xl">
+            <div class="text-center">
+              <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Success!</h3>
+              <p class="text-sm text-gray-600 mb-4">${successMessage}</p>
+              <button 
+                onclick="this.closest('.fixed').remove(); window.location.reload();" 
+                class="w-full bg-gymmawy-primary text-white px-4 py-2 rounded-lg hover:bg-gymmawy-primary-dark transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Auto-remove modal after 5 seconds
+        setTimeout(() => {
+          if (modal.parentNode) {
+            modal.remove();
+            window.location.reload();
+          }
+        }, 5000);
+        
       } catch (error) {
         console.error('Free programme purchase error:', error);
-        alert(error.message || 'Failed to purchase free programme. Please try again.');
+        
+        // Show error modal
+        const errorModal = document.createElement('div');
+        errorModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        errorModal.innerHTML = `
+          <div class="bg-white rounded-lg p-6 max-w-md mx-auto m-4 shadow-xl">
+            <div class="text-center">
+              <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Error</h3>
+              <p class="text-sm text-gray-600 mb-4">${error.message || 'Failed to purchase free programme. Please try again.'}</p>
+              <button 
+                onclick="this.closest('.fixed').remove();" 
+                class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(errorModal);
       } finally {
         setLoading(false);
       }

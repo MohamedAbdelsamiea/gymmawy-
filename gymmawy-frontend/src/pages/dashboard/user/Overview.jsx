@@ -289,7 +289,11 @@ const UserOverview = () => {
                       {purchase.items}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {typeof purchase.amount === 'number' ? purchase.amount.toFixed(2) : purchase.amount || '0.00'} {purchase.currency}
+                      {purchase.amount === 0 ? (
+                        <span className="text-orange-600 font-semibold">FREE</span>
+                      ) : (
+                        `${typeof purchase.amount === 'number' ? purchase.amount.toFixed(2) : purchase.amount || '0.00'} ${purchase.currency}`
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(purchase.status)}`}>

@@ -98,8 +98,8 @@ const UserDashboard = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <span className="text-sm font-medium text-green-600">
-                    ${programme.price?.toFixed(2) || '0.00'}
+                  <span className={`text-sm font-medium ${programme.price === 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                    {programme.price === 0 ? 'FREE' : `$${programme.price?.toFixed(2) || '0.00'}`}
                   </span>
                   <StatusBadge status={programme.status} />
                 </div>

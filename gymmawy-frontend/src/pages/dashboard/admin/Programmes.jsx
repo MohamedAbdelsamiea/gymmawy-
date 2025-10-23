@@ -633,6 +633,17 @@ const AdminProgrammes = () => {
         
         const currencies = ['EGP', 'SAR', 'AED', 'USD'];
         
+        // Check if programme is free (any price is 0)
+        const isFree = prices.some(price => Number(price.amount) === 0);
+        
+        if (isFree) {
+          return (
+            <div className="text-sm">
+              <div className="font-medium text-orange-600">FREE</div>
+            </div>
+          );
+        }
+        
         return (
           <div className="text-sm space-y-1">
             {currencies.map(currency => {
