@@ -20,7 +20,7 @@ i18n
       caches: ['cookie'],
       lookupCookie: 'i18next',
       cookieMinutes: 10080, // 7 days
-      cookieDomain: import.meta.env.PROD ? 'gym.omarelnemr.xyz' : 'localhost',
+      cookieDomain: import.meta.env.PROD ? 'gymmawy.fit' : 'localhost',
     },
     backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',

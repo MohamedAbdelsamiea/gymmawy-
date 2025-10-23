@@ -130,8 +130,8 @@ app.use("/uploads", (req, res, next) => {
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:5175",
-    "https://gym.omarelnemr.xyz",
-    "https://www.gym.omarelnemr.xyz"
+    "https://gymmawy.fit",
+    "https://www.gymmawy.fit"
   ];
   const origin = req.headers.origin;
   
@@ -140,8 +140,8 @@ app.use("/uploads", (req, res, next) => {
     if (allowedOrigin === "*") return true;
     if (allowedOrigin === origin) return true;
     // Allow subdomains for production domain
-    if (allowedOrigin === "https://gym.omarelnemr.xyz" && origin && origin.startsWith("https://")) {
-      return origin.includes("gym.omarelnemr.xyz");
+    if (allowedOrigin === "https://gymmawy.fit" && origin && origin.startsWith("https://")) {
+      return origin.includes("gymmawy.fit");
     }
     return false;
   });
@@ -198,8 +198,8 @@ app.use("/static", (req, res, next) => {
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:5175",
-    "https://gym.omarelnemr.xyz",
-    "https://www.gym.omarelnemr.xyz"
+    "https://gymmawy.fit",
+    "https://www.gymmawy.fit"
   ];
   const origin = req.headers.origin;
   
@@ -208,8 +208,8 @@ app.use("/static", (req, res, next) => {
     if (allowedOrigin === "*") return true;
     if (allowedOrigin === origin) return true;
     // Allow subdomains for production domain
-    if (allowedOrigin === "https://gym.omarelnemr.xyz" && origin && origin.startsWith("https://")) {
-      return origin.includes("gym.omarelnemr.xyz");
+    if (allowedOrigin === "https://gymmawy.fit" && origin && origin.startsWith("https://")) {
+      return origin.includes("gymmawy.fit");
     }
     return false;
   });

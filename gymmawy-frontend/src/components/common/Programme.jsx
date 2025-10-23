@@ -73,9 +73,9 @@ return fallback;
             return '/assets/common/store/product1-1.png';
         }
         // Convert full URLs to API routes
-        if (imagePath.startsWith('https://gym.omarelnemr.xyz/uploads/')) {
+        if (imagePath.startsWith('https://gymmawy.fit/uploads/')) {
             // Convert to API route
-            const pathPart = imagePath.replace('https://gym.omarelnemr.xyz/uploads/', 'uploads/');
+            const pathPart = imagePath.replace('https://gymmawy.fit/uploads/', 'uploads/');
             return `${config.API_BASE_URL}/${pathPart}`;
         }
         if (imagePath.startsWith('http')) {

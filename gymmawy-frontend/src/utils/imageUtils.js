@@ -12,9 +12,9 @@ export function getFullImageUrl(imageUrl, baseUrl = config.API_BASE_URL) {
   if (!imageUrl) return '';
   
   // Convert full URLs to API routes
-  if (imageUrl.startsWith('https://gym.omarelnemr.xyz/uploads/')) {
+  if (imageUrl.startsWith('https://gymmawy.fit/uploads/')) {
     // Convert to API route
-    const pathPart = imageUrl.replace('https://gym.omarelnemr.xyz/uploads/', 'uploads/');
+    const pathPart = imageUrl.replace('https://gymmawy.fit/uploads/', 'uploads/');
     return `${baseUrl}/${pathPart}`;
   }
   

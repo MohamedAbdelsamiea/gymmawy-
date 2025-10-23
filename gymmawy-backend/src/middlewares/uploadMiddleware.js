@@ -424,8 +424,8 @@ export const serveUploadedFiles = (req, res, next) => {
   const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
     "http://localhost:3000", 
     "http://localhost:5173",
-    "https://gym.omarelnemr.xyz",
-    "https://www.gym.omarelnemr.xyz"
+    "https://gymmawy.fit",
+    "https://www.gymmawy.fit"
   ];
   const origin = req.headers.origin;
   
@@ -434,8 +434,8 @@ export const serveUploadedFiles = (req, res, next) => {
     if (allowedOrigin === "*") return true;
     if (allowedOrigin === origin) return true;
     // Allow subdomains for production domain
-    if (allowedOrigin === "https://gym.omarelnemr.xyz" && origin && origin.startsWith("https://")) {
-      return origin.includes("gym.omarelnemr.xyz");
+    if (allowedOrigin === "https://gymmawy.fit" && origin && origin.startsWith("https://")) {
+      return origin.includes("gymmawy.fit");
     }
     return false;
   });
