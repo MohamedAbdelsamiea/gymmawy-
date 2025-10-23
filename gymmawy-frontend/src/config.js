@@ -16,7 +16,7 @@ export const config = {
   
   // Localization
   DEFAULT_LANGUAGE: 'ar',
-  SUPPORTED_LANGUAGES: ['ar', 'en'],
+  SUPPORTED_LANGUAGES: ['en', 'ar'],
   
   // Pagination
   DEFAULT_PAGE_SIZE: 10,

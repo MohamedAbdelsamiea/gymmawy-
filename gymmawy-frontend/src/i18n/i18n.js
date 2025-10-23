@@ -8,7 +8,7 @@ i18n
   .use(initReactI18next)
   .use(HttpBackend)
   .init({
-    fallbackLng: 'ar',
+    fallbackLng: 'en',
     debug: import.meta.env.DEV,
     
     interpolation: {
@@ -21,6 +21,15 @@ i18n
       lookupCookie: 'i18next',
       cookieMinutes: 10080, // 7 days
       cookieDomain: import.meta.env.PROD ? 'gymmawy.fit' : 'localhost',
+      // Ensure proper language detection
+      checkWhitelist: true,
+      // Only detect languages we support
+      convertDetectedLanguage: (lng) => {
+        // Convert detected language to our supported languages
+        if (lng.startsWith('ar')) return 'ar';
+        if (lng.startsWith('en')) return 'en';
+        return 'en'; // Default fallback
+      }
     },
     backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',
@@ -30,7 +39,7 @@ i18n
       useSuspense: true,
     },
     load: 'languageOnly',
-    preload: ['ar', 'en'],
+    preload: ['en', 'ar'],
     ns: ['translation', 'common', 'header', 'footer', 'checkout', 'payment', 'currency', 'rewards', 'terms', 'privacy'],
     defaultNS: 'translation',
   });

@@ -13,21 +13,26 @@ export const useLanguageInit = () => {
         const savedLanguage = Cookies.get('i18next');
         
         if (savedLanguage && ['en', 'ar'].includes(savedLanguage)) {
-          // Language is already set, just ensure it's loaded
+          // Language is already set, just ensure it's loaded and set
           if (!i18n.hasResourceBundle(savedLanguage, 'translation')) {
             await i18n.loadLanguages(savedLanguage);
+          }
+          // Ensure the language is actually set in i18n
+          if (i18n.language !== savedLanguage) {
+            await i18n.changeLanguage(savedLanguage);
           }
           setIsInitialized(true);
         } else {
           // No saved language, detect from browser or use default
-          const detectedLanguage = i18n.language || 'ar';
+          const detectedLanguage = i18n.language || 'en';
+          // Ensure we change to the detected language
           await i18n.changeLanguage(detectedLanguage);
           setIsInitialized(true);
         }
       } catch (error) {
         console.error('Language initialization error:', error);
-        // Fallback to Arabic
-        await i18n.changeLanguage('ar');
+        // Fallback to English
+        await i18n.changeLanguage('en');
         setIsInitialized(true);
       }
     };
