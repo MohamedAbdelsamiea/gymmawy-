@@ -1,13 +1,19 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Lock, UserCheck, AlertTriangle, ArrowLeft } from 'lucide-react';
 
 const UnauthorizedAccess = ({ 
   type = 'login', // 'login', 'admin', 'permission'
-  title = 'Authentication Required',
-  message = 'You need to be logged in to access this page.',
+  title,
+  message,
   showBackButton = true, 
 }) => {
+  const { t } = useTranslation('auth');
+  
+  // Use translations if no custom title/message provided
+  const displayTitle = title || t('unauthorized.title');
+  const displayMessage = message || t('unauthorized.message');
   const getIcon = () => {
     switch (type) {
       case 'admin':
@@ -28,13 +34,13 @@ const UnauthorizedAccess = ({
               to="/dashboard"
               className="w-full bg-gymmawy-primary text-white py-3 px-4 rounded-lg hover:bg-gymmawy-secondary transition-colors font-medium inline-block text-center"
             >
-              Go to User Dashboard
+              {t('unauthorized.goToUserDashboard')}
             </Link>
             <Link
               to="/auth/login"
               className="w-full bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors font-medium inline-block text-center"
             >
-              Login as Admin
+              {t('unauthorized.loginAsAdmin')}
             </Link>
           </div>
         );
@@ -45,13 +51,13 @@ const UnauthorizedAccess = ({
               to="/dashboard"
               className="w-full bg-gymmawy-primary text-white py-3 px-4 rounded-lg hover:bg-gymmawy-secondary transition-colors font-medium inline-block text-center"
             >
-              Go to Dashboard
+              {t('unauthorized.goToDashboard')}
             </Link>
             <Link
               to="/contact"
               className="w-full bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors font-medium inline-block text-center"
             >
-              Contact Support
+              {t('unauthorized.contactSupport')}
             </Link>
           </div>
         );
@@ -62,13 +68,13 @@ const UnauthorizedAccess = ({
               to="/auth/login"
               className="w-full bg-gymmawy-primary text-white py-3 px-4 rounded-lg hover:bg-gymmawy-secondary transition-colors font-medium inline-block text-center"
             >
-              Login to Continue
+              {t('unauthorized.loginToContinue')}
             </Link>
             <Link
               to="/auth/register"
               className="w-full bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors font-medium inline-block text-center"
             >
-              Create Account
+              {t('unauthorized.createAccount')}
             </Link>
           </div>
         );
@@ -80,8 +86,8 @@ const UnauthorizedAccess = ({
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
         <div className="mb-6">
           {getIcon()}
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{title}</h2>
-          <p className="text-gray-600 mb-6">{message}</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{displayTitle}</h2>
+          <p className="text-gray-600 mb-6">{displayMessage}</p>
         </div>
         
         {getActions()}
@@ -93,7 +99,7 @@ const UnauthorizedAccess = ({
               className="inline-flex items-center text-gray-500 hover:text-gray-700 transition-colors"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Home
+              {t('unauthorized.backToHome')}
             </Link>
           </div>
         )}

@@ -678,24 +678,6 @@ export async function adminUpdateStatus(id, status) {
             }
           });
 
-          await tx.payment.create({
-            data: {
-              userId: currentOrder.userId,
-              amount: totalLoyaltyPoints,
-              status: 'SUCCESS',
-              method: 'GYMMAWY_COINS',
-              currency: 'GYMMAWY_COINS',
-              paymentReference: `LOYALTY-EARNED-ORDER-${currentOrder.id}`,
-              paymentableType: 'ORDER',
-              paymentableId: currentOrder.id,
-              metadata: {
-                type: 'EARNED',
-                source: 'ORDER_ITEM',
-                sourceId: currentOrder.id
-              }
-            }
-          });
-
           console.log(`Awarded ${totalLoyaltyPoints} Gymmawy Coins for order status change from ${previousStatus} to ${status}`);
         }
 
@@ -927,23 +909,7 @@ export async function activateOrder(orderId, adminId) {
             }
           });
 
-          await tx.payment.create({
-            data: {
-              userId: order.userId,
-              amount: loyaltyPoints,
-              status: 'SUCCESS',
-              method: 'GYMMAWY_COINS',
-              currency: 'GYMMAWY_COINS',
-              paymentReference: `LOYALTY-EARNED-SUBSCRIPTION-${subscription.id}`,
-              paymentableType: 'SUBSCRIPTION',
-              paymentableId: subscription.id,
-              metadata: {
-                type: 'EARNED',
-                source: 'SUBSCRIPTION',
-                sourceId: subscription.id
-              }
-            }
-          });
+          console.log(`Awarded ${loyaltyPoints} Gymmawy Coins for subscription ${subscription.id}`);
         } else {
           console.log(`No loyalty points to award for subscription ${subscription.id} (loyaltyPointsAwarded: ${subscriptionPlan.loyaltyPointsAwarded})`);
         }
@@ -968,24 +934,6 @@ export async function activateOrder(orderId, adminId) {
         data: {
           loyaltyPoints: {
             increment: totalLoyaltyPoints
-          }
-        }
-      });
-
-      await tx.payment.create({
-        data: {
-          userId: order.userId,
-          amount: totalLoyaltyPoints,
-          status: 'SUCCESS',
-          method: 'GYMMAWY_COINS',
-          currency: 'GYMMAWY_COINS',
-          paymentReference: `LOYALTY-EARNED-ORDER-${order.id}`,
-          paymentableType: 'ORDER',
-          paymentableId: order.id,
-          metadata: {
-            type: 'EARNED',
-            source: 'ORDER_ITEM',
-            sourceId: order.id
           }
         }
       });

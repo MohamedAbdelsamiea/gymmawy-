@@ -9,10 +9,8 @@ import { useLanguage } from '../../hooks/useLanguage';
 import { config } from '../../config';
 import checkoutService from '../../services/checkoutService';
 import imageUploadService from '../../services/imageUploadService';
-import tabbyService from '../../services/tabbyService';
 import rewardsService from '../../services/rewardsService';
 import currencyService from '../../services/currencyService';
-import useTabbyPromo from '../../hooks/useTabbyPromo';
 import countryDetectionService from '../../services/countryDetectionService';
 import { useSecureImage } from '../../hooks/useSecureImage';
 import { useFormPersistence } from '../../hooks/useFormPersistence';
@@ -116,12 +114,7 @@ return fallback;
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
-  const [tabbyAvailable, setTabbyAvailable] = useState(false);
-  const [tabbyRejectionMessage, setTabbyRejectionMessage] = useState(null);
-  const [forceTabbyAvailable, setForceTabbyAvailable] = useState(false);
-  const [tabbyPrescoringLoading, setTabbyPrescoringLoading] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
-  const [tabbyConfiguration, setTabbyConfiguration] = useState(null);
   const [shippingDetails, setShippingDetails] = useState({
     shippingBuilding: '',
     shippingStreet: '',
@@ -440,8 +433,6 @@ return fallback;
     return instructions;
   };
 
-  // Get Tabby hook data
-  const { currentCountry } = useTabbyPromo();
 
   // Get phone number based on currency for Tabby
   const getPhoneForCurrency = (currency) => {
@@ -2416,33 +2407,6 @@ return;
       return { success: true };
     }
 
-    // Handle Tabby payment separately
-    if (paymentOption === 'tabby') {
-      // Check if Tabby has a rejection message (not available)
-      if (tabbyRejectionMessage) {
-        const errorMessage = i18n.language === 'ar' 
-          ? 'طريقة الدفع المختارة غير متاحة. يرجى اختيار طريقة دفع أخرى' 
-          : 'Selected payment method is not available. Please choose another payment method';
-        setError(errorMessage);
-        showError(errorMessage);
-        setSubmitting(false);
-        return { success: false, error: errorMessage };
-      }
-      
-      await handleTabbyPayment();
-      return { success: true };
-    }
-
-    // Prevent submission for Tamara (not yet available)
-    if (paymentOption === 'tamara') {
-      const errorMessage = i18n.language === 'ar' 
-        ? 'هذا الخيار غير متاح حالياً' 
-        : 'This payment option is currently unavailable';
-      setError(errorMessage);
-      showError(errorMessage);
-      setSubmitting(false);
-      return { success: false, error: errorMessage };
-    }
 
     try {
       // Upload payment proof if provided (File object)
@@ -3155,22 +3119,6 @@ return;
                       </div>
                     </label>
 
-                    {/* Only show installments option for AED and SAR */}
-                    {isTabbySupported && (
-                      <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          value="installments"
-                          checked={paymentMethod === 'installments'}
-                          onChange={(e) => setPaymentMethod(e.target.value)}
-                          className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
-                        />
-                        <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'}`}>
-                          <span className="text-sm font-medium text-gray-900">{t('checkout.payInInstallments')}</span>
-                        </div>
-                      </label>
-                    )}
                   </div>
                 </div>
 
@@ -3281,60 +3229,6 @@ return;
                   </div>
                 )}
 
-                {paymentMethod === 'installments' && (
-                  <div className="space-y-4">
-                    <h4 className="font-medium text-gray-900">{t('checkout.chooseInstallmentProvider')}</h4>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Always show Tabby option, but disable if there's a rejection message */}
-                      <label className={`flex items-center p-4 border rounded-lg ${
-                        tabbyRejectionMessage 
-                          ? 'border-red-200 bg-red-50 cursor-not-allowed opacity-60' 
-                          : 'border-gray-200 cursor-pointer hover:bg-gray-50'
-                      }`}>
-                        <input
-                          type="radio"
-                          name="paymentOption"
-                          value="tabby"
-                          checked={paymentOption === 'tabby'}
-                          onChange={(e) => setPaymentOption(e.target.value)}
-                          disabled={!tabbyAvailable}
-                          className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300 disabled:opacity-50"
-                        />
-                        <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
-                          <img src="/assets/common/payments/tabby.png" alt="Tabby" className={`h-8 w-auto object-contain ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                          <div className="flex flex-col">
-                            <span className={`text-sm font-medium ${
-                              tabbyRejectionMessage ? 'text-red-700' : 'text-gray-900'
-                            }`}>
-                              {t('checkout.tabby')}
-                            </span>
-                            <span className={`text-xs ${
-                              tabbyRejectionMessage ? 'text-red-600' : 'text-gray-500'
-                            }`}>
-                              {tabbyRejectionMessage || t('checkout.tabbyDescription')}
-                            </span>
-                          </div>
-                        </div>
-                      </label>
-
-                      <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input
-                          type="radio"
-                          name="paymentOption"
-                          value="tamara"
-                          checked={paymentOption === 'tamara'}
-                          onChange={(e) => setPaymentOption(e.target.value)}
-                          className="h-4 w-4 text-gymmawy-primary focus:ring-gymmawy-primary border-gray-300"
-                        />
-                        <div className={`${i18n.language === 'ar' ? 'mr-3' : 'ml-3'} flex items-center`}>
-                          <img src="/assets/common/payments/tamara.png" alt="Tamara" className={`h-8 w-auto object-contain ${i18n.language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                          <span className="text-sm font-medium text-gray-900">{t('checkout.tamara')}</span>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-                )}
 
 
                 {paymentOption === 'instapay' && (
@@ -3504,24 +3398,13 @@ return;
                   </div>
                 )}
 
-                {/* Tabby/Tamara Placeholder */}
-                {paymentOption === 'tamara' && (
-                  <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-800">
-                      {t('checkout.tamaraComingSoon')}
-                    </p>
-                    <p className="text-xs text-yellow-600 mt-1">
-                      {i18n.language === 'ar' ? 'هذا الخيار غير متاح حالياً' : 'This payment option is currently unavailable'}
-                    </p>
-                  </div>
-                )}
               </div>
 
               {/* Submit Button */}
               <div className="flex justify-end pb-12 sm:pb-0">
                 <button
                   type="submit"
-                  disabled={submitting || (!isLoyaltyRedemption && (!paymentOption || paymentOption === 'tamara'))}
+                  disabled={submitting || (!isLoyaltyRedemption && !paymentOption)}
                   className="px-8 py-3 bg-gymmawy-primary text-white rounded-lg hover:bg-gymmawy-secondary disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
                   {submitting ? (
