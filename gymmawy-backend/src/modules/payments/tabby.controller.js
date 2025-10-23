@@ -502,7 +502,7 @@ async function handlePaymentUpdated(webhookData) {
 
   if (payment) {
     const mappedStatus = tabbyService.mapPaymentStatus(status);
-    await prisma.payment.update({
+    const updatedPayment = await prisma.payment.update({
       where: { id: payment.id },
       data: { 
         status: mappedStatus,
@@ -513,6 +513,17 @@ async function handlePaymentUpdated(webhookData) {
         }
       }
     });
+
+    // Auto-approve programme purchases for successful Tabby payments
+    if (mappedStatus === 'SUCCESS' && payment.paymentableType === 'PROGRAMME') {
+      try {
+        const { approvePayment } = await import('../paymentApproval.service.js');
+        await approvePayment(updatedPayment.id, payment.userId);
+        console.log(`✅ Programme purchase ${payment.paymentableId} automatically approved for Tabby payment`);
+      } catch (approvalError) {
+        console.error(`❌ Failed to auto-approve programme purchase ${payment.paymentableId}:`, approvalError);
+      }
+    }
   }
 }
 

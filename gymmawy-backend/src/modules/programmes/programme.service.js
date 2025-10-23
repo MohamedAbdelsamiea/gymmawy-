@@ -589,16 +589,8 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
       }
     } while (attempts < maxAttempts);
     
-    // Determine initial status based on payment method
+    // All payments start as PENDING until actually confirmed
     let initialStatus = 'PENDING';
-    if (paymentMethod) {
-      const gatewayMethods = ['TABBY', 'TAMARA', 'PAYMOB'];
-      if (gatewayMethods.includes(paymentMethod.toUpperCase())) {
-        initialStatus = 'PAID'; // Gateway payments are paid but need admin approval
-      } else {
-        initialStatus = 'PENDING'; // InstaPay and Vodafone Cash need admin approval
-      }
-    }
 
     console.log('🔍 Creating programme purchase with data:', {
       purchaseNumber,
@@ -716,46 +708,7 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
       });
     }
 
-    // For gateway payments, automatically send email and complete the purchase
-    if (initialStatus === 'PAID') {
-      try {
-        // Update status to COMPLETE
-        const completedPurchase = await tx.programmePurchase.update({
-          where: { id: purchase.id },
-          data: { 
-            status: 'COMPLETE'
-          },
-          include: {
-            programme: true,
-            user: true
-          }
-        });
-
-        console.log('✅ Programme purchase automatically completed for gateway payment:', {
-          purchaseId: completedPurchase.id,
-          purchaseNumber: completedPurchase.purchaseNumber,
-          status: completedPurchase.status
-        });
-
-        // Send programme delivery email
-        try {
-          const { sendProgrammeDeliveryEmail } = await import('./programmeEmail.service.js');
-          await sendProgrammeDeliveryEmail(completedPurchase);
-          console.log(`✅ Programme delivery email sent successfully for purchase ${completedPurchase.id}`);
-        } catch (emailError) {
-          console.error('❌ Failed to send programme delivery email:', emailError);
-          // Don't throw error - purchase is still valid even if email fails
-        }
-
-        return completedPurchase;
-      } catch (error) {
-        console.error('❌ Error completing programme purchase:', error);
-        // Return the original purchase even if completion fails
-        return purchase;
-      }
-    }
-
-    // Note: For manual payments (InstaPay, Vodafone Cash), email will be sent when admin approves the purchase
+    // Note: Email will be sent when payment is confirmed and purchase is approved/completed
     return purchase;
   });
   

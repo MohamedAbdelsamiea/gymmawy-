@@ -455,9 +455,14 @@ export const handleWebhook = async (req, res) => {
             break;
             
           case 'PROGRAMME':
-            // Programme purchases are already created with PAID status for gateway payments
-            // No need to update status - admin will approve to change to COMPLETE
-            console.log(`Programme purchase ${payment.paymentableId} is already PAID, waiting for admin approval`);
+            // Automatically approve programme purchase for successful gateway payments
+            try {
+              const { approvePayment } = await import('../paymentApproval.service.js');
+              const approvalResult = await approvePayment(updatedPayment.id, payment.userId);
+              console.log(`✅ Programme purchase ${payment.paymentableId} automatically approved for gateway payment`);
+            } catch (approvalError) {
+              console.error(`❌ Failed to auto-approve programme purchase ${payment.paymentableId}:`, approvalError);
+            }
             break;
             
           case 'ORDER':
