@@ -352,7 +352,7 @@ return imagePath;
                   : t("purchasing")
                 ) 
               : (isFreeProgramme() 
-                  ? (i18n.language === 'ar' ? 'احصل عليه مجاناً' : 'Get Free') 
+                  ? (i18n.language === 'ar' ? 'احصل عليه مجاناً' : 'GET FREE') 
                   : t("button")
                 )
             }

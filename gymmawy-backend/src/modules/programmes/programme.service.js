@@ -588,9 +588,35 @@ export async function purchaseFreeProgramme(userId, programmeId, currency, progr
 
       // Send programme delivery email immediately for free programmes
       try {
-        const { sendProgrammeDeliveryEmail } = await import('./programmeEmail.service.js');
-        await sendProgrammeDeliveryEmail(purchase);
-        console.log(`Free programme delivery email sent successfully for purchase ${purchase.id}`);
+        // Fetch the purchase with all required relations for email
+        const purchaseWithRelations = await tx.programmePurchase.findUnique({
+          where: { id: purchase.id },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+              }
+            },
+            programme: {
+              select: {
+                id: true,
+                name: true,
+                pdfUrl: true
+              }
+            }
+          }
+        });
+
+        if (purchaseWithRelations) {
+          const { sendProgrammeDeliveryEmail } = await import('./programmeEmail.service.js');
+          await sendProgrammeDeliveryEmail(purchaseWithRelations);
+          console.log(`Free programme delivery email sent successfully for purchase ${purchase.id}`);
+        } else {
+          console.error('Failed to fetch purchase with relations for email');
+        }
       } catch (emailError) {
         console.error('Failed to send free programme delivery email:', emailError);
         // Don't throw error here as the main operation succeeded
