@@ -131,6 +131,7 @@
       "purchaseHistory": "Purchase History",
       "date": "Date",
       "type": "Type",
+      "reference": "Reference",
       "items": "Items",
       "amount": "Amount",
       "status": "Status",

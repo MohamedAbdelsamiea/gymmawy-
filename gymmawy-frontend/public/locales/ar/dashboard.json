@@ -131,6 +131,7 @@
       "purchaseHistory": "تاريخ المشتريات",
       "date": "التاريخ",
       "type": "النوع",
+      "reference": "المرجع",
       "items": "العناصر",
       "amount": "المبلغ",
       "status": "الحالة",

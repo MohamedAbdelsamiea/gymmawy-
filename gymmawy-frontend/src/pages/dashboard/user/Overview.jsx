@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Award, Package, ShoppingBag, Calendar } from 'lucide-react';
+import { Award, Package, ShoppingBag, Calendar, CreditCard } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import orderService from '../../../services/orderService';
 import programmeService from '../../../services/programmeService';
+import subscriptionService from '../../../services/subscriptionService';
 
 const UserOverview = () => {
   const { t } = useTranslation("dashboard");
@@ -23,16 +24,18 @@ const UserOverview = () => {
       setLoading(true);
       setError(null);
 
-      // Load all purchases (orders and programmes)
-      const [ordersResponse, programmePurchasesResponse] = await Promise.allSettled([
+      // Load all purchases (orders, programmes, and subscriptions)
+      const [ordersResponse, programmePurchasesResponse, subscriptionsResponse] = await Promise.allSettled([
         orderService.getOrders(),
-        programmeService.getUserProgrammes()
+        programmeService.getUserProgrammes(),
+        subscriptionService.getUserSubscriptions()
       ]);
 
       const purchases = [];
 
       // Process orders
       if (ordersResponse.status === 'fulfilled' && ordersResponse.value?.data) {
+        console.log('📦 Processing orders:', ordersResponse.value.data.length);
         ordersResponse.value.data.forEach(order => {
           purchases.push({
             id: order.id,
@@ -42,13 +45,17 @@ const UserOverview = () => {
             amount: order.totalPrice || order.amount || 0,
             currency: order.currency || 'EGP',
             status: order.status,
-            loyaltyPointsEarned: order.loyaltyPointsEarned || 0
+            loyaltyPointsEarned: order.loyaltyPointsEarned || 0,
+            reference: order.orderNumber || order.id
           });
         });
+      } else if (ordersResponse.status === 'rejected') {
+        console.error('❌ Failed to fetch orders:', ordersResponse.reason);
       }
 
       // Process programme purchases
       if (programmePurchasesResponse.status === 'fulfilled' && programmePurchasesResponse.value?.data) {
+        console.log('📚 Processing programmes:', programmePurchasesResponse.value.data.length);
         programmePurchasesResponse.value.data.forEach(purchase => {
           purchases.push({
             id: purchase.id,
@@ -58,14 +65,38 @@ const UserOverview = () => {
             amount: purchase.amount || 0,
             currency: purchase.currency || 'EGP',
             status: purchase.status,
-            loyaltyPointsEarned: 0
+            loyaltyPointsEarned: 0,
+            reference: purchase.purchaseNumber || purchase.id
           });
         });
+      } else if (programmePurchasesResponse.status === 'rejected') {
+        console.error('❌ Failed to fetch programmes:', programmePurchasesResponse.reason);
+      }
+
+      // Process subscriptions
+      if (subscriptionsResponse.status === 'fulfilled' && subscriptionsResponse.value?.items) {
+        console.log('💳 Processing subscriptions:', subscriptionsResponse.value.items.length);
+        subscriptionsResponse.value.items.forEach(subscription => {
+          purchases.push({
+            id: subscription.id,
+            type: 'subscription',
+            date: subscription.createdAt || subscription.startDate,
+            items: subscription.subscriptionPlan?.name || 'Subscription Plan',
+            amount: subscription.price || 0,
+            currency: subscription.currency || 'EGP',
+            status: subscription.status,
+            loyaltyPointsEarned: subscription.subscriptionPlan?.loyaltyPointsAwarded || 0,
+            reference: subscription.subscriptionNumber || subscription.id
+          });
+        });
+      } else if (subscriptionsResponse.status === 'rejected') {
+        console.error('❌ Failed to fetch subscriptions:', subscriptionsResponse.reason);
       }
 
       // Sort by date (newest first)
       purchases.sort((a, b) => new Date(b.date) - new Date(a.date));
 
+      console.log('✅ Total purchases loaded:', purchases.length);
       setPurchaseHistory(purchases);
 
     } catch (err) {
@@ -177,6 +208,9 @@ const UserOverview = () => {
                     {t('user.overview.type', 'Type')}
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('user.overview.reference', 'Reference')}
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {t('user.overview.items', 'Items')}
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -200,11 +234,16 @@ const UserOverview = () => {
                       <div className="flex items-center">
                         {purchase.type === 'order' ? (
                           <ShoppingBag className="h-4 w-4 text-blue-600 mr-2" />
+                        ) : purchase.type === 'subscription' ? (
+                          <CreditCard className="h-4 w-4 text-green-600 mr-2" />
                         ) : (
                           <Package className="h-4 w-4 text-purple-600 mr-2" />
                         )}
                         <span className="text-sm text-gray-900 capitalize">{purchase.type}</span>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600">
+                      {purchase.reference || purchase.id}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                       {purchase.items}
