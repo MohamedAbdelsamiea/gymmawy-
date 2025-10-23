@@ -115,7 +115,11 @@ app.use("/uploads", uploadRoutes);
 // Serve uploaded files statically with CORS headers (fallback for non-API requests)
 app.use("/uploads", (req, res, next) => {
   // Skip if this is an API request (has specific upload endpoints) or DELETE request
-  if (req.path.match(/^\/(public|admin)\/(images|videos|pdfs)/) || req.path.match(/^\/payment-proof/) || req.method === 'DELETE') {
+  // Also skip programme PDFs - they should only be accessed through secure /files/programmes route
+  if (req.path.match(/^\/(public|admin)\/(images|videos|pdfs)/) || 
+      req.path.match(/^\/payment-proof/) || 
+      req.path.match(/^\/programmes\//) || 
+      req.method === 'DELETE') {
     return next();
   }
   
