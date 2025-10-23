@@ -21,5 +21,28 @@
     "payWithCard": "Pay with Card",
     "payWithApple": "Pay with Apple Pay",
     "disclaimer": "Your payment information is secure and encrypted. We do not store your card details."
+  },
+  "success": {
+    "title": "Payment Successful! 🎉",
+    "verifying": "Verifying your payment...",
+    "verificationFailed": "Payment Verification Failed",
+    "orderReference": "Order Reference",
+    "subscriptionReference": "Subscription Reference",
+    "programmeReference": "Programme Reference",
+    "referenceNumber": "Reference Number:",
+    "amountPaid": "Amount Paid:",
+    "dateTime": "Date & Time:",
+    "goToDashboard": "Go to Dashboard",
+    "viewOrders": "View Orders",
+    "continueShopping": "Continue Shopping",
+    "needHelp": "Need Help?",
+    "supportDescription": "Use your reference number above when contacting support. You can always access your order details in your dashboard.",
+    "contactSupport": "Contact Support",
+    "paymentCompleted": "Payment completed successfully!",
+    "paymentProcessing": "Payment is being processed...",
+    "noPaymentId": "No payment ID or session ID found in URL",
+    "verificationError": "Failed to verify payment status",
+    "thankYou": "Thank you for your trust!",
+    "contactTimeframe": "We will contact you within 24-48 hours to confirm your order and provide further details."
   }
 }

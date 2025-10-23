@@ -4,12 +4,14 @@ import { useToast } from '../contexts/ToastContext';
 import tabbyService from '../services/tabbyService';
 import { useAuth } from '../hooks/useAuth';
 import apiClient from '../services/apiClient';
+import { useTranslation } from 'react-i18next';
 
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { showSuccess, showError } = useToast();
+  const { t } = useTranslation('payment');
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,7 +27,7 @@ const PaymentSuccess = () => {
     } else if (sessionId) {
       verifyPayment(sessionId);
     } else {
-      setError('No payment ID or session ID found in URL');
+      setError(t('success.noPaymentId'));
       setLoading(false);
     }
   }, [paymentId, sessionId]);
@@ -88,7 +90,7 @@ const PaymentSuccess = () => {
       // Payment is successful (AUTHORIZED or CLOSED) or still processing (CREATED)
       if (result.success || tabbyStatus === 'AUTHORIZED' || tabbyStatus === 'CLOSED') {
         setPaymentStatus(result.payment);
-        showSuccess('Payment completed successfully!');
+        showSuccess(t('success.paymentCompleted'));
       } else {
         setError(result.message);
         showError(result.message);
@@ -96,7 +98,7 @@ const PaymentSuccess = () => {
     } catch (error) {
       console.error('Payment verification failed:', error);
       setError(error.message);
-      showError('Failed to verify payment status');
+      showError(t('success.verificationError'));
     } finally {
       setLoading(false);
     }
@@ -141,7 +143,7 @@ const PaymentSuccess = () => {
             provider: 'PayMob',
             order_type: orderType
           });
-          showSuccess('Payment completed successfully!');
+          showSuccess(t('success.paymentCompleted'));
         } else if (payment.status === 'failed') {
           // Redirect to failure page
           navigate(`/payment/failure?payment_id=${paymentReference}&provider=paymob`, { replace: true });
@@ -175,15 +177,15 @@ const PaymentSuccess = () => {
             provider: 'PayMob',
             order_type: orderType
           });
-          showSuccess('Payment is being processed...');
+          showSuccess(t('success.paymentProcessing'));
         }
       } else {
         throw new Error('Payment not found');
       }
     } catch (error) {
       console.error('Paymob payment verification failed:', error);
-      setError('Failed to verify payment status');
-      showError('Failed to verify payment status');
+      setError(t('success.verificationError'));
+      showError(t('success.verificationError'));
     }
   };
 
@@ -205,7 +207,7 @@ const PaymentSuccess = () => {
         <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
           <div className="flex flex-col items-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-            <p className="mt-4 text-gray-600">Verifying your payment...</p>
+            <p className="mt-4 text-gray-600">{t('success.verifying')}</p>
           </div>
         </div>
       </div>
@@ -224,7 +226,7 @@ const PaymentSuccess = () => {
             </div>
             
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Payment Verification Failed
+              {t('success.verificationFailed')}
             </h1>
             
             <p className="text-gray-600 mb-6">
@@ -236,13 +238,13 @@ const PaymentSuccess = () => {
                 onClick={handleViewOrders}
                 className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
               >
-                Check Orders
+                {t('success.viewOrders')}
               </button>
               <button
                 onClick={handleContinueShopping}
                 className="bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400 transition-colors"
               >
-                Continue Shopping
+                {t('success.continueShopping')}
               </button>
             </div>
           </div>
@@ -263,9 +265,19 @@ const PaymentSuccess = () => {
           </div>
           
           {/* Success Message */}
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">
-            Payment Successful! 🎉
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            {t('success.title')}
           </h1>
+          
+          {/* Thank You Message */}
+          <div className="mb-6 text-center">
+            <p className="text-lg font-medium text-gray-800 mb-2">
+              {t('success.thankYou')}
+            </p>
+            <p className="text-sm text-gray-600">
+              {t('success.contactTimeframe')}
+            </p>
+          </div>
           
           {/* Order Reference - Critical for Support */}
           {paymentStatus && (
@@ -274,21 +286,23 @@ const PaymentSuccess = () => {
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                {paymentStatus.order_type ? `${paymentStatus.order_type} Reference` : 'Order Reference'}
+                {paymentStatus.order_type === 'Subscription' ? t('success.subscriptionReference') : 
+                 paymentStatus.order_type === 'Programme' ? t('success.programmeReference') : 
+                 t('success.orderReference')}
               </h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between items-center">
-                  <span className="text-green-700 font-medium">Reference Number:</span>
+                  <span className="text-green-700 font-medium">{t('success.referenceNumber')}</span>
                   <span className="font-mono text-sm bg-white px-2 py-1 rounded border font-semibold text-green-900">
                     {paymentStatus.payment_id}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-green-700">Amount Paid:</span>
+                  <span className="text-green-700">{t('success.amountPaid')}</span>
                   <span className="font-semibold text-green-900">{paymentStatus.amount} {paymentStatus.currency}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-green-700">Date & Time:</span>
+                  <span className="text-green-700">{t('success.dateTime')}</span>
                   <span className="font-medium text-green-900">{new Date(paymentStatus.created_at).toLocaleString()}</span>
                 </div>
               </div>
@@ -306,7 +320,7 @@ const PaymentSuccess = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v4H8V5z" />
               </svg>
-              Go to Dashboard
+              {t('success.goToDashboard')}
             </button>
             
             <div className="flex space-x-3">
@@ -317,7 +331,7 @@ const PaymentSuccess = () => {
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                View Orders
+                {t('success.viewOrders')}
               </button>
               <button
                 onClick={handleContinueShopping}
@@ -326,7 +340,7 @@ const PaymentSuccess = () => {
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
-                Continue Shopping
+                {t('success.continueShopping')}
               </button>
             </div>
           </div>
@@ -337,10 +351,10 @@ const PaymentSuccess = () => {
               <svg className="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M12 2.25a9.75 9.75 0 100 19.5 9.75 9.75 0 000-19.5z" />
               </svg>
-              Need Help?
+              {t('success.needHelp')}
             </h4>
             <p className="text-sm text-gray-600 mb-3">
-              Use your reference number above when contacting support. You can always access your order details in your dashboard.
+              {t('success.supportDescription')}
             </p>
             <button
               onClick={() => navigate('/contact')}
@@ -349,7 +363,7 @@ const PaymentSuccess = () => {
               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
-              Contact Support
+              {t('success.contactSupport')}
             </button>
           </div>
         </div>
