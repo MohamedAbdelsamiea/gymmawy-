@@ -136,7 +136,7 @@ export const createIntention = async (req, res) => {
         currency: 'SAR', // Always use SAR for Paymob
         method: 'PAYMOB',
         status: 'PENDING',
-        gatewayId: intentionResult.data.id,
+        gatewayId: String(intentionResult.data.id), // Ensure gatewayId is stored as string
         transactionId: null, // Will be updated when webhook is received
         paymentReference: finalSpecialReference,
         paymentableId: billingData.orderId || billingData.subscriptionId || billingData.programmeId,
@@ -265,7 +265,7 @@ export const handleWebhook = async (req, res) => {
     if (orderData?.id) {
       console.log('🔍 Strategy 1: Searching by gatewayId:', orderData.id);
       payment = await prisma.payment.findFirst({
-        where: { gatewayId: orderData.id }
+        where: { gatewayId: String(orderData.id) } // Convert to string
       });
       if (payment) console.log('✅ Found payment by gatewayId:', payment.id);
     }
@@ -302,7 +302,7 @@ export const handleWebhook = async (req, res) => {
         payment = await prisma.payment.findFirst({
           where: {
             OR: [
-              { gatewayId: { in: searchTerms } },
+              { gatewayId: { in: searchTerms.map(term => String(term)) } }, // Convert all to strings
               { paymentReference: { in: searchTerms } },
               { transactionId: { in: searchTerms } }
             ]
