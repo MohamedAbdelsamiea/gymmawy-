@@ -493,6 +493,111 @@ export async function purchaseProgramme(userId, programmeId, country = 'EG') {
   });
 }
 
+export async function purchaseFreeProgramme(userId, programmeId, currency, programme) {
+  try {
+    console.log('🆓 Processing free programme purchase:', {
+      userId,
+      programmeId,
+      currency,
+      programmeName: programme.name
+    });
+
+    return prisma.$transaction(async (tx) => {
+      // Check if user already purchased this programme
+      const existing = await tx.programmePurchase.findUnique({
+        where: { userId_programmeId: { userId, programmeId } }
+      });
+      
+      if (existing) {
+        const error = new Error("Programme already purchased");
+        error.status = 400;
+        error.expose = true;
+        throw error;
+      }
+
+      // Generate unique purchase number
+      let purchaseNumber;
+      let attempts = 0;
+      const maxAttempts = 5;
+      
+      do {
+        attempts++;
+        const timestamp = Date.now();
+        const randomSuffix = Math.random().toString(36).substr(2, 9).toUpperCase();
+        purchaseNumber = `PROG-FREE-${timestamp}-${randomSuffix}`;
+        
+        const existingPurchase = await tx.programmePurchase.findUnique({
+          where: { purchaseNumber }
+        });
+        
+        if (!existingPurchase) break;
+        
+        if (attempts >= maxAttempts) {
+          throw new Error("Failed to generate unique purchase number after multiple attempts");
+        }
+      } while (attempts < maxAttempts);
+
+      // Create purchase record for free programme
+      const purchase = await tx.programmePurchase.create({
+        data: {
+          purchaseNumber,
+          userId,
+          programmeId,
+          price: new Decimal(0),
+          currency: currency,
+          discountPercentage: 0,
+          purchasedAt: new Date(),
+          status: 'COMPLETE' // Free programmes are immediately complete
+        }
+      });
+
+      console.log('✅ Free programme purchase created:', {
+        purchaseId: purchase.id,
+        purchaseNumber: purchase.purchaseNumber,
+        status: purchase.status
+      });
+
+      // Award loyalty points if applicable
+      if (programme.loyaltyPointsAwarded && programme.loyaltyPointsAwarded > 0) {
+        await tx.loyaltyPoint.create({
+          data: {
+            userId: purchase.userId,
+            amount: programme.loyaltyPointsAwarded,
+            status: 'SUCCESS',
+            method: 'GYMMAWY_COINS',
+            currency: 'GYMMAWY_COINS',
+            paymentReference: `LOYALTY-PROGRAMME-${purchase.id}`,
+            paymentableType: 'PROGRAMME',
+            paymentableId: purchase.id,
+            metadata: {
+              type: 'EARNED',
+              source: 'PROGRAMME_PURCHASE',
+              sourceId: purchase.id
+            }
+          }
+        });
+
+        console.log(`Awarded ${programme.loyaltyPointsAwarded} Gymmawy Coins for free programme purchase ${purchase.id}`);
+      }
+
+      // Send programme delivery email immediately for free programmes
+      try {
+        const { sendProgrammeDeliveryEmail } = await import('./programmeEmail.service.js');
+        await sendProgrammeDeliveryEmail(purchase);
+        console.log(`Free programme delivery email sent successfully for purchase ${purchase.id}`);
+      } catch (emailError) {
+        console.error('Failed to send free programme delivery email:', emailError);
+        // Don't throw error here as the main operation succeeded
+      }
+
+      return purchase;
+    });
+  } catch (error) {
+    console.error('❌ Failed to process free programme purchase:', error);
+    throw error;
+  }
+}
+
 export async function purchaseProgrammeWithPayment(userId, programmeId, paymentData) {
   try {
     console.log('🔍 Programme purchase creation started:', {
@@ -573,6 +678,12 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
     const programmeDiscountPercentage = programme.discountPercentage || 0;
     const programmeDiscountAmount = (originalPrice * programmeDiscountPercentage) / 100;
     let finalPrice = originalPrice - programmeDiscountAmount;
+
+    // Check if this is a free programme (price = 0)
+    if (finalPrice <= 0) {
+      console.log('🆓 Free programme detected, processing without payment');
+      return await purchaseFreeProgramme(userId, programmeId, currency, programme);
+    }
 
     // Handle coupon discount if provided
     let couponDiscountAmount = 0;

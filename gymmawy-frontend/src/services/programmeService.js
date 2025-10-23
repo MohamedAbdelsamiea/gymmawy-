@@ -30,6 +30,16 @@ class ProgrammeService {
     }
   }
 
+  async purchaseFreeProgramme(id, currency = 'EGP') {
+    try {
+      return await apiClient.post(`/programmes/${id}/purchase-free`, {
+        currency,
+      });
+    } catch (error) {
+      throw new Error(`Free programme purchase error: ${error.message}`);
+    }
+  }
+
   async getUserProgrammes() {
     try {
       return await apiClient.get('/programmes/user/my-programmes');

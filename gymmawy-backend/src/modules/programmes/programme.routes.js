@@ -12,6 +12,7 @@ import {
   deleteProgrammeController, 
   purchaseProgrammeController,
   purchaseProgrammeWithPaymentController,
+  purchaseFreeProgrammeController,
   getPendingProgrammePurchasesController,
   approveProgrammePurchaseController,
   rejectProgrammePurchaseController
@@ -34,6 +35,7 @@ router.patch('/:id', updateProgrammeController);
 router.delete('/:id', deleteProgrammeController);
 router.post('/:id/purchase', purchaseProgrammeController);
 router.post('/:id/purchase-with-payment', requireAuth, purchaseProgrammeWithPaymentController);
+router.post('/:id/purchase-free', requireAuth, purchaseFreeProgrammeController);
 
 // Admin routes
 router.get('/admin/pending-purchases', requireAuth, requireAdmin, getPendingProgrammePurchasesController);

@@ -9,6 +9,7 @@ import AuthRequiredModal from '../modals/AuthRequiredModal';
 import useAuthRequired from '../../hooks/useAuthRequired';
 import { config } from '../../config';
 import { getGymmawyCoinIcon } from '../../utils/currencyUtils';
+import programmeService from '../../services/programmeService';
 
 export default function Programme({ image, name, price, programme }) {
     const { t, i18n } = useTranslation('programmes');
@@ -88,6 +89,40 @@ return imagePath;
         return imagePath; // Return as-is for other cases
     };
 
+    // Helper function to check if programme is free
+    const isFreeProgramme = () => {
+      if (!programme) return false;
+      
+      // Check if any price is 0 or null/undefined
+      const prices = [
+        programme.priceEGP?.amount || programme.priceEGP,
+        programme.priceSAR?.amount || programme.priceSAR,
+        programme.priceAED?.amount || programme.priceAED,
+        programme.priceUSD?.amount || programme.priceUSD
+      ];
+      
+      return prices.some(price => price === 0 || price === null || price === undefined);
+    };
+
+    const handleFreeProgrammePurchase = async () => {
+      try {
+        setLoading(true);
+        const { currency } = getCurrencyInfo();
+        const result = await programmeService.purchaseFreeProgramme(programme.id, currency);
+        
+        // Show success message
+        alert(result.message || 'Free programme purchased successfully! Check your email for the programme.');
+        
+        // Optionally refresh the page or update UI
+        window.location.reload();
+      } catch (error) {
+        console.error('Free programme purchase error:', error);
+        alert(error.message || 'Failed to purchase free programme. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const handlePurchase = () => {
       requireAuth(() => {
         // User is authenticated, proceed with purchase
@@ -96,7 +131,13 @@ return imagePath;
           return;
         }
 
-        // Navigate to checkout with programme data
+        // Check if this is a free programme
+        if (isFreeProgramme()) {
+          handleFreeProgrammePurchase();
+          return;
+        }
+
+        // Navigate to checkout with programme data for paid programmes
         navigate('/checkout', {
           state: {
             plan: {
@@ -196,8 +237,10 @@ return imagePath;
           
           {/* Price display with discount handling */}
           <div className="mb-3 sm:mb-4 relative">
-            {price === 'FREE' || price === 'مجاني' ? (
-              <p className="text-xl sm:text-2xl text-orange-500 font-bold">{price}</p>
+            {isFreeProgramme() ? (
+              <p className="text-xl sm:text-2xl text-orange-500 font-bold">
+                {i18n.language === 'ar' ? 'مجاني' : 'FREE'}
+              </p>
             ) : programme?.discountPercentage > 0 ? (
               // Display discounted price similar to packages section
               <div className="flex flex-col items-start">
@@ -246,7 +289,16 @@ return imagePath;
             disabled={loading}
             className="mt-auto w-full bg-[#281159] text-white py-2 px-3 sm:px-4 rounded-lg font-semibold hover:bg-[#3f0071] transition disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
           >
-            {loading ? t("purchasing") : t("button")}
+            {loading 
+              ? (isFreeProgramme() 
+                  ? (i18n.language === 'ar' ? 'جاري التحميل...' : 'Getting...') 
+                  : t("purchasing")
+                ) 
+              : (isFreeProgramme() 
+                  ? (i18n.language === 'ar' ? 'احصل عليه مجاناً' : 'Get Free') 
+                  : t("button")
+                )
+            }
           </button>
         </div>
 

@@ -6,6 +6,7 @@ import {
   updateProgramme, 
   deleteProgramme,
   purchaseProgrammeWithPayment,
+  purchaseFreeProgramme,
   getUserProgrammes,
   getProgrammeStats,
   approveProgrammePurchase,
@@ -103,6 +104,28 @@ export const purchaseProgrammeWithPaymentController = async (req, res) => {
     const paymentData = req.body;
     const result = await purchaseProgrammeWithPayment(req.user.id, id, paymentData);
     res.status(201).json({ purchase: result });
+  } catch (error) {
+    const status = error.status || 500;
+    res.status(status).json({ error: { message: error.message } });
+  }
+};
+
+export const purchaseFreeProgrammeController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { currency } = req.body;
+    
+    // Get programme details first
+    const programme = await getProgrammeById(id);
+    if (!programme) {
+      return res.status(404).json({ error: { message: "Programme not found" } });
+    }
+    
+    const result = await purchaseFreeProgramme(req.user.id, id, currency || 'EGP', programme);
+    res.status(201).json({ 
+      purchase: result,
+      message: "Free programme purchased successfully! Check your email for the programme."
+    });
   } catch (error) {
     const status = error.status || 500;
     res.status(status).json({ error: { message: error.message } });
