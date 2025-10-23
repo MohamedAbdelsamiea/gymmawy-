@@ -20,11 +20,15 @@ export async function createSubscriptionWithPayment(req, res, next) {
       isMedical: z.boolean().optional(),
       currency: z.string().default("EGP"),
       couponId: z.string().uuid().nullable().optional(),
-      reason: z.string().optional(), // User's reason for subscribing
+      reason: z.string().nullable().optional(), // User's reason for subscribing - allow null
       // Remove all price fields - backend calculates everything
     });
     const data = parseOrThrow(schema, req.body || {});
-    const subscription = await service.createSubscriptionWithPayment(req.user.id, data);
+    
+    // Use the user ID from the request
+    const userId = req.user.id;
+    
+    const subscription = await service.createSubscriptionWithPayment(userId, data);
     res.status(201).json({ subscription });
   } catch (e) { 
     console.log('Validation error:', e.message);
@@ -68,6 +72,42 @@ export async function adminUpdateSubscriptionStatus(req, res, next) {
     const subscription = await service.adminUpdateSubscriptionStatus(id, status);
     res.json({ subscription });
   } catch (e) { next(e); }
+}
+
+// Test endpoint for subscription creation (bypasses authentication)
+export async function testCreateSubscriptionWithPayment(req, res, next) {
+  try {
+    console.log('🧪 Test subscription request body:', JSON.stringify(req.body, null, 2));
+    
+    const schema = z.object({
+      planId: z.string().uuid(),
+      paymentMethod: z.enum(["INSTAPAY", "VODAFONECASH", "TABBY", "TAMARA", "CARD", "CASH", "PAYMOB"]).optional(),
+      paymentProof: z.string().min(1).optional(),
+      isMedical: z.boolean().optional(),
+      currency: z.string().default("EGP"),
+      couponId: z.string().uuid().nullable().optional(),
+      reason: z.string().nullable().optional(),
+    });
+    const data = parseOrThrow(schema, req.body || {});
+    
+    // Use test user ID
+    const userId = 'cba5db85-a0b9-4680-9295-ab36668b60d7';
+    console.log('🧪 Using test user ID:', userId);
+    
+    const subscription = await service.createSubscriptionWithPayment(userId, data);
+    res.status(201).json({ 
+      success: true,
+      message: 'Test subscription created successfully',
+      subscription 
+    });
+  } catch (e) { 
+    console.error('🧪 Test subscription error:', e.message);
+    res.status(500).json({
+      success: false,
+      error: e.message,
+      stack: e.stack
+    });
+  }
 }
 
 // New endpoint to manually fix subscription status

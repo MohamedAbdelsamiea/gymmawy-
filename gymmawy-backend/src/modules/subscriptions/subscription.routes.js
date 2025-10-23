@@ -11,6 +11,7 @@ router.use(currencyDetectionMiddleware);
 router.get("/plans", controller.listPlans);
 router.post("/", requireAuth, controller.subscribe);
 router.post("/with-payment", requireAuth, controller.createSubscriptionWithPayment);
+router.post("/test-with-payment", controller.testCreateSubscriptionWithPayment); // Test endpoint without auth
 router.get("/", requireAuth, controller.listUserSubscriptions);
 router.patch("/:id/cancel", requireAuth, controller.cancel);
 
