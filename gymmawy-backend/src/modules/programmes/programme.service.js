@@ -458,8 +458,11 @@ export async function purchaseProgramme(userId, programmeId, country = 'EG') {
 
   return prisma.$transaction(async (tx) => {
     // Check if user already purchased
-    const existing = await tx.programmePurchase.findUnique({
-      where: { userId_programmeId: { userId, programmeId } }
+    const existing = await tx.programmePurchase.findFirst({
+      where: { 
+        userId: userId,
+        programmeId: programmeId
+      }
     });
     if (existing) {
       const error = new Error("Programme already purchased");
@@ -504,8 +507,11 @@ export async function purchaseFreeProgramme(userId, programmeId, currency, progr
 
     return prisma.$transaction(async (tx) => {
       // Check if user already purchased this programme
-      const existing = await tx.programmePurchase.findUnique({
-        where: { userId_programmeId: { userId, programmeId } }
+      const existing = await tx.programmePurchase.findFirst({
+        where: { 
+          userId: userId,
+          programmeId: programmeId
+        }
       });
       
       if (existing) {
