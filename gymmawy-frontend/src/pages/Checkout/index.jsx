@@ -1871,7 +1871,7 @@ return;
   );
 
   // Handle Paymob payment
-  const handlePaymobPayment = async () => {
+  const handlePaymobPayment = async (programmeResult = null) => {
     try {
       setSubmitting(true);
       setError(null);
@@ -1914,48 +1914,11 @@ return;
         subscriptionResult = await checkoutService.createSubscription(subscriptionData);
         console.log('✅ Subscription created successfully:', subscriptionResult);
       } else if (type === 'programme') {
-        console.log('🔍 Creating programme purchase before Paymob payment...');
-        console.log('🔍 Programme details:', {
-          programmeId: plan.id,
-          programmeName: plan.name,
-          currency: currency,
-          couponId: couponValid && couponData ? couponData.id : null
-        });
-        
-        try {
-          // Import programme service dynamically
-          const { default: programmeService } = await import('../../services/programmeService.js');
-          
-          // Send only essential data - let backend calculate all prices
-          const programmeData = {
-            paymentMethod: 'PAYMOB',
-            currency: currency, // Current selected currency
-            // Coupon information - backend will validate and calculate discount
-            couponId: couponValid && couponData ? couponData.id : null,
-          };
-
-          // Debug: Log programme data being sent
-          console.log('🔍 Programme data being sent to backend:', programmeData);
-          console.log('✅ Backend will calculate and validate all prices');
-
-          programmeResult = await programmeService.purchaseProgramme(plan.id, 'SA', programmeData);
-          console.log('✅ Programme purchase created successfully:', programmeResult);
-          
-          // Verify the result has the expected structure
-          if (!programmeResult || !programmeResult.purchase) {
-            throw new Error('Invalid programme purchase response from backend');
-          }
-          
-          console.log('✅ Programme purchase verified:', {
-            purchaseId: programmeResult.purchase.id,
-            purchaseNumber: programmeResult.purchase.purchaseNumber,
-            status: programmeResult.purchase.status
-          });
-          
-        } catch (programmeError) {
-          console.error('❌ Programme purchase creation failed:', programmeError);
-          throw new Error(`Failed to create programme purchase: ${programmeError.message}`);
+        // Programme purchase should already be created before this function is called
+        if (!programmeResult) {
+          throw new Error('Programme purchase not found. Please try again.');
         }
+        console.log('✅ Using existing programme purchase:', programmeResult);
       }
 
       // Prepare payment data
@@ -2385,9 +2348,64 @@ return;
       }
     }
 
+    // Create programme purchase BEFORE processing any payment method
+    let programmeResult = null;
+    if (type === 'programme') {
+      console.log('🔍 Creating programme purchase before payment processing...');
+      console.log('🔍 Programme details:', {
+        programmeId: plan.id,
+        programmeName: plan.name,
+        currency: currency,
+        couponId: couponValid && couponData ? couponData.id : null
+      });
+      
+      try {
+        // Import programme service dynamically
+        const { default: programmeService } = await import('../../services/programmeService.js');
+        
+        // Send only essential data - let backend calculate all prices
+        const programmeData = {
+          paymentMethod: paymentOption?.toUpperCase() === 'VODAFONE' ? 'VODAFONECASH' : 
+                        paymentOption?.toUpperCase() === 'INSTAPAY' ? 'INSTAPAY' : 
+                        paymentOption === 'paymob_card' ? 'PAYMOB' :
+                        paymentOption === 'paymob_apple' ? 'PAYMOB' :
+                        paymentOption?.toUpperCase(),
+          currency: currency, // Current selected currency
+          // Coupon information - backend will validate and calculate discount
+          couponId: couponValid && couponData ? couponData.id : null,
+        };
+
+        // Debug: Log programme data being sent
+        console.log('🔍 Programme data being sent to backend:', programmeData);
+        console.log('✅ Backend will calculate and validate all prices');
+
+        programmeResult = await programmeService.purchaseProgramme(plan.id, 'SA', programmeData);
+        console.log('✅ Programme purchase created successfully:', programmeResult);
+        
+        // Verify the result has the expected structure
+        if (!programmeResult || !programmeResult.purchase) {
+          throw new Error('Invalid programme purchase response from backend');
+        }
+        
+        console.log('✅ Programme purchase verified:', {
+          purchaseId: programmeResult.purchase.id,
+          purchaseNumber: programmeResult.purchase.purchaseNumber,
+          status: programmeResult.purchase.status
+        });
+        
+      } catch (programmeError) {
+        console.error('❌ Programme purchase creation failed:', programmeError);
+        const errorMessage = `Failed to create programme purchase: ${programmeError.message}`;
+        setError(errorMessage);
+        showError(errorMessage);
+        setSubmitting(false);
+        return { success: false, error: errorMessage };
+      }
+    }
+
     // Handle Paymob payments separately
     if (paymentOption === 'paymob_card' || paymentOption === 'paymob_apple') {
-      await handlePaymobPayment();
+      await handlePaymobPayment(programmeResult);
       return { success: true };
     }
 
