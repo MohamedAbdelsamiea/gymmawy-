@@ -517,7 +517,7 @@ async function handlePaymentUpdated(webhookData) {
     // Auto-approve programme purchases for successful Tabby payments
     if (mappedStatus === 'SUCCESS' && payment.paymentableType === 'PROGRAMME') {
       try {
-        const { approvePayment } = await import('../paymentApproval.service.js');
+        const { approvePayment } = await import('./paymentApproval.service.js');
         await approvePayment(updatedPayment.id, payment.userId);
         console.log(`✅ Programme purchase ${payment.paymentableId} automatically approved for Tabby payment`);
       } catch (approvalError) {

@@ -457,7 +457,7 @@ export const handleWebhook = async (req, res) => {
           case 'PROGRAMME':
             // Automatically approve programme purchase for successful gateway payments
             try {
-              const { approvePayment } = await import('../paymentApproval.service.js');
+              const { approvePayment } = await import('./paymentApproval.service.js');
               const approvalResult = await approvePayment(updatedPayment.id, payment.userId);
               console.log(`✅ Programme purchase ${payment.paymentableId} automatically approved for gateway payment`);
             } catch (approvalError) {
