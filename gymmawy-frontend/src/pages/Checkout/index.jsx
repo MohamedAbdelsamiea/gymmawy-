@@ -1886,8 +1886,10 @@ return;
         type
       });
 
-      // Create subscription first if this is a subscription type
+      // Create subscription or programme purchase first if this is a subscription/programme type
       let subscriptionResult = null;
+      let programmeResult = null;
+      
       if (type === 'subscription') {
         console.log('🔍 Creating subscription before Paymob payment...');
         
@@ -1911,6 +1913,26 @@ return;
 
         subscriptionResult = await checkoutService.createSubscription(subscriptionData);
         console.log('✅ Subscription created successfully:', subscriptionResult);
+      } else if (type === 'programme') {
+        console.log('🔍 Creating programme purchase before Paymob payment...');
+        
+        // Import programme service dynamically
+        const { default: programmeService } = await import('../../services/programmeService.js');
+        
+        // Send only essential data - let backend calculate all prices
+        const programmeData = {
+          paymentMethod: 'PAYMOB',
+          currency: currency, // Current selected currency
+          // Coupon information - backend will validate and calculate discount
+          couponId: couponValid && couponData ? couponData.id : null,
+        };
+
+        // Debug: Log programme data being sent
+        console.log('🔍 Programme data being sent to backend:', programmeData);
+        console.log('✅ Backend will calculate and validate all prices');
+
+        programmeResult = await programmeService.purchaseProgramme(plan.id, 'SA', programmeData);
+        console.log('✅ Programme purchase created successfully:', programmeResult);
       }
 
       // Prepare payment data
@@ -1933,7 +1955,9 @@ return;
           country: 'KSA', // Always use KSA for Paymob
           postalCode: type === 'cart' || type === 'product' ? (shippingDetails?.shippingPostalCode || '') : '',
           // Include subscription ID if this is a subscription
-          ...(type === 'subscription' && subscriptionResult?.subscription?.id ? { subscriptionId: subscriptionResult.subscription.id } : {})
+          ...(type === 'subscription' && subscriptionResult?.subscription?.id ? { subscriptionId: subscriptionResult.subscription.id } : {}),
+          // Include programme ID if this is a programme purchase
+          ...(type === 'programme' && programmeResult?.purchase?.id ? { programmeId: programmeResult.purchase.id } : {})
         },
         customer: {
           firstName: user?.firstName || 'User',

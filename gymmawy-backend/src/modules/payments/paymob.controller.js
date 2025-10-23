@@ -455,11 +455,9 @@ export const handleWebhook = async (req, res) => {
             break;
             
           case 'PROGRAMME':
-            await prisma.programmePurchase.update({
-              where: { id: payment.paymentableId },
-              data: { status: 'PAID' }
-            });
-            console.log(`Programme purchase ${payment.paymentableId} status updated to PAID`);
+            // Programme purchases are already created with PAID status for gateway payments
+            // No need to update status - admin will approve to change to COMPLETE
+            console.log(`Programme purchase ${payment.paymentableId} is already PAID, waiting for admin approval`);
             break;
             
           case 'ORDER':
@@ -953,6 +951,39 @@ export const verifyPaymentPublic = async (req, res) => {
       console.log('🔍 Payment still PENDING, but Paymob redirected to success page. Marking as SUCCESS.');
     }
 
+    // Get order reference (subscription number or programme purchase number)
+    let orderReference = null;
+    let orderType = null;
+    
+    if (payment.paymentableType === 'SUBSCRIPTION' && payment.paymentableId) {
+      const subscription = await prisma.subscription.findUnique({
+        where: { id: payment.paymentableId },
+        select: { subscriptionNumber: true }
+      });
+      if (subscription) {
+        orderReference = subscription.subscriptionNumber;
+        orderType = 'Subscription';
+      }
+    } else if (payment.paymentableType === 'PROGRAMME' && payment.paymentableId) {
+      const programmePurchase = await prisma.programmePurchase.findUnique({
+        where: { id: payment.paymentableId },
+        select: { purchaseNumber: true }
+      });
+      if (programmePurchase) {
+        orderReference = programmePurchase.purchaseNumber;
+        orderType = 'Programme';
+      }
+    } else if (payment.paymentableType === 'ORDER' && payment.paymentableId) {
+      const order = await prisma.order.findUnique({
+        where: { id: payment.paymentableId },
+        select: { orderNumber: true }
+      });
+      if (order) {
+        orderReference = order.orderNumber;
+        orderType = 'Order';
+      }
+    }
+
     // Return the payment status
     res.json({
       success: true,
@@ -967,7 +998,9 @@ export const verifyPaymentPublic = async (req, res) => {
       },
       local_status: payment.status,
       webhook_processed: payment.status !== 'PENDING',
-      local_metadata: payment.metadata
+      local_metadata: payment.metadata,
+      order_reference: orderReference,
+      order_type: orderType
     });
 
   } catch (error) {

@@ -296,7 +296,7 @@ export async function approveProgrammePurchase(id) {
     throw new Error("Programme purchase not found");
   }
 
-  if (existingPurchase.status !== "PENDING") {
+  if (existingPurchase.status !== "PENDING" && existingPurchase.status !== "PAID") {
     throw new Error("Programme purchase is not pending approval");
   }
 
@@ -562,7 +562,7 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
     if (paymentMethod) {
       const gatewayMethods = ['TABBY', 'TAMARA', 'PAYMOB'];
       if (gatewayMethods.includes(paymentMethod.toUpperCase())) {
-        initialStatus = 'COMPLETE'; // Gateway payments are automatically complete
+        initialStatus = 'PAID'; // Gateway payments are paid but need admin approval
       } else {
         initialStatus = 'PENDING'; // InstaPay and Vodafone Cash need admin approval
       }
@@ -664,35 +664,8 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
       });
     }
 
-    // Send programme delivery email for gateway payments (COMPLETE status)
-    if (initialStatus === 'COMPLETE') {
-      try {
-        // Get the purchase with all related data for email
-        const purchaseForEmail = await tx.programmePurchase.findUnique({
-          where: { id: purchase.id },
-          include: {
-            user: true,
-            programme: true,
-            coupon: true
-          }
-        });
-        
-        if (purchaseForEmail) {
-          // Send email asynchronously (don't wait for it in transaction)
-          setImmediate(async () => {
-            try {
-              await sendProgrammeDeliveryEmail(purchaseForEmail);
-              console.log(`Programme delivery email sent successfully for gateway payment purchase ${purchase.id}`);
-            } catch (emailError) {
-              console.error('Failed to send programme delivery email for gateway payment:', emailError);
-            }
-          });
-        }
-      } catch (error) {
-        console.error('Error preparing programme delivery email for gateway payment:', error);
-        // Don't throw error here as the main operation succeeded
-      }
-    }
+    // Note: Email will be sent when admin approves the purchase
+    // No immediate email sending for gateway payments - wait for admin approval
 
     return purchase;
   });

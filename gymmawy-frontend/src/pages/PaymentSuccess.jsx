@@ -114,13 +114,32 @@ const PaymentSuccess = () => {
         
         // Check payment status
         if (payment.status === 'success') {
+          // Extract order reference from metadata if not provided directly
+          let orderReference = response.order_reference || payment.payment_id;
+          let orderType = response.order_type || 'Order';
+          
+          // Fallback: try to extract from metadata
+          if (!response.order_reference && response.local_metadata) {
+            const metadata = response.local_metadata;
+            if (metadata.billingData?.subscriptionId) {
+              // This is a subscription payment
+              orderReference = `SUB-${metadata.billingData.subscriptionId.substring(0, 8).toUpperCase()}`;
+              orderType = 'Subscription';
+            } else if (metadata.billingData?.programmeId) {
+              // This is a programme purchase
+              orderReference = `PROG-${metadata.billingData.programmeId.substring(0, 8).toUpperCase()}`;
+              orderType = 'Programme';
+            }
+          }
+          
           setPaymentStatus({
-            payment_id: payment.payment_id,
+            payment_id: orderReference,
             amount: payment.amount,
             currency: payment.currency,
             status: payment.status,
             created_at: payment.created_at,
-            provider: 'PayMob'
+            provider: 'PayMob',
+            order_type: orderType
           });
           showSuccess('Payment completed successfully!');
         } else if (payment.status === 'failed') {
@@ -129,13 +148,32 @@ const PaymentSuccess = () => {
           return;
         } else if (payment.status === 'pending') {
           // Payment is still processing, show pending state
+          // Extract order reference from metadata if not provided directly
+          let orderReference = response.order_reference || payment.payment_id;
+          let orderType = response.order_type || 'Order';
+          
+          // Fallback: try to extract from metadata
+          if (!response.order_reference && response.local_metadata) {
+            const metadata = response.local_metadata;
+            if (metadata.billingData?.subscriptionId) {
+              // This is a subscription payment
+              orderReference = `SUB-${metadata.billingData.subscriptionId.substring(0, 8).toUpperCase()}`;
+              orderType = 'Subscription';
+            } else if (metadata.billingData?.programmeId) {
+              // This is a programme purchase
+              orderReference = `PROG-${metadata.billingData.programmeId.substring(0, 8).toUpperCase()}`;
+              orderType = 'Programme';
+            }
+          }
+          
           setPaymentStatus({
-            payment_id: payment.payment_id,
+            payment_id: orderReference,
             amount: payment.amount,
             currency: payment.currency,
             status: 'processing',
             created_at: payment.created_at,
-            provider: 'PayMob'
+            provider: 'PayMob',
+            order_type: orderType
           });
           showSuccess('Payment is being processed...');
         }
@@ -236,7 +274,7 @@ const PaymentSuccess = () => {
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Order Reference
+                {paymentStatus.order_type ? `${paymentStatus.order_type} Reference` : 'Order Reference'}
               </h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between items-center">

@@ -1081,31 +1081,9 @@ async function createPurchaseRecord(payment) {
       }
     });
     
-    // Auto-approve programme purchase and award Gymmawy Coins for successful payment
-    try {
-      console.log(`🎁 Auto-approving programme purchase ${programmePurchase.id} and awarding Gymmawy Coins`);
-      await approveProgrammePurchase(programmePurchase.id);
-      console.log(`✅ Programme purchase ${programmePurchase.id} auto-approved and Gymmawy Coins awarded`);
-      
-      // Send programme delivery email
-      try {
-        console.log(`📧 Sending programme delivery email for purchase ${programmePurchase.id}`);
-        const emailResult = await sendProgrammeDeliveryEmail(programmePurchase.id);
-        if (emailResult.success) {
-          console.log(`✅ Programme delivery email sent successfully`);
-        } else {
-          console.warn(`⚠️ Failed to send programme delivery email: ${emailResult.message}`);
-        }
-      } catch (emailError) {
-        console.error(`❌ Error sending programme delivery email:`, emailError.message);
-        // Don't fail the approval if email sending fails
-      }
-    } catch (error) {
-      console.error(`❌ Failed to auto-approve programme purchase ${programmePurchase.id}:`, error.message);
-      // Don't fail the webhook if auto-approval fails - admin can approve manually
-    }
-    
-    console.log(`Programme purchase ${programmePurchase.id} set to PENDING status - awaiting admin approval`);
+    // Programme purchase is already created with PAID status for gateway payments
+    // Admin will approve to change to COMPLETE and send email
+    console.log(`Programme purchase ${programmePurchase.id} is PAID - awaiting admin approval`);
     
   } else if (paymentableType === 'ORDER') {
     // For orders, we need to activate them and award Gymmawy Coins
