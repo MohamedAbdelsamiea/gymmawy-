@@ -345,21 +345,8 @@ export async function createSubscriptionWithPayment(userId, subscriptionData) {
       }
     });
 
-    // Redeem coupon if couponId is provided (within the same transaction)
-    if (couponId) {
-      try {
-        await couponService.redeemCouponForPurchase(
-          userId, 
-          couponId, 
-          'SUBSCRIPTION', 
-          newSubscription.id
-        );
-        console.log('Coupon redeemed successfully for subscription:', newSubscription.id);
-      } catch (error) {
-        console.error('Failed to redeem coupon for subscription:', error.message);
-        throw error;
-      }
-    }
+    // Note: Coupon usage will be recorded only when subscription is activated and payment is completed
+    // This prevents counting coupon usage for failed or cancelled subscriptions
 
     return newSubscription;
   });
@@ -513,6 +500,54 @@ export async function activateSubscription(id) {
       endDate
     }
   });
+
+  // Record coupon usage only when subscription is activated
+  if (subscription.couponId) {
+    try {
+      // Check if user has already redeemed this coupon
+      const existingRedemption = await prisma.userCouponRedemption.findUnique({
+        where: {
+          userId_couponId: {
+            userId: subscription.userId,
+            couponId: subscription.couponId
+          }
+        }
+      });
+
+      if (!existingRedemption) {
+        // Create user redemption record only if it doesn't exist
+        await prisma.userCouponRedemption.create({ 
+          data: { userId: subscription.userId, couponId: subscription.couponId } 
+        });
+        
+        // Increment total redemptions only for new redemptions
+        await prisma.coupon.update({ 
+          where: { id: subscription.couponId }, 
+          data: { totalRedemptions: { increment: 1 } } 
+        });
+        
+        console.log('✅ Coupon redeemed successfully for activated subscription:', subscription.id);
+      } else {
+        // Update usage count for existing redemption
+        await prisma.userCouponRedemption.update({
+          where: {
+            userId_couponId: {
+              userId: subscription.userId,
+              couponId: subscription.couponId
+            }
+          },
+          data: {
+            usageCount: { increment: 1 }
+          }
+        });
+        
+        console.log('✅ Coupon usage count incremented for activated subscription:', subscription.id);
+      }
+    } catch (error) {
+      console.error('❌ Error recording coupon usage for subscription:', error);
+      // Don't fail the activation process if coupon recording fails
+    }
+  }
 
   // Award Gymmawy Coins for subscription completion
   if (subscription.subscriptionPlan.loyaltyPointsAwarded > 0) {
@@ -745,14 +780,51 @@ export async function adminUpdateSubscriptionStatus(id, status) {
           console.log(`Awarded ${currentSubscription.subscriptionPlan.loyaltyPointsAwarded} Gymmawy Coins for subscription status change from ${previousStatus} to ${status}`);
         }
 
-        // Apply coupon usage if subscription had a coupon
+        // Record coupon usage when subscription is marked as ACTIVE
         if (currentSubscription.couponId) {
           try {
-            const { applyCouponUsage } = couponService;
-            await applyCouponUsage(currentSubscription.userId, currentSubscription.couponId, 'SUBSCRIPTION', currentSubscription.id);
-            console.log('Coupon usage applied for subscription status change:', currentSubscription.id);
+            // Check if user has already redeemed this coupon
+            const existingRedemption = await tx.userCouponRedemption.findUnique({
+              where: {
+                userId_couponId: {
+                  userId: currentSubscription.userId,
+                  couponId: currentSubscription.couponId
+                }
+              }
+            });
+
+            if (!existingRedemption) {
+              // Create user redemption record only if it doesn't exist
+              await tx.userCouponRedemption.create({ 
+                data: { userId: currentSubscription.userId, couponId: currentSubscription.couponId } 
+              });
+              
+              // Increment total redemptions only for new redemptions
+              await tx.coupon.update({ 
+                where: { id: currentSubscription.couponId }, 
+                data: { totalRedemptions: { increment: 1 } } 
+              });
+              
+              console.log('✅ Coupon redeemed successfully for admin-activated subscription:', currentSubscription.id);
+            } else {
+              // Update usage count for existing redemption
+              await tx.userCouponRedemption.update({
+                where: {
+                  userId_couponId: {
+                    userId: currentSubscription.userId,
+                    couponId: currentSubscription.couponId
+                  }
+                },
+                data: {
+                  usageCount: { increment: 1 }
+                }
+              });
+              
+              console.log('✅ Coupon usage count incremented for admin-activated subscription:', currentSubscription.id);
+            }
           } catch (error) {
-            console.error('Failed to apply coupon usage for subscription status change:', error);
+            console.error('❌ Error recording coupon usage for admin-activated subscription:', error);
+            // Don't fail the status update if coupon recording fails
           }
         }
       }

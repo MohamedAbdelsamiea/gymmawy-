@@ -313,6 +313,54 @@ export async function approveProgrammePurchase(id) {
     }
   });
 
+  // Record coupon usage only when payment is completed and purchase is approved
+  if (purchase.couponId) {
+    try {
+      // Check if user has already redeemed this coupon
+      const existingRedemption = await prisma.userCouponRedemption.findUnique({
+        where: {
+          userId_couponId: {
+            userId: purchase.userId,
+            couponId: purchase.couponId
+          }
+        }
+      });
+
+      if (!existingRedemption) {
+        // Create user redemption record only if it doesn't exist
+        await prisma.userCouponRedemption.create({ 
+          data: { userId: purchase.userId, couponId: purchase.couponId } 
+        });
+        
+        // Increment total redemptions only for new redemptions
+        await prisma.coupon.update({ 
+          where: { id: purchase.couponId }, 
+          data: { totalRedemptions: { increment: 1 } } 
+        });
+        
+        console.log('✅ Coupon redeemed successfully for completed programme purchase:', purchase.id);
+      } else {
+        // Update usage count for existing redemption
+        await prisma.userCouponRedemption.update({
+          where: {
+            userId_couponId: {
+              userId: purchase.userId,
+              couponId: purchase.couponId
+            }
+          },
+          data: {
+            usageCount: { increment: 1 }
+          }
+        });
+        
+        console.log('✅ Coupon usage count incremented for completed programme purchase:', purchase.id);
+      }
+    } catch (error) {
+      console.error('❌ Error recording coupon usage for programme purchase:', error);
+      // Don't fail the approval process if coupon recording fails
+    }
+  }
+
   // Award Gymmawy Coins for programme purchase completion
   if (purchase.programme.loyaltyPointsAwarded > 0) {
     await prisma.user.update({
@@ -628,48 +676,8 @@ export async function purchaseProgrammeWithPayment(userId, programmeId, paymentD
       currency: purchase.currency
     });
 
-    // Redeem coupon if used (within the same transaction)
-    if (validatedCoupon) {
-      // Check if user has already redeemed this coupon
-      const existingRedemption = await tx.userCouponRedemption.findUnique({
-        where: {
-          userId_couponId: {
-            userId: userId,
-            couponId: validatedCoupon.id
-          }
-        }
-      });
-
-      if (!existingRedemption) {
-        // Create user redemption record only if it doesn't exist
-        await tx.userCouponRedemption.create({ 
-          data: { userId, couponId: validatedCoupon.id } 
-        });
-        
-        // Increment total redemptions only for new redemptions
-        await tx.coupon.update({ 
-          where: { id: validatedCoupon.id }, 
-          data: { totalRedemptions: { increment: 1 } } 
-        });
-        
-        console.log('Coupon redeemed successfully for programme purchase:', purchase.id);
-      } else {
-        // Update usage count for existing redemption
-        await tx.userCouponRedemption.update({
-          where: {
-            userId_couponId: {
-              userId: userId,
-              couponId: validatedCoupon.id
-            }
-          },
-          data: {
-            usageCount: { increment: 1 }
-          }
-        });
-        
-        console.log('Coupon usage count incremented for programme purchase:', purchase.id);
-      }
-    }
+    // Note: Coupon usage will be recorded only when payment is completed and purchase is approved
+    // This prevents counting coupon usage for failed or cancelled payments
 
     // Create payment record if payment method is provided
     if (paymentMethod && paymentProof) {

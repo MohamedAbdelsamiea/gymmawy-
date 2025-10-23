@@ -133,17 +133,8 @@ export async function createSingleProductOrder(userId, orderData = {}) {
       data: { stock: { decrement: quantity } }
     });
 
-    // Redeem coupon if valid
-    if (validatedCoupon) {
-      await tx.userCouponRedemption.create({
-        data: { userId, couponId: validatedCoupon.id }
-      });
-      
-      await tx.coupon.update({
-        where: { id: validatedCoupon.id },
-        data: { totalRedemptions: { increment: 1 } }
-      });
-    }
+    // Note: Coupon usage will be recorded only when payment is completed and order is paid
+    // This prevents counting coupon usage for failed or cancelled payments
 
     return created;
   });
@@ -358,48 +349,8 @@ export async function createOrderFromCart(userId, orderData = {}) {
       });
     }
 
-    // Redeem coupon if valid (within the same transaction)
-    if (validatedCoupon) {
-      // Check if user has already redeemed this coupon
-      const existingRedemption = await tx.userCouponRedemption.findUnique({
-        where: {
-          userId_couponId: {
-            userId: userId,
-            couponId: validatedCoupon.id
-          }
-        }
-      });
-
-      if (!existingRedemption) {
-        // Create user redemption record only if it doesn't exist
-        await tx.userCouponRedemption.create({ 
-          data: { userId, couponId: validatedCoupon.id } 
-        });
-        
-        // Increment total redemptions only for new redemptions
-        await tx.coupon.update({ 
-          where: { id: validatedCoupon.id }, 
-          data: { totalRedemptions: { increment: 1 } } 
-        });
-        
-        console.log('Coupon redeemed successfully for order:', created.id);
-      } else {
-        // Update usage count for existing redemption
-        await tx.userCouponRedemption.update({
-          where: {
-            userId_couponId: {
-              userId: userId,
-              couponId: validatedCoupon.id
-            }
-          },
-          data: {
-            usageCount: { increment: 1 }
-          }
-        });
-        
-        console.log('Coupon usage count incremented for order:', created.id);
-      }
-    }
+    // Note: Coupon usage will be recorded only when payment is completed and order is paid
+    // This prevents counting coupon usage for failed or cancelled payments
     
     await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
     return created;
@@ -662,6 +613,54 @@ export async function adminUpdateStatus(id, status) {
         }
         console.log(`Subtracted stock for order ${currentOrder.id} status change from ${previousStatus} to ${status}`);
 
+        // Record coupon usage when order is marked as PAID
+        if (currentOrder.couponId) {
+          try {
+            // Check if user has already redeemed this coupon
+            const existingRedemption = await tx.userCouponRedemption.findUnique({
+              where: {
+                userId_couponId: {
+                  userId: currentOrder.userId,
+                  couponId: currentOrder.couponId
+                }
+              }
+            });
+
+            if (!existingRedemption) {
+              // Create user redemption record only if it doesn't exist
+              await tx.userCouponRedemption.create({ 
+                data: { userId: currentOrder.userId, couponId: currentOrder.couponId } 
+              });
+              
+              // Increment total redemptions only for new redemptions
+              await tx.coupon.update({ 
+                where: { id: currentOrder.couponId }, 
+                data: { totalRedemptions: { increment: 1 } } 
+              });
+              
+              console.log('✅ Coupon redeemed successfully for admin-approved order:', currentOrder.id);
+            } else {
+              // Update usage count for existing redemption
+              await tx.userCouponRedemption.update({
+                where: {
+                  userId_couponId: {
+                    userId: currentOrder.userId,
+                    couponId: currentOrder.couponId
+                  }
+                },
+                data: {
+                  usageCount: { increment: 1 }
+                }
+              });
+              
+              console.log('✅ Coupon usage count incremented for admin-approved order:', currentOrder.id);
+            }
+          } catch (error) {
+            console.error('❌ Error recording coupon usage for admin-approved order:', error);
+            // Don't fail the status update if coupon recording fails
+          }
+        }
+
         let totalLoyaltyPoints = 0;
         for (const item of currentOrder.items) {
           const pointsPerItem = item.loyaltyPointsAwarded || 0;
@@ -754,6 +753,54 @@ export async function activateOrder(orderId, adminId) {
         updatedAt: new Date()
       }
     });
+
+    // Record coupon usage only when order is paid
+    if (order.couponId) {
+      try {
+        // Check if user has already redeemed this coupon
+        const existingRedemption = await tx.userCouponRedemption.findUnique({
+          where: {
+            userId_couponId: {
+              userId: order.userId,
+              couponId: order.couponId
+            }
+          }
+        });
+
+        if (!existingRedemption) {
+          // Create user redemption record only if it doesn't exist
+          await tx.userCouponRedemption.create({ 
+            data: { userId: order.userId, couponId: order.couponId } 
+          });
+          
+          // Increment total redemptions only for new redemptions
+          await tx.coupon.update({ 
+            where: { id: order.couponId }, 
+            data: { totalRedemptions: { increment: 1 } } 
+          });
+          
+          console.log('✅ Coupon redeemed successfully for completed order:', order.id);
+        } else {
+          // Update usage count for existing redemption
+          await tx.userCouponRedemption.update({
+            where: {
+              userId_couponId: {
+                userId: order.userId,
+                couponId: order.couponId
+              }
+            },
+            data: {
+              usageCount: { increment: 1 }
+            }
+          });
+          
+          console.log('✅ Coupon usage count incremented for completed order:', order.id);
+        }
+      } catch (error) {
+        console.error('❌ Error recording coupon usage for order:', error);
+        // Don't fail the order activation if coupon recording fails
+      }
+    }
 
     // Check if this order contains subscription items
     let subscription = null;
