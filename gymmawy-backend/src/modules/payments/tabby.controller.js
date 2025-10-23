@@ -514,32 +514,14 @@ async function handlePaymentUpdated(webhookData) {
       }
     });
 
-    // Handle programme purchases based on payment status
-    if (payment.paymentableType === 'PROGRAMME') {
-      if (mappedStatus === 'SUCCESS') {
-        // Auto-approve programme purchases for successful Tabby payments
-        try {
-          const { approvePayment } = await import('./paymentApproval.service.js');
-          await approvePayment(updatedPayment.id, payment.userId);
-          console.log(`✅ Programme purchase ${payment.paymentableId} automatically approved for Tabby payment`);
-        } catch (approvalError) {
-          console.error(`❌ Failed to auto-approve programme purchase ${payment.paymentableId}:`, approvalError);
-        }
-      } else if (mappedStatus === 'FAILED') {
-        // Cancel programme purchase for failed payments
-        try {
-          await prisma.programmePurchase.update({
-            where: { id: payment.paymentableId },
-            data: {
-              status: 'CANCELLED',
-              cancelledAt: new Date(),
-              rejectionReason: `Payment failed: ${status}`
-            }
-          });
-          console.log(`❌ Programme purchase ${payment.paymentableId} cancelled due to failed Tabby payment`);
-        } catch (cancelError) {
-          console.error(`❌ Failed to cancel programme purchase ${payment.paymentableId}:`, cancelError);
-        }
+    // Auto-approve programme purchases for successful Tabby payments
+    if (mappedStatus === 'SUCCESS' && payment.paymentableType === 'PROGRAMME') {
+      try {
+        const { approvePayment } = await import('./paymentApproval.service.js');
+        await approvePayment(updatedPayment.id, payment.userId);
+        console.log(`✅ Programme purchase ${payment.paymentableId} automatically approved for Tabby payment`);
+      } catch (approvalError) {
+        console.error(`❌ Failed to auto-approve programme purchase ${payment.paymentableId}:`, approvalError);
       }
     }
   }
