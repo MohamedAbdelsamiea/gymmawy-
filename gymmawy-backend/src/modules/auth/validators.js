@@ -3,12 +3,12 @@ import { z } from "zod";
 export const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).regex(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/,
-    "Password must be at least 8 characters with uppercase, lowercase, and number"
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])[a-zA-Z\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{8,}$/,
+    "Password must be at least 8 characters with uppercase, lowercase, number, and special character"
   ),
   firstName: z.string().min(2).max(50).optional(),
   lastName: z.string().min(2).max(50).optional(),
-  mobileNumber: z.string().optional(),
+  mobileNumber: z.string().min(7, "Phone number must be at least 7 digits").max(20, "Phone number must be less than 20 digits"),
   birthDate: z.string().optional(),
   building: z.string().optional(),
   street: z.string().optional(),
@@ -20,7 +20,7 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   identifier: z.string().min(1),
-  password: z.string().min(8),
+  password: z.string().min(1), // Don't validate password format on login, just check it exists
 });
 
 export const emailTokenSchema = z.object({ token: z.string().min(10), email: z.string().email() });
