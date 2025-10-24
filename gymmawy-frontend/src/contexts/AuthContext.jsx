@@ -159,6 +159,9 @@ export const AuthProvider = ({ children }) => {
         errorMessage = error.response.data.error.message;
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
+      } else if (error.response?.data) {
+        // Handle case where error message is directly in data
+        errorMessage = error.response.data;
       }
       
       setError(errorMessage);

@@ -168,6 +168,8 @@ class ApiClient {
             errorMessage = errorData.message;
           } else if (errorData.error && errorData.error.message) {
             errorMessage = errorData.error.message;
+          } else if (typeof errorData === 'string') {
+            errorMessage = errorData;
           }
         } catch (parseError) {
           // If JSON parsing fails, use the status text or default message

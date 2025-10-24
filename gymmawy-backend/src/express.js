@@ -290,9 +290,12 @@ app.use((error, req, res, next) => {
     });
   }
   
+  // Check if error should be exposed (has expose: true or is a client error)
+  const shouldExpose = error.expose || (error.status && error.status < 500);
+  
   res.status(error.status || 500).json({
     error: {
-      message: isDevelopment ? error.message : 'Internal server error',
+      message: shouldExpose ? error.message : 'Internal server error',
       ...(isDevelopment && { stack: error.stack })
     }
   });
