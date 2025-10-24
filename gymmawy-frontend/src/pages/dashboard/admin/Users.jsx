@@ -7,6 +7,7 @@ import AddAdminModal from '../../../components/modals/AddAdminModal';
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,15 +54,19 @@ const AdminUsers = () => {
       setError(null);
       
       // Only send server-side filters (role)
-      const params = {};
+      const params = {
+        pageSize: 1000, // Fetch all users (up to 1000)
+        page: 1
+      };
       if (filterRole !== 'all') {
-params.role = filterRole;
-}
+        params.role = filterRole;
+      }
       
       const response = await adminApiService.getUsers(params);
       // Handle response structure: { items: [...], total: 2, page: 1, pageSize: 10 }
       const usersData = response.items || response;
       setUsers(Array.isArray(usersData) ? usersData : []);
+      setTotalUsers(response.total || usersData.length);
     } catch (err) {
       setError(err.message);
       console.error('Error fetching users:', err);
@@ -336,7 +341,7 @@ return <span className="text-gray-400">Never</span>;
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Users</p>
-              <p className="text-2xl font-bold text-gray-900">{Array.isArray(users) ? users.length : 0}</p>
+              <p className="text-2xl font-bold text-gray-900">{totalUsers}</p>
             </div>
           </div>
         </div>
@@ -372,7 +377,7 @@ return <span className="text-gray-400">Never</span>;
       <div className="bg-white p-4 rounded-lg border border-gray-200">
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            Showing <span className="font-medium text-gray-900">{filteredUsers.length}</span> of <span className="font-medium text-gray-900">{users.length}</span> users
+            Showing <span className="font-medium text-gray-900">{filteredUsers.length}</span> of <span className="font-medium text-gray-900">{totalUsers}</span> users
           </div>
           {(searchTerm || filterRole !== 'all') && (
             <button
