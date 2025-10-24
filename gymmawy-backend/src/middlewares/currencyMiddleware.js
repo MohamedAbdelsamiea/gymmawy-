@@ -1,24 +1,13 @@
-import { WebServiceClient } from '@maxmind/geoip2-node';
 import { Currency } from '@prisma/client';
 
-// Initialize MaxMind client with error handling
-let client = null;
-try {
-  if (process.env.MAXMIND_ACCOUNT_ID && process.env.MAXMIND_LICENSE_KEY) {
-    client = new WebServiceClient(
-      process.env.MAXMIND_ACCOUNT_ID,
-      process.env.MAXMIND_LICENSE_KEY,
-      { 
-        host: 'geolite.info', // important for free GeoLite service
-        timeout: 5000 // 5 second timeout
-      }
-    );
-    console.log('✅ MaxMind client initialized successfully');
-  } else {
-    console.warn('⚠️ MaxMind credentials not found. Currency detection will use fallback.');
-  }
-} catch (error) {
-  console.error('❌ Failed to initialize MaxMind client:', error.message);
+// FindIP.net API configuration
+const FINDIP_API_KEY = process.env.FINDIP_API_KEY;
+const FINDIP_BASE_URL = 'https://api.findip.net';
+
+if (!FINDIP_API_KEY) {
+  console.warn('⚠️ FINDIP_API_KEY not found. Currency detection will use fallback.');
+} else {
+  console.log('✅ FindIP.net API key configured successfully');
 }
 
 /**
@@ -84,7 +73,7 @@ export async function detectCurrencyService(req) {
     return {
       success: true,
       currency,
-      detectedFrom: client ? 'ip_geolocation' : 'fallback',
+      detectedFrom: FINDIP_API_KEY ? 'ip_geolocation' : 'fallback',
       clientIP: process.env.NODE_ENV === 'development' ? clientIP : clientIP.substring(0, 8) + '...',
       timestamp: new Date().toISOString()
     };
@@ -144,51 +133,41 @@ async function detectCurrencyFromIP(req) {
 }
 
 /**
- * Get country code from IP using MaxMind Web Service
+ * Get country code from IP using FindIP.net API
  */
 async function getCountryFromIP(ip) {
-  // Check if client is available
-  if (!client) {
-    console.warn('⚠️ MaxMind client not available, trying fallback IP detection');
-    
-    // Try fallback IP detection service
-    try {
-      const response = await fetch(`https://ipapi.co/${ip}/json/`, { timeout: 5000 });
-      const data = await response.json();
-      const countryCode = data.country_code;
-      console.log(`✅ Fallback IP detection for ${ip}:`, countryCode || 'No country code');
-      return countryCode || null;
-    } catch (fallbackErr) {
-      console.error('❌ Fallback IP detection also failed:', fallbackErr.message);
-      return null;
-    }
+  // Check if API key is available
+  if (!FINDIP_API_KEY) {
+    console.warn('⚠️ FindIP API key not available, using fallback');
+    return null;
   }
 
   try {
-    console.log(`🔍 MaxMind lookup for IP: ${ip}`);
-    const response = await client.country(ip);
-    const countryCode = response.country?.isoCode;
-    console.log(`✅ MaxMind response for ${ip}:`, countryCode || 'No country code');
+    console.log(`🔍 FindIP.net lookup for IP: ${ip}`);
+    const url = `${FINDIP_BASE_URL}/${ip}/?token=${FINDIP_API_KEY}`;
+    const response = await fetch(url, { 
+      timeout: 5000,
+      headers: {
+        'User-Agent': 'Gymmawy-Currency-Detection/1.0'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    const countryCode = data.country?.iso_code || data.country_code || data.country?.code;
+    
+    console.log(`✅ FindIP.net response for ${ip}:`, countryCode || 'No country code');
     return countryCode || null;
   } catch (err) {
-    console.error('❌ MaxMind lookup failed for IP:', ip);
+    console.error('❌ FindIP.net lookup failed for IP:', ip);
     console.error('❌ Error details:', {
       message: err.message,
       code: err.code,
       type: err.constructor.name
     });
-    
-    // Try fallback IP detection service
-    try {
-      console.log(`🔄 Trying fallback IP detection for ${ip}`);
-      const response = await fetch(`https://ipapi.co/${ip}/json/`, { timeout: 5000 });
-      const data = await response.json();
-      const countryCode = data.country_code;
-      console.log(`✅ Fallback IP detection for ${ip}:`, countryCode || 'No country code');
-      return countryCode || null;
-    } catch (fallbackErr) {
-      console.error('❌ Fallback IP detection also failed:', fallbackErr.message);
-    }
     
     // Don't log full stack trace in production
     if (process.env.NODE_ENV === 'development') {

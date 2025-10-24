@@ -18,69 +18,85 @@ export async function detectCurrency(req, res, next) {
 }
 
 /**
- * Get location data from IP (proxy for ipapi.co)
+ * Get location data from IP using FindIP.net
  */
 export async function getLocationData(req, res, next) {
   try {
-    const https = await import('https');
-    const http = await import('http');
+    const FINDIP_API_KEY = process.env.FINDIP_API_KEY;
+    const FINDIP_BASE_URL = 'https://api.findip.net';
     
-    const makeRequest = (url) => {
-      return new Promise((resolve, reject) => {
-        const client = url.startsWith('https') ? https : http;
-        const request = client.get(url, (response) => {
-          let data = '';
-          response.on('data', (chunk) => {
-            data += chunk;
-          });
-          response.on('end', () => {
-            try {
-              // Check if response is rate limited or error
-              if (response.statusCode === 429 || data.includes('Too many rapid requests')) {
-                reject(new Error('Rate limited'));
-                return;
-              }
-              
-              if (response.statusCode !== 200) {
-                reject(new Error(`HTTP ${response.statusCode}: ${data}`));
-                return;
-              }
-              
-              const parsed = JSON.parse(data);
-              if (parsed.error) {
-                reject(new Error(parsed.reason || 'API error'));
-              } else {
-                resolve(parsed);
-              }
-            } catch (e) {
-              reject(e);
-            }
-          });
-        });
-        
-        request.setTimeout(10000, () => {
-          request.destroy();
-          reject(new Error('Request timeout'));
-        });
-        
-        request.on('error', (err) => {
-          reject(err);
-        });
-      });
+    if (!FINDIP_API_KEY) {
+      throw new Error('FindIP API key not configured');
+    }
+    
+    // Get client IP
+    const getClientIP = (req) => {
+      const forwardedFor = req.headers['x-forwarded-for'];
+      const realIP = req.headers['x-real-ip'];
+      const cfConnectingIP = req.headers['cf-connecting-ip'];
+      const xClientIP = req.headers['x-client-ip'];
+      
+      if (forwardedFor) {
+        const ips = forwardedFor.split(',').map(ip => ip.trim());
+        return ips[0];
+      }
+      
+      if (realIP) return realIP;
+      if (cfConnectingIP) return cfConnectingIP;
+      if (xClientIP) return xClientIP;
+      
+      return (
+        req.connection?.remoteAddress ||
+        req.socket?.remoteAddress ||
+        req.ip ||
+        '127.0.0.1'
+      );
     };
     
-    const data = await makeRequest('https://ipapi.co/json/');
+    const clientIP = getClientIP(req);
+    
+    // Skip localhost for external API calls
+    if (clientIP === '127.0.0.1' || clientIP === '::1') {
+      return res.json({
+        success: true,
+        data: {
+          country_code: 'US',
+          country_name: 'United States',
+          city: 'Localhost',
+          region: 'Development',
+          timezone: 'UTC',
+          currency: 'USD',
+          currency_name: 'US Dollar'
+        },
+        fallback: true,
+        reason: 'localhost'
+      });
+    }
+    
+    const url = `${FINDIP_BASE_URL}/${clientIP}/?token=${FINDIP_API_KEY}`;
+    const response = await fetch(url, {
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Gymmawy-Location-Detection/1.0'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
     
     res.json({
       success: true,
       data: {
-        country_code: data.country_code,
-        country_name: data.country_name,
-        city: data.city,
-        region: data.region,
-        timezone: data.timezone,
-        currency: data.currency,
-        currency_name: data.currency_name
+        country_code: data.country?.iso_code || data.country_code || data.country?.code,
+        country_name: data.country?.names?.en || data.country_name || data.country?.name,
+        city: data.city?.names?.en || data.city || data.location?.city,
+        region: data.subdivisions?.[0]?.names?.en || data.region || data.location?.region,
+        timezone: data.location?.time_zone || data.timezone || data.location?.timezone,
+        currency: data.currency || data.country?.currency,
+        currency_name: data.currency_name || data.country?.currency_name
       }
     });
   } catch (error) {
