@@ -348,26 +348,22 @@ const Register = () => {
           setValidationErrors(validationErrs);
           setErrors({});
         } else {
-          // Handle general errors - check multiple possible error structures
-          let errorMessage = 'Registration failed. Please try again.';
+          // Handle general errors using the improved error utility
+          let errorMessage = getGeneralErrorMessage(result.error?.response?.data || result.error);
           
-          if (result.error?.response?.data?.message) {
-            errorMessage = result.error.response.data.message;
-          } else if (result.error?.response?.data?.error?.message) {
-            errorMessage = result.error.response.data.error.message;
-          } else if (result.error?.message) {
-            errorMessage = result.error.message;
-          } else if (typeof result.error === 'string') {
-            errorMessage = result.error;
-          }
-          
-          // Handle specific error cases
-          if (errorMessage.includes('409') || errorMessage.includes('Conflict')) {
+          // Handle specific error cases with better user-friendly messages
+          if (errorMessage.includes('already registered') || errorMessage.includes('already exists')) {
             const translatedMessage = t('register.errors.emailAlreadyExists');
             errorMessage = translatedMessage !== 'register.errors.emailAlreadyExists' ? translatedMessage : 'This email is already registered. Please use a different email or try logging in.';
-          } else if (errorMessage.includes('400') || errorMessage.includes('Bad Request')) {
+          } else if (errorMessage.includes('Missing required fields')) {
+            const translatedMessage = t('register.errors.missingFields');
+            errorMessage = translatedMessage !== 'register.errors.missingFields' ? translatedMessage : errorMessage;
+          } else if (errorMessage.includes('Invalid input') || errorMessage.includes('validation')) {
             const translatedMessage = t('register.errors.invalidData');
             errorMessage = translatedMessage !== 'register.errors.invalidData' ? translatedMessage : 'Please check your information and try again.';
+          } else if (errorMessage.includes('Failed to create user account')) {
+            const translatedMessage = t('register.errors.accountCreationFailed');
+            errorMessage = translatedMessage !== 'register.errors.accountCreationFailed' ? translatedMessage : 'Unable to create your account. Please try again.';
           }
           
           setErrors({ 

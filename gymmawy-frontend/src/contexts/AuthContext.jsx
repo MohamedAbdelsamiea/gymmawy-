@@ -150,7 +150,18 @@ export const AuthProvider = ({ children }) => {
       return { success: true, message: response.message || 'Registration successful. Please check your email to verify your account.' };
     } catch (error) {
       console.error('Registration error in AuthContext:', error);
-      setError(error.message);
+      
+      // Extract meaningful error message
+      let errorMessage = error.message || 'Registration failed. Please try again.';
+      
+      // If it's an API error with response data, use that message
+      if (error.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      setError(errorMessage);
       return { success: false, error: error };
     } finally {
       setLoading(false);

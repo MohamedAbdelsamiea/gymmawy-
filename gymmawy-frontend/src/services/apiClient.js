@@ -159,9 +159,10 @@ class ApiClient {
 
       if (!response.ok) {
         let errorMessage = `HTTP error! status: ${response.status}`;
+        let errorData = null;
         
         try {
-          const errorData = await response.json();
+          errorData = await response.json();
           // Handle both direct message and nested error.message structure
           if (errorData.message) {
             errorMessage = errorData.message;
@@ -173,7 +174,14 @@ class ApiClient {
           errorMessage = response.statusText || `HTTP error! status: ${response.status}`;
         }
         
-        throw new Error(errorMessage);
+        // Create a custom error object that preserves the full error structure
+        const error = new Error(errorMessage);
+        error.response = {
+          status: response.status,
+          statusText: response.statusText,
+          data: errorData
+        };
+        throw error;
       }
 
       // Handle 204 No Content responses

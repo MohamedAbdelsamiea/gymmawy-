@@ -108,7 +108,12 @@ export async function registerUser({
   mobileNumber = String(mobileNumber || "").trim();
   
   if (!email || !password || !mobileNumber) {
-    const error = new Error("Email, password, and mobile number are required");
+    const missingFields = [];
+    if (!email) missingFields.push('email');
+    if (!password) missingFields.push('password');
+    if (!mobileNumber) missingFields.push('mobileNumber');
+    
+    const error = new Error(`Missing required fields: ${missingFields.join(', ')}`);
     error.status = 400;
     error.expose = true;
     throw error;
@@ -117,7 +122,7 @@ export async function registerUser({
   // Check if user already exists (verified)
   const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) {
-    const error = new Error("User with email already exists");
+    const error = new Error("This email address is already registered. Please use a different email or try logging in.");
     error.status = 409;
     error.expose = true;
     throw error;
@@ -135,23 +140,32 @@ export async function registerUser({
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
   
   // Create pending user verification record
-  const pendingUser = await prisma.pendingUserVerification.create({
-    data: {
-      email,
-      passwordHash,
-      firstName: firstName || null,
-      lastName: lastName || null,
-      mobileNumber: mobileNumber,
-      birthDate: birthDate ? new Date(birthDate) : null,
-      building: building || null,
-      street: street || null,
-      city: city || null,
-      country: country || null,
-      postcode: postcode || null,
-      verificationToken,
-      expiresAt,
-    },
-  });
+  let pendingUser;
+  try {
+    pendingUser = await prisma.pendingUserVerification.create({
+      data: {
+        email,
+        passwordHash,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        mobileNumber: mobileNumber,
+        birthDate: birthDate ? new Date(birthDate) : null,
+        building: building || null,
+        street: street || null,
+        city: city || null,
+        country: country || null,
+        postcode: postcode || null,
+        verificationToken,
+        expiresAt,
+      },
+    });
+  } catch (dbError) {
+    console.error('Database error during user registration:', dbError);
+    const error = new Error("Failed to create user account. Please try again.");
+    error.status = 500;
+    error.expose = true;
+    throw error;
+  }
   
   // Send verification email using template
   const frontendUrl = process.env.FRONTEND_URL || "https://gymmawy.fit";
@@ -164,12 +178,18 @@ export async function registerUser({
     verificationLink: link
   }, language); // Use the language from registration
   
-  await sendEmail({
-    to: email,
-    subject: "Welcome to Gymmawy - Verify Your Email",
-    html: html,
-    text: `Hi ${firstName || email}, please verify your email by clicking this link: ${link}`,
-  });
+  try {
+    await sendEmail({
+      to: email,
+      subject: "Welcome to Gymmawy - Verify Your Email",
+      html: html,
+      text: `Hi ${firstName || email}, please verify your email by clicking this link: ${link}`,
+    });
+  } catch (emailError) {
+    console.error('Email sending error during registration:', emailError);
+    // Don't fail registration if email fails - user can request resend
+    console.warn('Registration successful but verification email failed to send. User can request resend.');
+  }
   
   return { id: pendingUser.id, email: pendingUser.email };
 }

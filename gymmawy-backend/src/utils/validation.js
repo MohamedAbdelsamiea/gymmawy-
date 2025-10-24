@@ -6,9 +6,19 @@ export function parseOrThrow(schema, data) {
     const errorMessages = result.error.issues ? 
       result.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(", ") : 
       "Validation failed";
+    
+    // Create detailed validation errors for frontend
+    const validationErrors = result.error.issues.map(issue => ({
+      field: issue.path.join('.'),
+      message: issue.message,
+      code: issue.code,
+      value: issue.input
+    }));
+    
     const err = new Error(`Invalid input: ${errorMessages}`);
     err.status = 400;
     err.expose = true;
+    err.validationErrors = validationErrors;
     throw err;
   }
   return result.data;

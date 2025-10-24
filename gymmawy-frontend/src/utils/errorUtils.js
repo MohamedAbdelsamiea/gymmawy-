@@ -63,8 +63,22 @@ export function hasValidationErrors(errorResponse) {
  * @returns {string} General error message
  */
 export function getGeneralErrorMessage(errorResponse) {
+  // Try multiple possible error structures
   if (errorResponse?.error?.message) {
     return errorResponse.error.message;
   }
-  return 'An unexpected error occurred';
+  
+  if (errorResponse?.response?.data?.error?.message) {
+    return errorResponse.response.data.error.message;
+  }
+  
+  if (errorResponse?.message) {
+    return errorResponse.message;
+  }
+  
+  if (errorResponse?.response?.data?.message) {
+    return errorResponse.response.data.message;
+  }
+  
+  return 'An unexpected error occurred. Please try again.';
 }
