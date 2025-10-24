@@ -18,6 +18,93 @@ export async function detectCurrency(req, res, next) {
 }
 
 /**
+ * Get location data from IP (proxy for ipapi.co)
+ */
+export async function getLocationData(req, res, next) {
+  try {
+    const https = await import('https');
+    const http = await import('http');
+    
+    const makeRequest = (url) => {
+      return new Promise((resolve, reject) => {
+        const client = url.startsWith('https') ? https : http;
+        const request = client.get(url, (response) => {
+          let data = '';
+          response.on('data', (chunk) => {
+            data += chunk;
+          });
+          response.on('end', () => {
+            try {
+              // Check if response is rate limited or error
+              if (response.statusCode === 429 || data.includes('Too many rapid requests')) {
+                reject(new Error('Rate limited'));
+                return;
+              }
+              
+              if (response.statusCode !== 200) {
+                reject(new Error(`HTTP ${response.statusCode}: ${data}`));
+                return;
+              }
+              
+              const parsed = JSON.parse(data);
+              if (parsed.error) {
+                reject(new Error(parsed.reason || 'API error'));
+              } else {
+                resolve(parsed);
+              }
+            } catch (e) {
+              reject(e);
+            }
+          });
+        });
+        
+        request.setTimeout(10000, () => {
+          request.destroy();
+          reject(new Error('Request timeout'));
+        });
+        
+        request.on('error', (err) => {
+          reject(err);
+        });
+      });
+    };
+    
+    const data = await makeRequest('https://ipapi.co/json/');
+    
+    res.json({
+      success: true,
+      data: {
+        country_code: data.country_code,
+        country_name: data.country_name,
+        city: data.city,
+        region: data.region,
+        timezone: data.timezone,
+        currency: data.currency,
+        currency_name: data.currency_name
+      }
+    });
+  } catch (error) {
+    console.error('Location data fetch error:', error.message);
+    
+    // Return fallback data instead of error
+    res.json({
+      success: true,
+      data: {
+        country_code: 'US',
+        country_name: 'United States',
+        city: 'Unknown',
+        region: 'Unknown',
+        timezone: 'UTC',
+        currency: 'USD',
+        currency_name: 'US Dollar'
+      },
+      fallback: true,
+      error: error.message
+    });
+  }
+}
+
+/**
  * Get prices for a specific currency
  */
 export async function getPrices(req, res, next) {

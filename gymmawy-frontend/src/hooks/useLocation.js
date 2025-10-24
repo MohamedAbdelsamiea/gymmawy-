@@ -21,10 +21,11 @@ export function useLocation() {
   const detectLocation = async() => {
     try {
       // Try IP-based detection first (faster and more reliable)
-      const ipResponse = await fetch('https://ipapi.co/json/');
-      const ipData = await ipResponse.json();
+      const ipResponse = await fetch('/api/currency/location');
+      const ipResult = await ipResponse.json();
       
-      if (ipData.country_code) {
+      if (ipResult.success && ipResult.data.country_code) {
+        const ipData = ipResult.data;
         const countryCode = ipData.country_code;
         const countryInfo = getCountryInfo(countryCode);
         

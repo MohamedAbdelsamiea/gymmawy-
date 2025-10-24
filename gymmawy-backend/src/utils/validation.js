@@ -16,7 +16,7 @@ export function parseOrThrow(schema, data) {
 
 export const paginationSchema = z.object({
   page: z.coerce.number().int().gte(1).default(1),
-  pageSize: z.coerce.number().int().gte(1).lte(100).default(20),
+  pageSize: z.coerce.number().int().gte(1).lte(1000).default(20),
   q: z.string().trim().optional(),
 });
 

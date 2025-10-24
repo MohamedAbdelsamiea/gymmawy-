@@ -2,10 +2,10 @@
  * Service for detecting user's country based on IP address
  */
 
-// Free IP geolocation service (you can replace with a paid service for better reliability)
-const IP_GEOLOCATION_API = 'https://ipapi.co/json/';
+// Use backend proxy to avoid CORS issues
+const IP_GEOLOCATION_API = '/api/currency/location';
 
-// Alternative service as fallback
+// Alternative service as fallback (direct call, may have CORS issues)
 const IP_GEOLOCATION_API_FALLBACK = 'https://ip-api.com/json/';
 
 // Mapping of country codes to country names (matching our CountrySelector)
@@ -455,23 +455,30 @@ export const detectCountry = async () => {
       throw new Error('Failed to fetch geolocation data');
     }
     
-    const data = await response.json();
+    const result = await response.json();
     
     // Handle different response formats
     let countryCode, country, city, region;
     
-    if (data.country_code) {
-      // ipapi.co format
+    if (result.success && result.data) {
+      // Backend proxy format
+      const data = result.data;
       countryCode = data.country_code;
       country = data.country_name;
       city = data.city;
       region = data.region;
-    } else if (data.countryCode) {
+    } else if (result.country_code) {
+      // Direct ipapi.co format (fallback)
+      countryCode = result.country_code;
+      country = result.country_name;
+      city = result.city;
+      region = result.region;
+    } else if (result.countryCode) {
       // ip-api.com format
-      countryCode = data.countryCode;
-      country = data.country;
-      city = data.city;
-      region = data.regionName;
+      countryCode = result.countryCode;
+      country = result.country;
+      city = result.city;
+      region = result.regionName;
     } else {
       throw new Error('Invalid geolocation response format');
     }

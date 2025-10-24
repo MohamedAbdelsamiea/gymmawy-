@@ -10,6 +10,7 @@ router.use(currencyDetectionMiddleware);
 
 // Public routes
 router.get('/detect', controller.detectCurrency);
+router.get('/location', controller.getLocationData);
 router.get('/available', controller.getAvailableCurrencies);
 router.get('/rates', controller.getRates);
 router.get('/prices', controller.getPrices);

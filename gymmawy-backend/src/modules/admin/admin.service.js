@@ -307,6 +307,7 @@ export async function getAnalytics(query = {}) {
 export async function getUsers(query = {}) {
   const { page = 1, pageSize = 10, search } = query;
   const skip = (page - 1) * pageSize;
+  const take = parseInt(pageSize, 10);
   
   const where = search ? {
     OR: [
@@ -320,7 +321,7 @@ export async function getUsers(query = {}) {
     prisma.user.findMany({
       where,
       skip,
-      take: pageSize,
+      take,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
