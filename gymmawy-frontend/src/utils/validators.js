@@ -19,8 +19,8 @@ export const validateEmail = (email) => {
 
 // Password validation
 export const isValidPassword = (password) => {
-  // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/;
+  // At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special character (!@#$%^&*)
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[a-zA-Z\d!@#$%^&*]{8,}$/;
   return passwordRegex.test(password);
 };
 
@@ -48,7 +48,7 @@ export const validatePassword = (password, firstName = '', lastName = '', email 
     errors.push('passwordNumber');
   }
   
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+  if (!/[!@#$%^&*]/.test(password)) {
     errors.push('passwordSpecial');
   }
   
@@ -233,7 +233,7 @@ export const validateForm = (formData, validationRules) => {
     } else if (value && rules.email && !isValidEmail(value)) {
       errors[field] = 'Invalid email format';
     } else if (value && rules.password && !isValidPassword(value)) {
-      errors[field] = 'Password must be at least 8 characters with uppercase, lowercase, and number';
+      errors[field] = 'Password must be at least 8 characters with uppercase, lowercase, number, and special character (!@#$%^&*)';
     } else if (value && rules.phone && !isValidPhone(value)) {
       errors[field] = 'Invalid phone number';
     } else if (value && rules.minLength && value.length < rules.minLength) {
