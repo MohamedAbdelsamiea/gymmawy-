@@ -17,6 +17,11 @@ const TableWithFilters = ({
   exportButtonText = "Export",
   resultsCounter = null,
   className = "",
+  // Pagination props
+  pagination = null,
+  onPageChange = null,
+  onLimitChange = null,
+  loading = false,
 }) => {
   return (
     <div className={`bg-white rounded-xl shadow-sm border border-gray-200 ${className}`}>
@@ -51,6 +56,10 @@ const TableWithFilters = ({
           exportable={false} // We have custom export
           sortable={true} // Enable sorting
           className="border-0 shadow-none" // Remove extra styling since we're inside a card
+          pagination={pagination}
+          onPageChange={onPageChange}
+          onLimitChange={onLimitChange}
+          loading={loading}
         />
       </div>
     </div>

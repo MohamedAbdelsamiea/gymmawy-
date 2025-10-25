@@ -178,6 +178,7 @@ const SortableRow = ({ product, onEdit, onDelete, onToggleStatus, onAddStock }) 
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -188,6 +189,14 @@ const AdminProducts = () => {
   const [showAddStockModal, setShowAddStockModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [stockIncrement, setStockIncrement] = useState('');
+  
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -198,14 +207,36 @@ const AdminProducts = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, [searchTerm, filterStatus]);
+  }, [filterStatus, pagination.page, pagination.limit]);
+
+  // Client-side filtering effect - no API calls, just filtering
+  useEffect(() => {
+    let filtered = [...products];
+
+    // Apply search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(product => 
+        product.name?.en?.toLowerCase().includes(searchLower) ||
+        product.name?.ar?.toLowerCase().includes(searchLower) ||
+        product.id?.toString().includes(searchLower) ||
+        product.description?.en?.toLowerCase().includes(searchLower) ||
+        product.description?.ar?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    setFilteredProducts(filtered);
+  }, [products, searchTerm]);
 
   const fetchProducts = async() => {
     try {
       setLoading(true);
       setError(null);
       
-      const params = {};
+      const params = {
+        page: pagination.page,
+        limit: pagination.limit,
+      };
       if (searchTerm) {
         params.search = searchTerm;
       }
@@ -215,10 +246,19 @@ const AdminProducts = () => {
       
       const data = await adminApiService.getProducts(params);
       const productsArray = data.products?.items || data.products || data.items || [];
+      const total = data.products?.total || data.total || productsArray.length;
+      const totalPages = data.products?.totalPages || data.totalPages || Math.ceil(total / pagination.limit);
+      
       console.log('Products API response:', data);
       console.log('Products array:', productsArray);
       console.log('Active products count:', productsArray.filter(p => p.isActive === true).length);
+      
       setProducts(productsArray);
+      setPagination(prev => ({
+        ...prev,
+        total,
+        totalPages
+      }));
     } catch (err) {
       setError(err.message);
       console.error('Error fetching products:', err);
@@ -343,6 +383,14 @@ const AdminProducts = () => {
         )
       );
     }
+  };
+
+  const handlePageChange = (page) => {
+    setPagination(prev => ({ ...prev, page }));
+  };
+
+  const handleLimitChange = (limit) => {
+    setPagination(prev => ({ ...prev, limit, page: 1 }));
   };
 
   const handleExport = async() => {
@@ -657,7 +705,7 @@ const AdminProducts = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Products</p>
-              <p className="text-2xl font-bold text-gray-900">{Array.isArray(products) ? products.length : 0}</p>
+              <p className="text-2xl font-bold text-gray-900">{Array.isArray(filteredProducts) ? filteredProducts.length : 0}</p>
             </div>
           </div>
         </div>
@@ -669,7 +717,7 @@ const AdminProducts = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Active Products</p>
               <p className="text-2xl font-bold text-gray-900">
-                {Array.isArray(products) ? products.filter(p => p.isActive === true).length : 0}
+                {Array.isArray(filteredProducts) ? filteredProducts.filter(p => p.isActive === true).length : 0}
               </p>
             </div>
           </div>
@@ -682,7 +730,7 @@ const AdminProducts = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Out of Stock</p>
               <p className="text-2xl font-bold text-gray-900">
-                {Array.isArray(products) ? products.filter(p => p.stock === 0).length : 0}
+                {Array.isArray(filteredProducts) ? filteredProducts.filter(p => p.stock === 0).length : 0}
               </p>
             </div>
           </div>
@@ -699,13 +747,19 @@ const AdminProducts = () => {
                 type="text"
                 placeholder="Search products..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPagination(prev => ({ ...prev, page: 1 }));
+                }}
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-gymmawy-primary focus:border-gymmawy-primary w-full sm:w-auto"
               />
             </div>
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              onChange={(e) => {
+                setFilterStatus(e.target.value);
+                setPagination(prev => ({ ...prev, page: 1 }));
+              }}
               className="px-3 py-2 border border-gray-300 rounded-md focus:ring-gymmawy-primary focus:border-gymmawy-primary w-full sm:w-auto"
             >
               <option value="all">All Status</option>
@@ -765,8 +819,8 @@ const AdminProducts = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                <SortableContext items={products.map(p => p.id)} strategy={verticalListSortingStrategy}>
-                  {products.map((product) => (
+                <SortableContext items={filteredProducts.map(p => p.id)} strategy={verticalListSortingStrategy}>
+                  {filteredProducts.map((product) => (
                     <SortableRow
                       key={product.id}
                       product={product}
@@ -782,6 +836,51 @@ const AdminProducts = () => {
           </div>
         </DndContext>
       </div>
+
+      {/* Pagination Controls */}
+      {pagination.totalPages > 1 && (
+        <div className="bg-white px-6 py-4 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-700">
+              Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} results
+            </div>
+            <div className="flex items-center space-x-2">
+              {/* Items per page selector */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700">Show:</span>
+                <select
+                  value={pagination.limit}
+                  onChange={(e) => handleLimitChange(parseInt(e.target.value))}
+                  className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gymmawy-primary"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+
+              <button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.page <= 1}
+                className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Previous
+              </button>
+              <span className="px-3 py-1 text-sm">
+                Page {pagination.page} of {pagination.totalPages}
+              </span>
+              <button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.page >= pagination.totalPages}
+                className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Product Modal */}
       <AddProductModal

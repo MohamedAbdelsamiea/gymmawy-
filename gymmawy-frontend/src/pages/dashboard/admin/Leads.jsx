@@ -14,40 +14,67 @@ const AdminLeads = () => {
   const [selectedLead, setSelectedLead] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
+  
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0
+  });
 
   useEffect(() => {
     fetchLeads();
     fetchLeadsStats();
-  }, []);
+  }, [pagination.page, pagination.limit, filterStatus]);
 
-  // Client-side filtering effect
+  // Client-side filtering effect - no API calls, just filtering
   useEffect(() => {
     let filtered = [...leads];
 
+    // Apply search filter
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(lead =>
+      filtered = filtered.filter(lead => 
         lead.name?.toLowerCase().includes(searchLower) ||
         lead.email?.toLowerCase().includes(searchLower) ||
         lead.mobileNumber?.toLowerCase().includes(searchLower) ||
-        lead.message?.toLowerCase().includes(searchLower),
+        lead.message?.toLowerCase().includes(searchLower)
       );
     }
 
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(lead => lead.status === filterStatus);
-    }
-
     setFilteredLeads(filtered);
-  }, [searchTerm, filterStatus, leads]);
+  }, [leads, searchTerm]);
 
   const fetchLeads = async() => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await adminApiService.getLeads();
-      setLeads(Array.isArray(response.items) ? response.items : []);
+      const params = {
+        page: pagination.page,
+        limit: pagination.limit,
+      };
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      if (filterStatus !== 'all') {
+        params.status = filterStatus;
+      }
+      
+      const response = await adminApiService.getLeads(params);
+      
+      // Handle the response format with pagination
+      const leadsData = response?.items || response?.data || response || [];
+      const total = response?.total || leadsData.length;
+      const totalPages = response?.totalPages || Math.ceil(total / pagination.limit);
+      
+      setLeads(Array.isArray(leadsData) ? leadsData : []);
+      setPagination(prev => ({
+        ...prev,
+        total,
+        totalPages
+      }));
     } catch (err) {
       setError(err.message);
       console.error('Error fetching leads:', err);
@@ -127,6 +154,14 @@ const AdminLeads = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedLead(null);
+  };
+
+  const handlePageChange = (page) => {
+    setPagination(prev => ({ ...prev, page }));
+  };
+
+  const handleLimitChange = (limit) => {
+    setPagination(prev => ({ ...prev, limit, page: 1 }));
   };
 
   const columns = [
@@ -332,13 +367,14 @@ const AdminLeads = () => {
       <div className="bg-white p-4 rounded-lg border border-gray-200">
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            Showing <span className="font-medium text-gray-900">{filteredLeads.length}</span> of <span className="font-medium text-gray-900">{leads.length}</span> leads
+            Showing <span className="font-medium text-gray-900">{filteredLeads.length}</span> of <span className="font-medium text-gray-900">{pagination.total}</span> leads
           </div>
           {(searchTerm || filterStatus !== 'all') && (
             <button
               onClick={() => {
                 setSearchTerm('');
                 setFilterStatus('all');
+                setPagination(prev => ({ ...prev, page: 1 }));
               }}
               className="text-sm text-gymmawy-primary hover:text-gymmawy-secondary underline"
             >
@@ -353,13 +389,19 @@ const AdminLeads = () => {
         data={Array.isArray(filteredLeads) ? filteredLeads : []}
         columns={columns}
         searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
+        onSearchChange={(value) => {
+          setSearchTerm(value);
+          setPagination(prev => ({ ...prev, page: 1 }));
+        }}
         searchPlaceholder="Search leads..."
         filters={[
           {
             label: "Status",
             value: filterStatus,
-            onChange: setFilterStatus,
+            onChange: (value) => {
+              setFilterStatus(value);
+              setPagination(prev => ({ ...prev, page: 1 }));
+            },
             options: [
               { value: "all", label: "All Status" },
               { value: "NEW", label: "New" },
@@ -373,6 +415,10 @@ const AdminLeads = () => {
         showExportButton={true}
         applyButtonText="Apply Filters"
         exportButtonText="Export"
+        pagination={pagination}
+        onPageChange={handlePageChange}
+        onLimitChange={handleLimitChange}
+        loading={loading}
       />
 
       {/* Lead Details Modal */}

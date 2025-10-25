@@ -10,7 +10,12 @@ const DataTable = ({
   exportable = true,
   sortable = true,
   onExport,
-  className = '', 
+  className = '',
+  // Pagination props
+  pagination = null,
+  onPageChange = null,
+  onLimitChange = null,
+  loading = false,
 }) => {
   const { t } = useTranslation("dashboard");
   const [searchTerm, setSearchTerm] = useState('');
@@ -130,11 +135,24 @@ return 0;
     return 0;
   });
 
-  // Paginate data
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedData = sortedData.slice(startIndex, endIndex);
-  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+  // Handle pagination - server-side or client-side
+  const isServerSidePagination = pagination && onPageChange;
+  
+  let paginatedData, totalPages, startIndex, endIndex;
+  
+  if (isServerSidePagination) {
+    // Server-side pagination
+    paginatedData = sortedData; // Data is already paginated from server
+    totalPages = pagination.totalPages || Math.ceil(pagination.total / pagination.limit);
+    startIndex = (pagination.page - 1) * pagination.limit;
+    endIndex = Math.min(startIndex + pagination.limit, pagination.total);
+  } else {
+    // Client-side pagination
+    startIndex = (currentPage - 1) * itemsPerPage;
+    endIndex = startIndex + itemsPerPage;
+    paginatedData = sortedData.slice(startIndex, endIndex);
+    totalPages = Math.ceil(sortedData.length / itemsPerPage);
+  }
 
   const handleSort = (key) => {
     setSortConfig(prev => ({
@@ -244,22 +262,51 @@ return 0;
         <div className="px-6 py-4 border-t border-gray-200">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-700">
-              {t('common.showing')} {startIndex + 1} {t('common.to')} {Math.min(endIndex, sortedData.length)} {t('common.of')} {sortedData.length} {t('common.results')}
+              {t('common.showing')} {startIndex + 1} {t('common.to')} {endIndex} {t('common.of')} {isServerSidePagination ? pagination.total : sortedData.length} {t('common.results')}
             </div>
             <div className="flex items-center space-x-2">
+              {/* Items per page selector for server-side pagination */}
+              {isServerSidePagination && onLimitChange && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-700">Show:</span>
+                  <select
+                    value={pagination.limit}
+                    onChange={(e) => onLimitChange(parseInt(e.target.value))}
+                    className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gymmawy-primary"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+              )}
+              
               <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
+                onClick={() => {
+                  if (isServerSidePagination) {
+                    onPageChange(pagination.page - 1);
+                  } else {
+                    setCurrentPage(prev => Math.max(prev - 1, 1));
+                  }
+                }}
+                disabled={isServerSidePagination ? pagination.page <= 1 : currentPage === 1}
                 className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
               >
                 {t('common.previous')}
               </button>
               <span className="px-3 py-1 text-sm">
-                {t('common.page')} {currentPage} {t('common.of')} {totalPages}
+                {t('common.page')} {isServerSidePagination ? pagination.page : currentPage} {t('common.of')} {totalPages}
               </span>
               <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
+                onClick={() => {
+                  if (isServerSidePagination) {
+                    onPageChange(pagination.page + 1);
+                  } else {
+                    setCurrentPage(prev => Math.min(prev + 1, totalPages));
+                  }
+                }}
+                disabled={isServerSidePagination ? pagination.page >= totalPages : currentPage === totalPages}
                 className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
               >
                 {t('common.next')}

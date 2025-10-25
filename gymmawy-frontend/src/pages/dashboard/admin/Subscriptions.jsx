@@ -126,6 +126,22 @@ const AdminSubscriptions = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPlan, setFilterPlan] = useState('all');
   const [filterActive, setFilterActive] = useState('all');
+  
+  // Pagination state for subscriptions
+  const [subscriptionPagination, setSubscriptionPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0
+  });
+  
+  // Pagination state for plans
+  const [planPagination, setPlanPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0
+  });
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -160,16 +176,23 @@ const AdminSubscriptions = () => {
       setLoading(true);
       setError(null);
       
-      const params = {};
+      const params = {
+        page: subscriptionPagination.page,
+        limit: subscriptionPagination.limit,
+      };
       if (filterStatus !== 'all') {
-params.status = filterStatus.toUpperCase();
-}
+        params.status = filterStatus.toUpperCase();
+      }
       if (filterPlan !== 'all') {
-params.plan = filterPlan;
-}
+        params.plan = filterPlan;
+      }
       
       const response = await adminApiService.getSubscriptions(params);
       const subscriptionsData = response.items || response.data || response || [];
+      
+      // Handle pagination data
+      const total = response?.total || subscriptionsData.length;
+      const totalPages = response?.totalPages || Math.ceil(total / subscriptionPagination.limit);
       
       // Debug: Log the raw data structure
       console.log('Raw subscription data:', subscriptionsData);
@@ -222,13 +245,18 @@ params.plan = filterPlan;
       });
       
       setSubscriptions(Array.isArray(mappedData) ? mappedData : []);
+      setSubscriptionPagination(prev => ({
+        ...prev,
+        total,
+        totalPages
+      }));
     } catch (err) {
       setError(err.message);
       console.error('Error fetching subscriptions:', err);
     } finally {
       setLoading(false);
     }
-  }, [filterStatus, filterPlan]);
+  }, [filterStatus, filterPlan, subscriptionPagination.page, subscriptionPagination.limit]);
 
   const fetchSubscriptionStats = useCallback(async() => {
     try {
@@ -259,8 +287,7 @@ params.plan = filterPlan;
     }
   }, [activeTab, filterStatus, filterPlan, user, authLoading, fetchSubscriptions, fetchSubscriptionStats]);
 
-
-  // Client-side filtering effect
+  // Client-side filtering effect - no API calls, just filtering
   useEffect(() => {
     if (activeTab === 'subscriptions') {
       let filtered = [...subscriptions];
@@ -268,52 +295,21 @@ params.plan = filterPlan;
       // Apply search filter
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
-        filtered = filtered.filter(sub => 
-          sub.subscriptionNumber?.toLowerCase().includes(searchLower) ||
-          sub.userName?.toLowerCase().includes(searchLower) ||
-          sub.userEmail?.toLowerCase().includes(searchLower) ||
-          sub.planName?.toLowerCase().includes(searchLower) ||
-          sub.user?.firstName?.toLowerCase().includes(searchLower) ||
-          sub.user?.lastName?.toLowerCase().includes(searchLower) ||
-          sub.user?.email?.toLowerCase().includes(searchLower) ||
-          sub.subscriptionPlan?.name?.en?.toLowerCase().includes(searchLower) ||
-          sub.subscriptionPlan?.name?.ar?.toLowerCase().includes(searchLower),
+        filtered = filtered.filter(subscription => 
+          subscription.subscriptionNumber?.toLowerCase().includes(searchLower) ||
+          subscription.user?.firstName?.toLowerCase().includes(searchLower) ||
+          subscription.user?.lastName?.toLowerCase().includes(searchLower) ||
+          subscription.user?.email?.toLowerCase().includes(searchLower) ||
+          subscription.subscriptionPlan?.name?.en?.toLowerCase().includes(searchLower) ||
+          subscription.subscriptionPlan?.name?.ar?.toLowerCase().includes(searchLower)
         );
-      }
-
-      // Apply status filter
-      if (filterStatus !== 'all') {
-        filtered = filtered.filter(sub => sub.status === filterStatus.toUpperCase());
-      }
-
-      // Apply plan filter
-      if (filterPlan !== 'all') {
-        filtered = filtered.filter(sub => sub.subscriptionPlanId === filterPlan || sub.planId === filterPlan);
       }
 
       setFilteredSubscriptions(filtered);
     } else {
-      let filtered = [...subscriptionPlans];
-
-      // Apply search filter
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        filtered = filtered.filter(plan => 
-          plan.name?.en?.toLowerCase().includes(searchLower) ||
-          plan.description?.en?.toLowerCase().includes(searchLower),
-        );
-      }
-
-      // Apply active filter
-      if (filterActive !== 'all') {
-        filtered = filtered.filter(plan => 
-          filterActive === 'active' ? plan.isActive : !plan.isActive,
-        );
-      }
-
-      setFilteredPlans(filtered);
+      setFilteredPlans(subscriptionPlans);
     }
-  }, [subscriptions, subscriptionPlans, searchTerm, filterStatus, filterPlan, filterActive, activeTab]);
+  }, [subscriptions, subscriptionPlans, activeTab, searchTerm]);
 
   const fetchSubscriptionPlans = async() => {
     try {
@@ -479,6 +475,14 @@ params.plan = filterPlan;
     if (activeTab === 'plans') {
       fetchSubscriptionPlans();
     }
+  };
+
+  const handleSubscriptionPageChange = (page) => {
+    setSubscriptionPagination(prev => ({ ...prev, page }));
+  };
+
+  const handleSubscriptionLimitChange = (limit) => {
+    setSubscriptionPagination(prev => ({ ...prev, limit, page: 1 }));
   };
 
 
@@ -1601,7 +1605,7 @@ return null;
             Showing <span className="font-medium text-gray-900">
               {activeTab === 'subscriptions' ? filteredSubscriptions.length : filteredPlans.length}
             </span> of <span className="font-medium text-gray-900">
-              {activeTab === 'subscriptions' ? subscriptions.length : subscriptionPlans.length}
+              {activeTab === 'subscriptions' ? subscriptionPagination.total : subscriptionPlans.length}
             </span> {activeTab === 'subscriptions' ? 'subscriptions' : 'plans'}
           </div>
           {(searchTerm || filterStatus !== 'all' || filterPlan !== 'all' || filterActive !== 'all') && (
@@ -1611,6 +1615,9 @@ return null;
                 setFilterStatus('all');
                 setFilterPlan('all');
                 setFilterActive('all');
+                if (activeTab === 'subscriptions') {
+                  setSubscriptionPagination(prev => ({ ...prev, page: 1 }));
+                }
               }}
               className="text-sm text-gymmawy-primary hover:text-gymmawy-secondary underline"
             >
@@ -1626,13 +1633,19 @@ return null;
           data={Array.isArray(filteredSubscriptions) ? filteredSubscriptions : []}
           columns={subscriptionColumns}
           searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
+          onSearchChange={(value) => {
+            setSearchTerm(value);
+            setSubscriptionPagination(prev => ({ ...prev, page: 1 }));
+          }}
           searchPlaceholder="Search subscriptions..."
           filters={[
             {
               label: "Status",
               value: filterStatus,
-              onChange: setFilterStatus,
+              onChange: (value) => {
+                setFilterStatus(value);
+                setSubscriptionPagination(prev => ({ ...prev, page: 1 }));
+              },
               options: [
                 { value: "all", label: "All Status" },
                 { value: "pending", label: "Pending" },
@@ -1645,7 +1658,10 @@ return null;
             {
               label: "Plan",
               value: filterPlan,
-              onChange: setFilterPlan,
+              onChange: (value) => {
+                setFilterPlan(value);
+                setSubscriptionPagination(prev => ({ ...prev, page: 1 }));
+              },
               options: [
                 { value: "all", label: "All Plans" },
                 ...(Array.isArray(subscriptionPlans) ? subscriptionPlans.map(plan => ({
@@ -1661,6 +1677,10 @@ return null;
           showExportButton={true}
           applyButtonText="Apply Filters"
           exportButtonText="Export"
+          pagination={subscriptionPagination}
+          onPageChange={handleSubscriptionPageChange}
+          onLimitChange={handleSubscriptionLimitChange}
+          loading={loading}
         />
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">

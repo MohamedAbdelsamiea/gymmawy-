@@ -6,6 +6,7 @@ import adminApiService from '../../../services/adminApiService';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
+  const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,6 +26,14 @@ const AdminOrders = () => {
   });
   const [ratesLoading, setRatesLoading] = useState(false);
   const [ratesLastUpdated, setRatesLastUpdated] = useState(null);
+  
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0
+  });
 
   // Debug orders state
   console.log('Orders state:', orders);
@@ -33,7 +42,27 @@ const AdminOrders = () => {
   useEffect(() => {
     fetchOrders();
     fetchExchangeRates();
-  }, [searchTerm, filterStatus, filterDate]);
+  }, [filterStatus, filterDate, pagination.page, pagination.limit]);
+
+  // Client-side filtering effect - no API calls, just filtering
+  useEffect(() => {
+    let filtered = [...orders];
+
+    // Apply search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(order => 
+        order.orderNumber?.toLowerCase().includes(searchLower) ||
+        order.user?.firstName?.toLowerCase().includes(searchLower) ||
+        order.user?.lastName?.toLowerCase().includes(searchLower) ||
+        order.user?.email?.toLowerCase().includes(searchLower) ||
+        order.paymentReference?.toLowerCase().includes(searchLower) ||
+        order.trackingNumber?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    setFilteredOrders(filtered);
+  }, [orders, searchTerm]);
 
   // Fetch live exchange rates using ExchangeRate-API.com (supports EGP, SAR, AED)
   const fetchExchangeRates = async () => {
@@ -95,24 +124,37 @@ const AdminOrders = () => {
       setLoading(true);
       setError(null);
       
-      const params = {};
+      const params = {
+        page: pagination.page,
+        limit: pagination.limit,
+      };
       if (searchTerm) {
-params.search = searchTerm;
-}
+        params.search = searchTerm;
+      }
       if (filterStatus !== 'all') {
-params.status = filterStatus;
-}
+        params.status = filterStatus;
+      }
       if (filterDate !== 'all') {
-params.date = filterDate;
-}
+        params.date = filterDate;
+      }
       
       const response = await adminApiService.getOrders(params);
       console.log('Orders API response:', response);
-      // Handle the response format: { orders: { items: [...] } }
+      
+      // Handle the response format with pagination
       const ordersData = response?.orders?.items || response?.data?.orders?.items || response?.data || response || [];
+      const total = response?.orders?.total || response?.total || ordersData.length;
+      const totalPages = response?.orders?.totalPages || response?.totalPages || Math.ceil(total / pagination.limit);
+      
       console.log('Extracted orders data:', ordersData);
       console.log('Sample order payment method:', ordersData[0]?.paymentMethod);
+      
       setOrders(Array.isArray(ordersData) ? ordersData : []);
+      setPagination(prev => ({
+        ...prev,
+        total,
+        totalPages
+      }));
     } catch (err) {
       setError(err.message);
       console.error('Error fetching orders:', err);
@@ -213,6 +255,14 @@ params.date = filterDate;
     } catch (err) {
       console.error('Error exporting orders:', err);
     }
+  };
+
+  const handlePageChange = (page) => {
+    setPagination(prev => ({ ...prev, page }));
+  };
+
+  const handleLimitChange = (limit) => {
+    setPagination(prev => ({ ...prev, limit, page: 1 }));
   };
 
   const columns = [
@@ -654,7 +704,7 @@ params.date = filterDate;
       <div className="bg-white p-4 rounded-lg border border-gray-200">
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            Showing <span className="font-medium text-gray-900">{Array.isArray(orders) ? orders.length : 0}</span> orders
+            Showing <span className="font-medium text-gray-900">{Array.isArray(filteredOrders) ? filteredOrders.length : 0}</span> of <span className="font-medium text-gray-900">{pagination.total}</span> orders
           </div>
           {(searchTerm || filterStatus !== 'all' || filterDate !== 'all') && (
             <button
@@ -662,6 +712,7 @@ params.date = filterDate;
                 setSearchTerm('');
                 setFilterStatus('all');
                 setFilterDate('all');
+                setPagination(prev => ({ ...prev, page: 1 }));
               }}
               className="text-sm text-gymmawy-primary hover:text-gymmawy-secondary underline"
             >
@@ -673,16 +724,22 @@ params.date = filterDate;
 
       {/* Orders Table with Integrated Filters */}
       <TableWithFilters
-        data={Array.isArray(orders) ? orders : []}
+        data={Array.isArray(filteredOrders) ? filteredOrders : []}
         columns={columns}
         searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
+        onSearchChange={(value) => {
+          setSearchTerm(value);
+          setPagination(prev => ({ ...prev, page: 1 }));
+        }}
         searchPlaceholder="Search orders..."
         filters={[
           {
             label: "Status",
             value: filterStatus,
-            onChange: setFilterStatus,
+            onChange: (value) => {
+              setFilterStatus(value);
+              setPagination(prev => ({ ...prev, page: 1 }));
+            },
             options: [
               { value: "all", label: "All Status" },
               { value: "PENDING", label: "Pending" },
@@ -695,7 +752,10 @@ params.date = filterDate;
           {
             label: "Date Range",
             value: filterDate,
-            onChange: setFilterDate,
+            onChange: (value) => {
+              setFilterDate(value);
+              setPagination(prev => ({ ...prev, page: 1 }));
+            },
             options: [
               { value: "all", label: "All Time" },
               { value: "today", label: "Today" },
@@ -710,6 +770,10 @@ params.date = filterDate;
         showExportButton={true}
         applyButtonText="Apply Filters"
         exportButtonText="Export"
+        pagination={pagination}
+        onPageChange={handlePageChange}
+        onLimitChange={handleLimitChange}
+        loading={loading}
       />
 
       {/* Payment Proof Modal */}

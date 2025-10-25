@@ -101,6 +101,20 @@ const AdminProgrammes = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Pagination state
+  const [programmePagination, setProgrammePagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0
+  });
+  const [purchasePagination, setPurchasePagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0
+  });
 
   // Payment proof preview button component - Updated to use PaymentProofModal
   const PaymentProofButton = ({ payment, purchase }) => {
@@ -185,9 +199,9 @@ const AdminProgrammes = () => {
     } else if (!authLoading && !user) {
       setError('Please log in to view programmes');
     }
-  }, [activeTab, filterProgramme, filterStatus, user, authLoading]);
+  }, [activeTab, filterProgramme, filterStatus, user, authLoading, programmePagination.page, programmePagination.limit, purchasePagination.page, purchasePagination.limit]);
 
-  // Client-side filtering effect
+  // Client-side filtering effect - no API calls, just filtering
   useEffect(() => {
     if (activeTab === 'programmes') {
       let filtered = [...programmes];
@@ -196,17 +210,12 @@ const AdminProgrammes = () => {
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
         filtered = filtered.filter(programme => 
-          programme.id?.toString().includes(searchLower) ||
           programme.name?.en?.toLowerCase().includes(searchLower) ||
           programme.name?.ar?.toLowerCase().includes(searchLower) ||
+          programme.id?.toString().includes(searchLower) ||
           programme.description?.en?.toLowerCase().includes(searchLower) ||
-          programme.description?.ar?.toLowerCase().includes(searchLower),
+          programme.description?.ar?.toLowerCase().includes(searchLower)
         );
-      }
-
-      // Apply programme filter
-      if (filterProgramme !== 'all') {
-        filtered = filtered.filter(programme => programme.id === filterProgramme);
       }
 
       setFilteredProgrammes(filtered);
@@ -220,33 +229,41 @@ const AdminProgrammes = () => {
           purchase.purchaseNumber?.toLowerCase().includes(searchLower) ||
           purchase.userName?.toLowerCase().includes(searchLower) ||
           purchase.userEmail?.toLowerCase().includes(searchLower) ||
-          purchase.programmeName?.toLowerCase().includes(searchLower),
+          purchase.programmeName?.toLowerCase().includes(searchLower)
         );
-      }
-
-      // Apply programme filter
-      if (filterProgramme !== 'all') {
-        filtered = filtered.filter(purchase => purchase.programmeId === filterProgramme);
-      }
-
-      // Apply status filter
-      if (filterStatus !== 'all') {
-        filtered = filtered.filter(purchase => purchase.status === filterStatus);
       }
 
       setFilteredPurchases(filtered);
     }
-  }, [searchTerm, filterProgramme, filterStatus, programmes, purchases, activeTab]);
+  }, [programmes, purchases, activeTab, searchTerm]);
 
   const fetchProgrammes = async() => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await adminApiService.getProgrammes();
+      const params = {
+        page: programmePagination.page,
+        limit: programmePagination.limit,
+      };
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      if (filterProgramme !== 'all') {
+        params.programmeId = filterProgramme;
+      }
+      
+      const response = await adminApiService.getProgrammes(params);
       const programmesData = response.programmes?.items || response.items || response.data || response || [];
+      const total = response.programmes?.total || response.total || programmesData.length;
+      const totalPages = response.programmes?.totalPages || response.totalPages || Math.ceil(total / programmePagination.limit);
       
       setProgrammes(Array.isArray(programmesData) ? programmesData : []);
+      setProgrammePagination(prev => ({
+        ...prev,
+        total,
+        totalPages
+      }));
     } catch (err) {
       console.error('Error fetching programmes:', err);
       setError('Failed to fetch programmes');
@@ -260,8 +277,24 @@ const AdminProgrammes = () => {
       setLoading(true);
       setError(null);
       
-      const response = await adminApiService.getProgrammePurchases();
+      const params = {
+        page: purchasePagination.page,
+        limit: purchasePagination.limit,
+      };
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      if (filterProgramme !== 'all') {
+        params.programmeId = filterProgramme;
+      }
+      if (filterStatus !== 'all') {
+        params.status = filterStatus;
+      }
+      
+      const response = await adminApiService.getProgrammePurchases(params);
       const purchasesData = response.purchases?.items || response.items || response.data || response || [];
+      const total = response.purchases?.total || response.total || purchasesData.length;
+      const totalPages = response.purchases?.totalPages || response.totalPages || Math.ceil(total / purchasePagination.limit);
       
       // Map the data to include user and programme information for easier access
       const mappedData = purchasesData.map(purchase => ({
@@ -279,6 +312,11 @@ const AdminProgrammes = () => {
       }));
       
       setPurchases(Array.isArray(mappedData) ? mappedData : []);
+      setPurchasePagination(prev => ({
+        ...prev,
+        total,
+        totalPages
+      }));
     } catch (err) {
       console.error('Error fetching purchases:', err);
       setError('Failed to fetch purchases');
@@ -370,6 +408,22 @@ const AdminProgrammes = () => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleProgrammePageChange = (page) => {
+    setProgrammePagination(prev => ({ ...prev, page }));
+  };
+
+  const handleProgrammeLimitChange = (limit) => {
+    setProgrammePagination(prev => ({ ...prev, limit, page: 1 }));
+  };
+
+  const handlePurchasePageChange = (page) => {
+    setPurchasePagination(prev => ({ ...prev, page }));
+  };
+
+  const handlePurchaseLimitChange = (limit) => {
+    setPurchasePagination(prev => ({ ...prev, limit, page: 1 }));
   };
 
   const handleAddSuccess = () => {
@@ -1236,9 +1290,9 @@ const AdminProgrammes = () => {
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
             {activeTab === 'programmes' ? (
-              <>Showing <span className="font-medium text-gray-900">{filteredProgrammes.length}</span> of <span className="font-medium text-gray-900">{programmes.length}</span> programmes</>
+              <>Showing <span className="font-medium text-gray-900">{filteredProgrammes.length}</span> of <span className="font-medium text-gray-900">{programmePagination.total}</span> programmes</>
             ) : (
-              <>Showing <span className="font-medium text-gray-900">{filteredPurchases.length}</span> of <span className="font-medium text-gray-900">{purchases.length}</span> purchases</>
+              <>Showing <span className="font-medium text-gray-900">{filteredPurchases.length}</span> of <span className="font-medium text-gray-900">{purchasePagination.total}</span> purchases</>
             )}
           </div>
           {(searchTerm || filterProgramme !== 'all' || (activeTab === 'purchases' && filterStatus !== 'all')) && (
@@ -1248,6 +1302,9 @@ const AdminProgrammes = () => {
                 setFilterProgramme('all');
                 if (activeTab === 'purchases') {
                   setFilterStatus('all');
+                  setPurchasePagination(prev => ({ ...prev, page: 1 }));
+                } else {
+                  setProgrammePagination(prev => ({ ...prev, page: 1 }));
                 }
               }}
               className="text-sm text-gymmawy-primary hover:text-gymmawy-secondary underline"
@@ -1275,13 +1332,27 @@ const AdminProgrammes = () => {
                       type="text"
                       placeholder="Search programmes..."
                       value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        if (activeTab === 'programmes') {
+                          setProgrammePagination(prev => ({ ...prev, page: 1 }));
+                        } else {
+                          setPurchasePagination(prev => ({ ...prev, page: 1 }));
+                        }
+                      }}
                       className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-gymmawy-primary focus:border-gymmawy-primary w-full sm:w-auto"
                     />
                   </div>
                   <select
                     value={filterProgramme}
-                    onChange={(e) => setFilterProgramme(e.target.value)}
+                    onChange={(e) => {
+                      setFilterProgramme(e.target.value);
+                      if (activeTab === 'programmes') {
+                        setProgrammePagination(prev => ({ ...prev, page: 1 }));
+                      } else {
+                        setPurchasePagination(prev => ({ ...prev, page: 1 }));
+                      }
+                    }}
                     className="px-3 py-2 border border-gray-300 rounded-md focus:ring-gymmawy-primary focus:border-gymmawy-primary w-full sm:w-auto"
                   >
                     <option value="all">All Programmes</option>
@@ -1340,6 +1411,51 @@ const AdminProgrammes = () => {
                 </table>
               </div>
             </div>
+            
+            {/* Pagination Controls for Programmes */}
+            {programmePagination.totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-700">
+                    Showing {((programmePagination.page - 1) * programmePagination.limit) + 1} to {Math.min(programmePagination.page * programmePagination.limit, programmePagination.total)} of {programmePagination.total} results
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {/* Items per page selector */}
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-700">Show:</span>
+                      <select
+                        value={programmePagination.limit}
+                        onChange={(e) => handleProgrammeLimitChange(parseInt(e.target.value))}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gymmawy-primary"
+                      >
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                    </div>
+
+                    <button
+                      onClick={() => handleProgrammePageChange(programmePagination.page - 1)}
+                      disabled={programmePagination.page <= 1}
+                      className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      Previous
+                    </button>
+                    <span className="px-3 py-1 text-sm">
+                      Page {programmePagination.page} of {programmePagination.totalPages}
+                    </span>
+                    <button
+                      onClick={() => handleProgrammePageChange(programmePagination.page + 1)}
+                      disabled={programmePagination.page >= programmePagination.totalPages}
+                      className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </DndContext>
       ) : (
@@ -1347,14 +1463,20 @@ const AdminProgrammes = () => {
           data={filteredPurchases}
           columns={purchaseColumns}
           searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
+          onSearchChange={(value) => {
+            setSearchTerm(value);
+            setPurchasePagination(prev => ({ ...prev, page: 1 }));
+          }}
           filters={[
             {
               key: 'programme',
               label: 'Programme',
               type: 'select',
               value: filterProgramme,
-              onChange: setFilterProgramme,
+              onChange: (value) => {
+                setFilterProgramme(value);
+                setPurchasePagination(prev => ({ ...prev, page: 1 }));
+              },
               options: [
                 { value: 'all', label: 'All Programmes' },
                 ...(programmes.length > 0 ? programmes.map(programme => ({
@@ -1368,7 +1490,10 @@ const AdminProgrammes = () => {
               label: 'Status',
               type: 'select',
               value: filterStatus,
-              onChange: setFilterStatus,
+              onChange: (value) => {
+                setFilterStatus(value);
+                setPurchasePagination(prev => ({ ...prev, page: 1 }));
+              },
               options: [
                 { value: 'all', label: 'All Statuses' },
                 { value: 'PENDING', label: 'Pending' },
@@ -1383,6 +1508,10 @@ const AdminProgrammes = () => {
           showExportButton={true}
           applyButtonText="Apply Filters"
           exportButtonText="Export"
+          pagination={purchasePagination}
+          onPageChange={handlePurchasePageChange}
+          onLimitChange={handlePurchaseLimitChange}
+          loading={loading}
         />
       )}
 
